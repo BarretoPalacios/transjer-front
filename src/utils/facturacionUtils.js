@@ -1,3 +1,54 @@
+// Formatear fecha (corregido problema de zona horaria)
+export const formatDate = (dateString, format = 'date') => {
+  if (!dateString) return 'N/A';
+  
+  try {
+    // Manejar diferentes tipos de entrada de fecha
+    let date;
+    
+    if (dateString.includes('T')) {
+      // Si ya tiene formato ISO con hora
+      date = new Date(dateString);
+    } else {
+      // Si solo tiene fecha YYYY-MM-DD, agregamos tiempo para evitar problemas de zona horaria
+      const [year, month, day] = dateString.split('-').map(Number);
+      date = new Date(year, month - 1, day); // Mes es 0-indexed
+    }
+    
+    // Verificar si la fecha es válida
+    if (isNaN(date.getTime())) {
+      return 'Fecha inválida';
+    }
+    
+    if (format === 'time') {
+      return date.toLocaleTimeString('es-PE', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+    
+    if (format === 'datetime') {
+      return date.toLocaleString('es-PE', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+    
+    // Formato por defecto: solo fecha
+    return date.toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    return 'Fecha inválida';
+  }
+};
+
 export const getEstadoPagoColor = (estado) => {
   const colors = {
     Pendiente: "bg-red-100 text-red-800",
@@ -37,6 +88,8 @@ export const formatCurrency = (amount) => {
     minimumFractionDigits: 2,
   }).format(amount);
 };
+
+
 
 const normalizarFecha = (fechaStr) => {
   const fecha = new Date(fechaStr);

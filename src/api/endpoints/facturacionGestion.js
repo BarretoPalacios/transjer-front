@@ -274,6 +274,11 @@ export const facturacionGestionAPI = {
     return facturacionGestionAPI.getEstadisticasDashboard();
   },
 
+  getAnalyticsAvanzadas: async (timeframe = 'month') => {
+    const response = await axiosInstance.get(`/facturacion-gestion/dashboard/analytics/advanced?timeframe=${timeframe}`);
+    return response.data;
+  },
+
   // Alias para export
   exportToExcel: async (filters = {}) => {
     return facturacionGestionAPI.exportAllGestionesExcel(filters);

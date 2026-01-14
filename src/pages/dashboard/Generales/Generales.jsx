@@ -38,7 +38,7 @@ import {
   formatCurrency,
 } from "../../../utils/facturacionUtils";
 
-const Gerencia = () => {
+const Generales = () => {
   const [gestiones, setGestiones] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -921,7 +921,7 @@ const Gerencia = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-500 mb-1">
-                Total Gestiones
+                Total Facturas
               </p>
               <p className="text-lg font-bold text-gray-900">
                 {estadisticas.total_gestiones || 0}
@@ -1553,4 +1553,4 @@ const Gerencia = () => {
   );
 };
 
-export default React.memo(Gerencia);
+export default React.memo(Generales);

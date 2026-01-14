@@ -35,6 +35,8 @@ import {
   ArrowBigRightIcon,
   AlignEndHorizontalIcon,
   ChartColumnDecreasing,
+  MonitorCheck,
+  FileStack,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -148,6 +150,12 @@ const Sidebar = ({
           path: "/contabilidad/segimineto",
           icon: Receipt,
         },
+        {
+          id: "reportes",
+          label: "Reportes Generales",
+          icon: BarChart3,
+          path: "/contabilidad/reportes",
+        },
       ],
     },
     {
@@ -187,23 +195,24 @@ const Sidebar = ({
       path: "/gerencia",
       submenu: [
         {
-          id: "reportes",
-          label: "Reportes Gerenciales",
-          icon: BarChart3,
-          path: "/gerencia/reportes",
+          id: "gerencia",
+          label: "Gerencia",
+          icon: MonitorCheck,
+          path: "/gerencia/gerencia",
         },
         {
-          id: "usuarios",
-          label: "Usuarios",
-          path: "/gerencia/usuarios",
-          icon: Users,
+          id: "analiticas",
+          label: "Analiticas",
+          path: "/gerencia/analiticas",
+          icon:   BarChart3,
         },
-        {
-          id: "actividad",
-          label: "Actividad",
-          icon: Activity,
+          {
+          id: "historial",
+          label: "Historial de Cambios",
           path: "/gerencia/actividad",
+          icon:   FileStack,
         },
+        
         
       ],
     },

@@ -25,8 +25,10 @@ import ServiciosHistoricos from "../pages/dashboard/ServiciosHistoricos/Servicio
 import FletesPendientes from "../pages/dashboard/FletesPendientes/FletesPendientes";
 import FletesPorFacturar from "../pages/dashboard/FletesPorFacturar/FletesPorFacturar";
 import SeguimientoFacturas from "../pages/dashboard/SeguimientoFacturas/SeguimientoFacturas";
-import Gerencia from "../pages/dashboard/Gerencia/Gerencia";
+import Generales from "../pages/dashboard/Generales/Generales";
 import ReportesHistoricos from "../pages/dashboard/ServiciosHistoricos/ReportesHistoricos";
+import Gerencia from "../pages/dashboard/GerenciaMonitoreo/Gerencia";
+import AnaliticasGerenciales from "../pages/dashboard/GerenciaMonitoreo/AnaliticasGerenciales";
 
 const AppRouter = () => {
   return (
@@ -70,7 +72,7 @@ const AppRouter = () => {
           <Route path="contabilidad/fletes-por-facturar" element={<FletesPorFacturar />} />
           <Route path="contabilidad/facturacion" element={<Facturacion />} />
           <Route path="contabilidad/segimineto" element={<SeguimientoFacturas />} />
-
+          <Route path="contabilidad/reportes" element={<Generales />} />
 
           <Route path="gestion" element={<Administracion />} />
           <Route path="gestion/clientes" element={<Clientes />} />
@@ -79,14 +81,11 @@ const AppRouter = () => {
           <Route path="gestion/personal" element={<Personal />} />
           
 
-
-
-          <Route path="gerencia/reportes" element={<Gerencia />} />
           <Route path="gerencia/actividad" element={<Historicos />} />
-          <Route path="reportes" element={<Reportes />} />
+          <Route path="gerencia/gerencia" element={<Gerencia />} />
+          <Route path="gerencia/analiticas" element={<AnaliticasGerenciales />} />
           <Route path="documentos" element={<Documentos />} />
-          <Route path="configuracion" element={<Configuracion />} />
-          <Route path="seguridad" element={<Seguridad />} />
+          
         </Route>
 
         
