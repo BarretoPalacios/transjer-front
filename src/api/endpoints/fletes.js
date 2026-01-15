@@ -257,7 +257,7 @@ export const fletesAPI = {
   },
   createGasto: async (gastoData) => {
     // console.log('Creando gasto:', gastoData);
-    const response = await axiosInstance.post('/gastos-adicionales/', gastoData);
+    const response = await axiosInstance.post('gastos-adicionales/', gastoData);
     return response.data;
   },
 
