@@ -41,6 +41,11 @@ const FletesPorFacturar = () => {
   const [fletes, setFletes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState(null);
+
+const [gastosFleteData, setGastosFleteData] = useState(null);
+const [loadingGastos, setLoadingGastos] = useState(false);
+// const [error, setError] = useState(null);
+
   
   // Estados de paginación
   const [pagination, setPagination] = useState({
@@ -172,6 +177,36 @@ const FletesPorFacturar = () => {
     },
     [] // No dependencias para mantener referencia estable
   );
+
+const fetchGastosFlete = useCallback(async (fleteId) => {
+  if (!fleteId) return;
+
+  setLoadingGastos(true);
+  setError(null);
+
+  try {
+    const response = await fletesAPI.getGastosByFlete(fleteId);
+
+    // ⬇️ guardamos TODO el objeto
+    setGastosFleteData(response);
+
+  } catch (err) {
+    console.error(err);
+    setError("Error al cargar los gastos del flete");
+  } finally {
+    setLoadingGastos(false);
+  }
+}, []);
+
+
+const handleVerGastos = useCallback(
+  async (flete) => {
+    await fetchGastosFlete(flete);
+  },
+  [fetchGastosFlete]
+);
+
+
 
   // Efecto para búsqueda en tiempo real con debounce
   useEffect(() => {
@@ -400,6 +435,7 @@ setFacturaForm({
     setModalMode("flete");
     setServicioDetalle(null);
     setFleteSeleccionado(null);
+    setGastosFleteData(null)
   }, []);
 
   // Handler para cambios en el formulario de factura
@@ -968,7 +1004,7 @@ setFacturaForm({
                                 className="p-1 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-100"
                                 title="Editar flete"
                               >
-                                <Edit className="h-3.5 w-3.5" />
+                                Editar Flete
                               </button>
                               <button
                                 onClick={(e) => {
@@ -978,7 +1014,7 @@ setFacturaForm({
                                 className="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-200"
                                 title="Ver detalles"
                               >
-                                <Eye className="h-3.5 w-3.5" />
+                                Detalles Flete 
                               </button>
                             </>
                           )}
@@ -1086,6 +1122,15 @@ setFacturaForm({
                 >
                   Ver Detalles del Servicio
                 </Button>
+                <Button
+                  onClick={() => handleVerGastos(fleteSeleccionado.id)}
+                  variant="secondary"
+                  size="small"
+                  icon={Info}
+                  isLoading={loadingGastos}
+                >
+                  Ver Gastos Asociados al Flete
+                </Button>
               </div>
 
               <div className="bg-white rounded-lg border border-gray-200">
@@ -1144,34 +1189,134 @@ setFacturaForm({
                         {formatFecha(fleteSeleccionado.fecha_creacion)}
                       </p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Cliente
-                      </label>
-                      <p className="text-sm text-gray-900">
-                        {fleteSeleccionado.cliente_nombre ||
-                          fleteSeleccionado.cliente?.nombre ||
-                          "N/A"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {fleteSeleccionado.cliente_ruc ||
-                          fleteSeleccionado.cliente?.ruc ||
-                          ""}
-                      </p>
-                    </div>
-                    {fleteSeleccionado.servicio_id && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 mb-1">
-                          ID Servicio
-                        </label>
-                        <p className="text-sm text-gray-900">
-                          {fleteSeleccionado.servicio_id}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
+
+              {gastosFleteData  && (
+<div className="bg-white rounded-lg border border-gray-200">
+  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+      <AlertCircle className="h-5 w-5" />
+      Gastos Adicionales
+    </h3>
+  </div>
+
+  <div className="p-4 space-y-4">
+
+    {/* Loading */}
+    {loadingGastos && (
+      <p className="text-sm text-gray-500">Cargando gastos...</p>
+    )}
+
+    {/* Error */}
+    {error && (
+      <p className="text-sm text-red-600">{error}</p>
+    )}
+
+    {/* Sin data */}
+    {!loadingGastos && !gastosFleteData && (
+      <p className="text-sm text-gray-500">
+        Selecciona un flete para ver sus gastos
+      </p>
+    )}
+
+    {/* Resumen */}
+    {gastosFleteData && (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="bg-gray-50 p-3 rounded">
+          <p className="text-gray-500">Cantidad</p>
+          <p className="font-semibold">{gastosFleteData.cantidad_gastos}</p>
+        </div>
+
+        <div className="bg-gray-50 p-3 rounded">
+          <p className="text-gray-500">Total Gastos</p>
+          <p className="font-semibold">
+            S/ {gastosFleteData.total_gastos.toFixed(2)}
+          </p>
+        </div>
+
+        <div className="bg-green-50 p-3 rounded">
+          <p className="text-gray-500">Recuperable Cliente</p>
+          <p className="font-semibold text-green-700">
+            S/ {gastosFleteData.total_recuperable_cliente.toFixed(2)}
+          </p>
+        </div>
+
+        <div className="bg-red-50 p-3 rounded">
+          <p className="text-gray-500">Costo Operativo</p>
+          <p className="font-semibold text-red-700">
+            S/ {gastosFleteData.total_costo_operativo.toFixed(2)}
+          </p>
+        </div>
+      </div>
+    )}
+
+    {/* Lista de gastos */}
+    {gastosFleteData?.gastos?.length > 0 && (
+      <ul className="space-y-3">
+        {gastosFleteData.gastos.map((gasto) => (
+          <li
+            key={gasto.id}
+            className="border rounded-md p-3 flex justify-between gap-4"
+          >
+            <div>
+              <p className="font-medium text-gray-900">
+                {gasto.tipo_gasto}
+              </p>
+
+              <p className="text-sm text-gray-600">
+                {gasto.descripcion}
+              </p>
+
+              <p className="text-xs text-gray-400">
+                {new Date(gasto.fecha_gasto).toLocaleDateString()}
+              </p>
+
+              <p className="text-xs text-gray-400">
+                Código: {gasto.codigo_gasto}
+              </p>
+            </div>
+
+            <div className="text-right">
+              <p className="font-semibold text-gray-900">
+                S/ {Number(gasto.valor).toFixed(2)}
+              </p>
+
+              <span
+                className={`text-xs px-2 py-1 rounded ${
+                  gasto.se_factura_cliente
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {gasto.se_factura_cliente
+                  ? "Facturable al cliente"
+                  : "No facturable"}
+              </span>
+
+              <p className="text-xs mt-1 text-gray-500">
+                Facturación: {gasto.estado_facturacion}
+              </p>
+
+              <p className="text-xs text-gray-500">
+                Aprobación: {gasto.estado_aprobacion}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+
+    {/* Sin gastos */}
+    {gastosFleteData && gastosFleteData.gastos.length === 0 && (
+      <p className="text-sm text-gray-500">
+        Este flete no tiene gastos registrados
+      </p>
+    )}
+  </div>
+</div>
+              )}
 
               <div className="bg-white rounded-lg border border-gray-200">
                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
@@ -1186,6 +1331,10 @@ setFacturaForm({
                   </p>
                 </div>
               </div>
+
+
+
+              
 
               <div className="flex justify-end pt-4 border-t border-gray-200">
                 <Button

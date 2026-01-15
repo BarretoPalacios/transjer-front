@@ -250,6 +250,11 @@ export const fletesAPI = {
     const response = await axiosInstance.get(`/gastos-adicionales/flete/${codigoFlete}`);
     return response.data;
   },
+
+    getGastosByCodeFlete: async (codigoFlete) => {
+    const response = await axiosInstance.get(`/gastos-adicionales/flete-code/${codigoFlete}`);
+    return response.data;
+  },
   createGasto: async (gastoData) => {
     // console.log('Creando gasto:', gastoData);
     const response = await axiosInstance.post('/gastos-adicionales', gastoData);
