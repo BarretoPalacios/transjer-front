@@ -1105,7 +1105,7 @@ const Gerencia = () => {
         page: page,
         pageSize: pageSize
       });
-      
+      // console.log(response.items)
       // Actualizar estado con los datos recibidos
       setInvoices(response.items || []);
       
@@ -1745,6 +1745,9 @@ const Gerencia = () => {
                   <th className="py-1.5 px-2 text-left font-medium text-gray-700 border-r border-gray-300 min-w-[100px]">
                     Factura
                   </th>
+                  <th className="py-1.5 px-2 text-left font-medium text-gray-700 border-r border-gray-300 min-w-[100px]">
+                    Cliente
+                  </th>
                   <th className="py-1.5 px-2 text-left font-medium text-gray-700 border-r border-gray-300 min-w-[80px]">
                     Emisión
                   </th>
@@ -1791,10 +1794,15 @@ const Gerencia = () => {
                       className="border-b border-gray-200 hover:bg-blue-50 cursor-pointer"
                     >
                       <td className="py-1.5 px-2 border-r border-gray-200">
-                        <div className="font-medium text-gray-900">{invoice.codigo_factura}</div>
+                        {/* <div className="font-medium text-gray-900">{invoice.codigo_factura}</div> */}
                         <div className="text-gray-500 text-xs truncate">{datos.numero_factura}</div>
+
                       </td>
-                      
+                      <td className="py-1.5 px-2 border-r border-gray-200 text-gray-700">
+                      {/* {datos.datos_completos?.fletes?.[0]?.servicio?.nombre_cliente || "no se cargó el cliente"} */}
+                        {invoice?.datos_completos?.fletes?.[0]?.servicio?.nombre_cliente ?? "no se cargó el cliente"}
+
+                      </td>
                       <td className="py-1.5 px-2 border-r border-gray-200 text-gray-700">
                         {formatDate(datos.fecha_emision)}
                       </td>
