@@ -248,12 +248,12 @@ const ClienteForm = ({
         // Mapear los datos del RUC a los campos del formulario
         setFormData((prev) => ({
           ...prev,
-          razon_social: rucData.razon_social || "",
-          direccion: rucData.direccion || "",
+          razon_social: rucData.nombre_razon_social || "",
+          direccion: rucData.direccion_completa || "",
           // Si el estado del RUC es "ACTIVO", establecer estado como "activo", de lo contrario "suspendido"
           estado:
-            rucData.estado?.includes("ACTIVO") ||
-            rucData.condicion?.includes("HABIDO")
+            rucData.estado_contribuyente?.includes("ACTIVO") ||
+            rucData.condicion_domicilio?.includes("HABIDO")
               ? "activo"
               : "suspendido",
         }));
