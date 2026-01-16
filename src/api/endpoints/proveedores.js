@@ -1,7 +1,4 @@
 import axiosInstance from '../axiosConfig';
-import axios from 'axios';
-
-const WEBNOVA_TOKEN = import.meta.env.VITE_WEBNOVA_TOKEN;
 
 export const proveedoresAPI = {
   createProveedor: async (proveedorData) => {
@@ -149,25 +146,9 @@ export const proveedoresAPI = {
   },
 
   consultarRuc: async (ruc) => {
-    try {
-      const response = await axios.get(`https://api.webnova.pe/api/v1/buscar/${ruc}`, {
-        headers: {
-          'Authorization': `Bearer ${WEBNOVA_TOKEN}`,
-          'Accept': 'application/json'
-        }
-      });
-      
-      // La API de Webnova suele devolver los datos directamente o envueltos
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || "Error en la consulta"
-      };
-    }
+    // Si tienes un endpoint específico para consultar RUC de proveedores
+    const response = await axiosInstance.get(`/utils/consultar-ruc/${ruc}`);
+    return response.data.data;
   }
 
 };
