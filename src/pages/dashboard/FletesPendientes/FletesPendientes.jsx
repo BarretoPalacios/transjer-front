@@ -50,6 +50,7 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
   
   // Estados para filtros - ahora usamos solo uno para filtrado en tiempo real
   const [filters, setFilters] = useState({
+    cliente:'',
     codigo_flete: '',
     codigo_servicio: ''
   });
@@ -129,7 +130,7 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
         console.log('Fetching fletes with params:', cleanFilters); // Para debug
         
         // Usar la API
-        const response = await fletesAPI.getAllFletes(cleanFilters);
+        const response = await fletesAPI.getAdvancedFletes(cleanFilters);
         console.log('API Response:', response); // Para debug
         
         // Asegurar que la respuesta tenga la estructura esperada
@@ -637,6 +638,21 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
 
         {/* Filtros en tiempo real */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Cliente */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Hash className="h-4 w-4" />
+              Cliente
+            </label>
+            <input
+              type="text"
+              value={filters.cliente}
+              onChange={(e) => handleFilterChange('cliente', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              placeholder="Ej: SONEPAR"
+            />
+          </div>
+          
           {/* Código Flete */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -698,13 +714,20 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
-                    Código Flete
+                    Códigos
                   </div>
                 </th>
+                
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
-                    Código Servicio
+                     Cliente
+                  </div>
+                </th>
+                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Fecha De Servicio
                   </div>
                 </th>
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
@@ -719,12 +742,7 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
                     Estado
                   </div>
                 </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    Fecha Creación
-                  </div>
-                </th>
+               
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <FileText className="h-3 w-3" />
@@ -745,19 +763,26 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
                     key={flete.id} 
                     className="border-b border-gray-200 hover:bg-blue-50"
                   >
-                    {/* Código Flete */}
+                    {/* Código Flete / Servicio */}
                     <td className="px-3 py-2 border-r border-gray-200">
-                      <div className="font-medium text-gray-900">
-                        {flete.codigo_flete}
+                      <div className=" text-gray-900">
+                       C. Flete: <p class="text-xs">{flete.codigo_flete}</p>
+                       C. Servicio: <p class="text-xs"> {flete.codigo_servicio}</p>
                       </div>
                     </td>
 
-                    {/* Código Servicio */}
                     <td className="px-3 py-2 border-r border-gray-200">
                       <div className="font-medium text-gray-900">
-                        {flete.codigo_servicio}
+                        {flete?.servicio?.cliente?.nombre}
                       </div>
                     </td>
+
+                     {/* Fecha Servicio */}
+                    <td className="px-3  border-r border-gray-200 whitespace-nowrap">
+                      <div className="text-gray-900">
+                        {formatFecha(flete?.servicio?.fecha_servicio)}
+                      </div>
+                    </td>  
 
                     {/* Monto Flete */}
                     <td className="px-3 py-2 border-r border-gray-200">
@@ -788,12 +813,7 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
                       </span>
                     </td>
 
-                    {/* Fecha Creación */}
-                    <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
-                      <div className="text-gray-900">
-                        {formatFecha(flete.fecha_creacion)}
-                      </div>
-                    </td>
+                   
 
                     {/* Observaciones */}
                     <td className="px-3 py-2 border-r border-gray-200">
@@ -806,7 +826,7 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
                           rows="2"
                         />
                       ) : (
-                        <div className="text-gray-900 truncate max-w-[200px]">
+                        <div className="text-gray-900 truncate max-w-[100px]">
                           {flete.observaciones || 'Sin observaciones'}
                         </div>
                       )}
@@ -1410,55 +1430,7 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
               </div>
             </div>
 
-            {/* Estado de Facturación (solo lectura) */}
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado de Facturación
-              </label>
-              <input
-                type="text"
-                value={gastoForm.estado_facturacion}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-50 text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                {gastoForm.se_factura === true 
-                  ? 'Se establecerá como "Pendiente" automáticamente'
-                  : 'No aplica para gastos no facturables'}
-              </p>
-            </div> */}
-
-            {/* Nº Factura (solo si se factura) */}
-            {/* {gastoForm.se_factura === true && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nº Factura
-                </label>
-                <input
-                  type="text"
-                  value={gastoForm.n_factura}
-                  onChange={(e) => handleGastoFormChange('n_factura', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                  placeholder="Ej: FAC-2026-001"
-                />
-              </div>
-            )} */}
-
-            {/* Estado de Aprobación */}
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado de Aprobación
-              </label>
-              <select
-                value={gastoForm.estado_aprobacion}
-                onChange={(e) => handleGastoFormChange('estado_aprobacion', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-              >
-                <option value="PENDIENTE">Pendiente</option>
-                <option value="APROBADO">Aprobado</option>
-                <option value="RECHAZADO">Rechazado</option>
-              </select>
-            </div> */}
+            
           </div>
 
           {/* Observaciones */}
