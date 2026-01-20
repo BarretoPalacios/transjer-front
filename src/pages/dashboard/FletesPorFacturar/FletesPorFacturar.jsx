@@ -3029,6 +3029,19 @@ const handleSaveGasto = useCallback(async () => {
     }
   };
 
+const formatHora = (fecha) => {
+  if (!fecha) return 'N/A';
+  try {
+    return new Date(fecha).toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false // Cambia a true si prefieres formato AM/PM
+    });
+  } catch (e) {   
+    return fecha;
+  }
+};
+
   // Formatear valor monetario
   const formatMoneda = (valor) => {
     if (!valor) return 'S/ 0.00';
@@ -3782,6 +3795,10 @@ const handleSaveGasto = useCallback(async () => {
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Fecha Salida</label>
                         <p className="text-sm text-gray-900">{formatFecha(fleteSeleccionado.servicio?.fecha_salida)}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Hora de Cita</label>
+                        <p className="text-sm text-gray-900">{formatHora(fleteSeleccionado.servicio?.hora_cita)}</p> 
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-500 mb-1">Descripción</label>

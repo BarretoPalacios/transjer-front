@@ -1699,7 +1699,18 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
       return fecha;
     }
   };
-
+const formatHora = (fecha) => {
+  if (!fecha) return 'N/A';
+  try {
+    return new Date(fecha).toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false // Cambia a true si prefieres formato AM/PM
+    });
+  } catch (e) {   
+    return fecha;
+  }
+};
   // Mostrar loading solo en carga inicial
   if (isLoading && fletes.length === 0) {
     return (
@@ -2238,6 +2249,10 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Fecha Salida</label>
                         <p className="text-sm text-gray-900">{formatFecha(fleteSeleccionado.servicio?.fecha_salida)}</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Hora de Cita</label>
+                        <p className="text-sm text-gray-900">{formatHora(fleteSeleccionado.servicio?.hora_cita)}</p> 
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-500 mb-1">Descripción</label>
