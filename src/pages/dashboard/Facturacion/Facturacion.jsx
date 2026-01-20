@@ -1821,7 +1821,7 @@ const Facturacion = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [sortBy, setSortBy] = useState("fecha_emision");
+  const [sortBy, setSortBy] = useState("codigo_factura");
   const [sortOrder, setSortOrder] = useState(-1);
 
   const [activeTab, setActiveTab] = useState("borradores");

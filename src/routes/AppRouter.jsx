@@ -29,6 +29,9 @@ import Generales from "../pages/dashboard/Generales/Generales";
 import ReportesHistoricos from "../pages/dashboard/ServiciosHistoricos/ReportesHistoricos";
 import Gerencia from "../pages/dashboard/GerenciaMonitoreo/Gerencia";
 import AnaliticasGerenciales from "../pages/dashboard/GerenciaMonitoreo/AnaliticasGerenciales";
+import BuscarServicio from "../pages/dashboard/BuscarServicio/BuscarServicio";
+import Gastos from "../pages/dashboard/Gastos/Gastos";
+import ReportesGastos from "../pages/dashboard/Gastos/ReportesGastos";
 
 const AppRouter = () => {
   return (
@@ -60,6 +63,8 @@ const AppRouter = () => {
           <Route path="dashboard" element={<Dashboard />} /> 
           
           <Route path="servicios" element={<Servicios />} />
+          <Route path="buscar-servicio" element={<BuscarServicio />} />
+          
           <Route path="servicios/nuevo" element={<ServicioForm />} />
           <Route path="servicios/editar/:id" element={<ServiceEditForm />} />
           <Route path="servicios/detalle/:id" element={<ServicioDetalle />} />
@@ -73,6 +78,9 @@ const AppRouter = () => {
           <Route path="contabilidad/facturacion" element={<Facturacion />} />
           <Route path="contabilidad/segimineto" element={<SeguimientoFacturas />} />
           <Route path="contabilidad/reportes" element={<Generales />} />
+
+          <Route path="gastos" element={<Gastos />} />
+          <Route path="gastos-reportes" element={<ReportesGastos />} />
 
           <Route path="gestion" element={<Administracion />} />
           <Route path="gestion/clientes" element={<Clientes />} />

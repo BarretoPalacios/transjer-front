@@ -14,6 +14,11 @@ export const serviciosPrincipalesAPI = {
     const response = await axiosInstance.get(`/servicios-principales/${servicioId}`);
     return response.data;
   },
+  
+  getServicioPrincipalByCodigo: async (codigoServicio) => {
+    const response = await axiosInstance.get(`/servicios-principales/codigo/${codigoServicio}`);
+    return response.data;
+  },
 
   updateServicioPrincipal: async (servicioId, updateData) => {
     const response = await axiosInstance.put(`/servicios-principales/${servicioId}`, updateData);

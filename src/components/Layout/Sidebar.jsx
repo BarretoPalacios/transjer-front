@@ -37,6 +37,9 @@ import {
   ChartColumnDecreasing,
   MonitorCheck,
   FileStack,
+  Search,
+  DollarSign,
+  BanknoteArrowDownIcon,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -165,6 +168,13 @@ const Sidebar = ({
       path: "/servicios",
       submenu: [
         {
+          id: "buscar-servicio",
+          label: "Buscar Servicio",
+          icon: Search,
+          path: "/buscar-servicio",
+          badge: null,
+        },
+        {
           id: "servicios",
           label: "Servicios Actuales",
           icon: Truck,
@@ -187,7 +197,28 @@ const Sidebar = ({
         }
       ],
     },
-
+{
+      id: "gastos",
+      label: "Gastos",
+      icon: BanknoteArrowDownIcon,
+      path: "/gastos",
+      submenu: [
+        {
+          id: "gastos",
+          label: "Gastos",
+          icon: BanknoteArrowDownIcon,
+          path: "/gastos",
+          badge: null,
+        },
+        {
+          id: "gastos-reportes",
+          label: "Reportes de Gastos",
+          icon: ChartColumnDecreasing,
+          path: "/gastos-reportes",
+          badge: null,
+        },
+      ],
+    },
     {
       id: "gerencia",
       label: "Gerencia",

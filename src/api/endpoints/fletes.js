@@ -375,6 +375,14 @@ export const fletesAPI = {
     const response = await axiosInstance.post('gastos-adicionales/', gastoData);
     return response.data;
   },
+  deleteGasto: async (gastoId) => {
+    try {
+      const response = await axiosInstance.delete(`gastos-adicionales/${gastoId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
 };
 
 // ======== Helper Functions ========
@@ -455,3 +463,4 @@ export const buildAdvancedFleteFilters = (filters) => {
   
   return cleanFilters;
 };
+
