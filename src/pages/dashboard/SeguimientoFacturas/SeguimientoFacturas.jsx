@@ -484,6 +484,14 @@ const formatDate = (dateString) => {
                 S/ {parseFloat(datos.monto_total || 0).toFixed(2)}
               </p>
             </div>
+                        <div>
+              <p className="text-xs font-medium text-gray-500">Fecha De Pago</p>
+              <p className="text-sm text-gray-900">{formatDate(gestion.fecha_probable_pago)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500">Banco Destino</p>
+              <p className="text-sm text-gray-900">{gestion.banco_destino || "No especificado"}</p>
+            </div>
           </div>
         </div>
 
@@ -496,11 +504,11 @@ const formatDate = (dateString) => {
             </h4>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Monto Total (Neto + Detracción)</span>
+                <span className="text-sm text-gray-600">Monto Total (Monto a Pagar + Detracción)</span>
                 <span className="text-sm font-semibold">S/ {montoTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Monto Neto a Cobrar</span>
+                <span className="text-sm text-gray-600">Monto por Pagar</span>
                 <span className="text-sm font-semibold text-green-600">
                   S/ {parseFloat(gestion.monto_neto || 0).toFixed(2)}
                 </span>
@@ -512,7 +520,7 @@ const formatDate = (dateString) => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Pagado Acumulado</span>
+                <span className="text-sm text-gray-600">Pagado hasta Ahora</span>
                 <span className="text-sm font-semibold text-blue-600">
                   S/ {parseFloat(gestion.monto_pagado_acumulado || 0).toFixed(2)}
                 </span>
@@ -562,22 +570,19 @@ const formatDate = (dateString) => {
         </div>
 
         {/* Sección 3: Información de Gestión */}
-        <div className="border rounded-lg p-4">
+        {/* <div className="border rounded-lg p-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
             <Calendar className="h-4 w-4 mr-2" />
             Gestión y Programación
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <p className="text-xs font-medium text-gray-500">Fecha Probable Pago</p>
-              <p className="text-sm text-gray-900">{formatDate(gestion.fecha_probable_pago)}</p>
-            </div>
-            <div>
+          </h4> */}
+          {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> */}
+
+            {/* <div>
               <p className="text-xs font-medium text-gray-500">Prioridad</p>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getPrioridadColor(gestion.prioridad)}`}>
                 {gestion.prioridad}
               </span>
-            </div>
+            </div> */}
             {/* <div>
               <p className="text-xs font-medium text-gray-500">Centro de Costo</p>
               <p className="text-sm text-gray-900">{gestion.centro_costo || "No especificado"}</p>
@@ -586,24 +591,21 @@ const formatDate = (dateString) => {
               <p className="text-xs font-medium text-gray-500">Responsable</p>
               <p className="text-sm text-gray-900">{gestion.responsable_gestion || "No asignado"}</p>
             </div> */}
-            <div>
-              <p className="text-xs font-medium text-gray-500">Banco Destino</p>
-              <p className="text-sm text-gray-900">{gestion.banco_destino || "No especificado"}</p>
-            </div>
-            <div>
+            
+            {/* <div>
               <p className="text-xs font-medium text-gray-500">N° Operación</p>
               <p className="text-sm text-gray-900">{gestion.nro_operacion_pago_neto || "No registrado"}</p>
-            </div>
-          </div>
-          {gestion.observaciones_admin && (
+            </div> */}
+          {/* </div> */}
+          {/* {gestion.observaciones_admin && (
             <div className="mt-4">
               <p className="text-xs font-medium text-gray-500">Observaciones</p>
               <p className="text-sm text-gray-900 mt-1 p-2 bg-gray-50 rounded">
                 {gestion.observaciones_admin}
               </p>
             </div>
-          )}
-        </div>
+          )} */}
+        {/* </div> */}
 
         {/* Sección 4: Información de Entidades */}
         {fletes.length > 0 && (
@@ -732,7 +734,7 @@ const formatDate = (dateString) => {
               </p>
             </div>
             <div className="text-center">
-              <p className="text-xs font-medium text-gray-500">Neto a Cobrar</p>
+              <p className="text-xs font-medium text-gray-500">Monto por Pagar</p>
               <p className="text-lg font-bold text-green-600">
                 S/ {parseFloat(gestion.monto_neto || 0).toFixed(2)}
               </p>
@@ -948,6 +950,9 @@ const formatDate = (dateString) => {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-300">
                 <th className="py-3 px-4 text-left font-medium text-gray-700 border-r border-gray-300">
+                  Cliente
+                </th>
+                <th className="py-3 px-4 text-left font-medium text-gray-700 border-r border-gray-300">
                   Numero Factura
                 </th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700 border-r border-gray-300">
@@ -957,19 +962,20 @@ const formatDate = (dateString) => {
                   Detracción (4%)
                 </th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700 border-r border-gray-300 bg-green-50">
-                  Neto a Cobrar
+                  Monto Por Pagar
                 </th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700 border-r border-gray-300">
-                  Estado Neto
+                  Estado de Pago
                 </th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700 border-r border-gray-300">
                   Estado Detracción
                 </th>
+                
                 <th className="py-3 px-4 text-left font-medium text-gray-700 border-r border-gray-300">
-                  Prioridad
+                  Fecha Pago del MOnto
                 </th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700 border-r border-gray-300">
-                  Fecha Pago
+                  Prioridad
                 </th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700">
                   Acciones
@@ -992,6 +998,13 @@ const formatDate = (dateString) => {
                     key={gestion.id}
                     className={`border-b border-gray-200 hover:bg-gray-50 ${isEditing ? 'bg-blue-50' : ''}`}
                   >
+                    {/* Cliente */}
+                    <td className="py-3 px-4 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {gestion.datos_completos?.fletes?.[0]?.servicio?.nombre_cliente || "SIN CLIENTE"}
+                      </div>
+                      
+                    </td>
                     {/* Factura */}
                     <td className="py-3 px-4 border-r border-gray-200">
                       <div className="font-medium text-gray-900">
@@ -1131,32 +1144,14 @@ const formatDate = (dateString) => {
                           )}
                           {gestion.estado_detraccion === "Pagado" && gestion.fecha_pago_detraccion && (
                             <div className="text-xs text-gray-500 mt-1">
-                              {formatDate(gestion.fecha_pago_detraccion)}
+                              F.Pago:{formatDate(gestion.fecha_pago_detraccion)}
                             </div>
                           )}
                         </>
                       )}
                     </td>
 
-                    {/* Prioridad */}
-                    <td className="py-3 px-4 border-r border-gray-200">
-                      {isEditing ? (
-                        <select
-                          value={editFormData.prioridad || 'Media'}
-                          onChange={(e) => handleEditChange('prioridad', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        >
-                          <option value="Baja">Baja</option>
-                          <option value="Media">Media</option>
-                          <option value="Alta">Alta</option>
-                          <option value="Urgente">Urgente</option>
-                        </select>
-                      ) : (
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getPrioridadColor(gestion.prioridad)}`}>
-                          {gestion.prioridad}
-                        </span>
-                      )}
-                    </td>
+                    
 
                     {/* Programación */}
                     <td className="py-3 px-4 border-r border-gray-200">
@@ -1221,6 +1216,26 @@ const formatDate = (dateString) => {
                       )}
                     </td>
 
+                  {/* Prioridad */}
+                    <td className="py-3 px-4 border-r border-gray-200">
+                      {isEditing ? (
+                        <select
+                          value={editFormData.prioridad || 'Media'}
+                          onChange={(e) => handleEditChange('prioridad', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="Baja">Baja</option>
+                          <option value="Media">Media</option>
+                          <option value="Alta">Alta</option>
+                          <option value="Urgente">Urgente</option>
+                        </select>
+                      ) : (
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getPrioridadColor(gestion.prioridad)}`}>
+                          {gestion.prioridad}
+                        </span>
+                      )}
+                    </td>
+
                     {/* Acciones */}
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-2">
@@ -1251,13 +1266,15 @@ const formatDate = (dateString) => {
                             </button>
                           </>
                         ) : (
-                          <button
-                            onClick={() => handleStartEdit(gestion)}
-                            className="p-1 hover:bg-gray-100 rounded"
-                            title="Editar"
-                          >
-                            <Edit className="h-4 w-4 text-gray-500" />
-                          </button>
+                          gestion.estado_pago_neto !== 'Anulado' && (
+        <button
+          onClick={() => handleStartEdit(gestion)}
+          className="p-1 hover:bg-gray-100 rounded"
+          title="Editar"
+        >
+          <Edit className="h-4 w-4 text-gray-500" />
+        </button>
+      )
                         )}
                       </div>
                     </td>

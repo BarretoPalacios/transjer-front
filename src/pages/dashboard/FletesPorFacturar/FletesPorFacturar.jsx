@@ -2332,16 +2332,18 @@ const FletesPorFacturar = () => {
   // Estados para gastos adicionales
   const [showGastoModal, setShowGastoModal] = useState(false);
   const [gastosFlete, setGastosFlete] = useState([]);
-  const [gastoForm, setGastoForm] = useState({
-    fecha: '',
-    tipo_gasto: '',
-    valor: '',
-    se_factura: false,
-    estado_facturacion: 'N/A',
-    n_factura: '',
-    estado_aprobacion: 'PENDIENTE',
-    observaciones: ''
-  });
+// En los estados del componente, dentro de la sección de estados para gastos adicionales:
+const [gastoForm, setGastoForm] = useState({
+  fecha: '',
+  tipo_gasto: '',
+  valor: '',
+  se_factura: false,
+  estado_facturacion: 'N/A',
+  n_factura: '',
+  estado_aprobacion: 'PENDIENTE',
+  observaciones: '',
+  tipo_gasto_personalizado: '' // ← AGREGAR ESTA LÍNEA
+});
 
   // Estado para el formulario de factura
   const [facturaForm, setFacturaForm] = useState({
@@ -2688,19 +2690,20 @@ const FletesPorFacturar = () => {
   }, []);
 
   // Cerrar modal de gasto
-  const handleCloseGastoModal = useCallback(() => {
-    setShowGastoModal(false);
-    setGastoForm({
-      fecha: '',
-      tipo_gasto: '',
-      valor: '',
-      se_factura: false,
-      estado_facturacion: 'N/A',
-      n_factura: '',
-      estado_aprobacion: 'PENDIENTE',
-      observaciones: ''
-    });
-  }, []);
+const handleCloseGastoModal = useCallback(() => {
+  setShowGastoModal(false);
+  setGastoForm({
+    fecha: '',
+    tipo_gasto: '',
+    valor: '',
+    se_factura: false,
+    estado_facturacion: 'N/A',
+    n_factura: '',
+    estado_aprobacion: 'PENDIENTE',
+    observaciones: '',
+    tipo_gasto_personalizado: '' // ← AGREGAR ESTA LÍNEA
+  });
+}, []);
 
   // Handler para cambios en el formulario de factura
   const handleFacturaFormChange = useCallback((field, value) => {
@@ -2712,71 +2715,87 @@ const FletesPorFacturar = () => {
     }
   }, [formErrors]);
 
-  // Handler para cambio en formulario de gasto
-  const handleGastoFormChange = useCallback((field, value) => {
-    setGastoForm(prev => {
-      const newForm = { ...prev, [field]: value };
+// Handler para cambio en formulario de gasto (NUEVO)
+const handleGastoFormChange = useCallback((field, value) => {
+  setGastoForm(prev => {
+    const newForm = { ...prev, [field]: value };
 
-      // Convertir valores string a boolean para se_factura
-      if (field === 'se_factura') {
-        if (value === 'true' || value === true) {
-          newForm.se_factura = true;
-          newForm.estado_facturacion = 'Pendiente';
-          newForm.n_factura = '';
-        } else if (value === 'false' || value === false) {
-          newForm.se_factura = false;
-          newForm.estado_facturacion = 'N/A';
-          newForm.n_factura = '---';
-        }
+    // Convertir valores string a boolean para se_factura
+    if (field === 'se_factura') {
+      // Si viene como string 'true' o 'false', convertirlo
+      if (value === 'true' || value === true) {
+        newForm.se_factura = true;
+        newForm.estado_facturacion = 'Pendiente';
+        newForm.n_factura = '';
+      } else if (value === 'false' || value === false) {
+        newForm.se_factura = false;
+        newForm.estado_facturacion = 'N/A';
+        newForm.n_factura = '---';
       }
+    }
 
-      return newForm;
-    });
-  }, []);
+    // Si cambia el tipo de gasto y no es "Otros", limpiar el campo personalizado
+    if (field === 'tipo_gasto' && value !== 'Otros') {
+      newForm.tipo_gasto_personalizado = ''; // ← AGREGAR ESTA LÍNEA
+    }
+
+    return newForm;
+  });
+}, []);
 
   // Handler para guardar gasto
-  const handleSaveGasto = useCallback(async () => {
-    if (!fleteSeleccionado) return;
+const handleSaveGasto = useCallback(async () => {
+  if (!fleteSeleccionado) return;
 
-    try {
-      // Validaciones básicas
-      if (!gastoForm.tipo_gasto) {
-        throw new Error('El tipo de gasto es requerido');
-      }
-
-      if (!gastoForm.valor || parseFloat(gastoForm.valor) <= 0) {
-        throw new Error('El valor debe ser mayor a 0');
-      }
-
-      // Preparar datos para enviar al backend
-      const gastoData = {
-        id_flete: fleteSeleccionado.id,
-        fecha_gasto: gastoForm.fecha,
-        tipo_gasto: gastoForm.tipo_gasto,
-        valor: parseFloat(gastoForm.valor),
-        se_factura_cliente: gastoForm.se_factura,
-        descripcion: gastoForm.observaciones === "" ? "GASTO AGREGADO" : gastoForm.observaciones,
-        usuario_registro: 'Sistema'
-      };
-
-      console.log('Datos listos para enviar al backend:', gastoData);
-
-      // Llamada al backend
-      await fletesAPI.createGasto(gastoData);
-
-      // Mensaje de éxito
-      setSuccessMessage('Gasto adicional registrado exitosamente');
-      handleCloseGastoModal();
-
-      // Recargar gastos si estamos en la vista de gastos
-      if (modalMode === 'gastos') {
-        fetchGastosFlete(fleteSeleccionado.id);
-      }
-
-    } catch (err) {
-      setError('Error al registrar el gasto: ' + err.message);
+  try {
+    // Validaciones básicas
+    if (!gastoForm.tipo_gasto) {
+      throw new Error('El tipo de gasto es requerido');
     }
-  }, [fleteSeleccionado, gastoForm, modalMode, fetchGastosFlete, handleCloseGastoModal]);
+
+    // Validación específica para "Otros"
+    if (gastoForm.tipo_gasto === 'Otros' && !gastoForm.tipo_gasto_personalizado.trim()) {
+      throw new Error('Debe especificar el tipo de gasto personalizado');
+    }
+
+    if (!gastoForm.valor || parseFloat(gastoForm.valor) <= 0) {
+      throw new Error('El valor debe ser mayor a 0');
+    }
+
+    // Determinar el tipo de gasto final
+    const tipoGastoFinal = gastoForm.tipo_gasto === 'Otros' 
+      ? gastoForm.tipo_gasto_personalizado 
+      : gastoForm.tipo_gasto;
+
+    // Preparar datos para enviar al backend
+    const gastoData = {
+      id_flete: fleteSeleccionado.id,
+      fecha_gasto: gastoForm.fecha,
+      tipo_gasto: tipoGastoFinal, // ← USAR EL TIPO CORRECTO
+      valor: parseFloat(gastoForm.valor),
+      se_factura_cliente: gastoForm.se_factura,
+      descripcion: gastoForm.observaciones === "" ? "GASTO AGREGADO" : gastoForm.observaciones,
+      usuario_registro: 'Sistema'
+    };
+
+    console.log('Datos listos para enviar al backend:', gastoData);
+
+    // Llamada al backend
+    await fletesAPI.createGasto(gastoData);
+
+    // Mensaje de éxito
+    setSuccessMessage('Gasto adicional registrado exitosamente');
+    handleCloseGastoModal();
+
+    // Recargar gastos si estamos en la vista de gastos
+    if (modalMode === 'gastos') {
+      fetchGastosFlete(fleteSeleccionado.id);
+    }
+
+  } catch (err) {
+    setError('Error al registrar el gasto: ' + err.message);
+  }
+}, [fleteSeleccionado, gastoForm, modalMode, fetchGastosFlete, handleCloseGastoModal]);
 
   // Validar formulario de factura
   const validateFacturaForm = () => {
@@ -4038,7 +4057,7 @@ const FletesPorFacturar = () => {
                                 title="Eliminar gasto"
                                 disabled={isDeletingGasto}
                               >
-                                <X className="h-3.5 w-3.5" />
+                                Eliminar
                               </button>
                             </div>
                           </td>
@@ -4270,139 +4289,156 @@ const FletesPorFacturar = () => {
 
       {/* Modal para agregar gasto adicional */}
       <Modal
-        isOpen={showGastoModal}
-        onClose={handleCloseGastoModal}
-        title={`Agregar Gasto Adicional - ${fleteSeleccionado?.codigo_flete || ''}`}
-        size="medium"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 mb-4">
-            Complete el formulario para registrar un gasto adicional al flete
-          </p>
+  isOpen={showGastoModal}
+  onClose={handleCloseGastoModal}
+  title={`Agregar Gasto Adicional - ${fleteSeleccionado?.codigo_flete || ''}`}
+  size="medium"
+>
+  <div className="space-y-4">
+    <p className="text-sm text-gray-600 mb-4">
+      Complete el formulario para registrar un gasto adicional al flete
+    </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Fecha */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Fecha *
-              </label>
-              <input
-                type="date"
-                value={gastoForm.fecha}
-                onChange={(e) => handleGastoFormChange('fecha', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">La fecha se establece automáticamente</p>
-            </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Fecha */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          <Calendar className="h-4 w-4" />
+          Fecha *
+        </label>
+        <input
+          type="date"
+          value={gastoForm.fecha}
+          onChange={(e) => handleGastoFormChange('fecha', e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">La fecha se establece automáticamente</p>
+      </div>
 
-            {/* Tipo de Gasto */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Gasto *
-              </label>
-              <select
-                value={gastoForm.tipo_gasto}
-                onChange={(e) => handleGastoFormChange('tipo_gasto', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                required
-              >
-                <option value="">Seleccione un tipo</option>
-                {tipoGastoOptions.map((tipo) => (
-                  <option key={tipo} value={tipo}>
-                    {tipo}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Valor */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                Valor *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">S/</span>
-                <input
-                  type="number"
-                  value={gastoForm.valor}
-                  onChange={(e) => handleGastoFormChange('valor', e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* ¿Se Factura? */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ¿Se Factura al Cliente? *
-              </label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="se_factura"
-                    value={true}
-                    checked={gastoForm.se_factura === true}
-                    onChange={(e) => handleGastoFormChange('se_factura', e.target.value === 'true' ? true : e.target.value)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="ml-2 text-sm">SÍ</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="se_factura"
-                    value={false}
-                    checked={gastoForm.se_factura === false}
-                    onChange={(e) => handleGastoFormChange('se_factura', e.target.value === 'false' ? false : e.target.value)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="ml-2 text-sm">NO</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Observaciones */}
-          <div className="col-span-1 md:col-span-2">
+      {/* Tipo de Gasto */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Tipo de Gasto *
+        </label>
+        <select
+          value={gastoForm.tipo_gasto}
+          onChange={(e) => handleGastoFormChange('tipo_gasto', e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+          required
+        >
+          <option value="">Seleccione un tipo</option>
+          {tipoGastoOptions.map((tipo) => (
+            <option key={tipo} value={tipo}>
+              {tipo}
+            </option>
+          ))}
+        </select>
+        
+        {/* ↓ AGREGAR ESTE CAMPO DINÁMICO ↓ */}
+        {gastoForm.tipo_gasto === 'Otros' && (
+          <div className="mt-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Observaciones
+              Especifique el tipo de gasto *
             </label>
-            <textarea
-              value={gastoForm.observaciones}
-              onChange={(e) => handleGastoFormChange('observaciones', e.target.value)}
+            <input
+              type="text"
+              value={gastoForm.tipo_gasto_personalizado}
+              onChange={(e) => handleGastoFormChange('tipo_gasto_personalizado', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-              placeholder="Observaciones adicionales..."
-              rows="3"
+              placeholder="Escriba el tipo de gasto personalizado"
+              required={gastoForm.tipo_gasto === 'Otros'}
             />
           </div>
+        )}
+      </div>
 
-          {/* Botones */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <Button
-              onClick={handleCloseGastoModal}
-              variant="secondary"
-              size="small"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSaveGasto}
-              variant="primary"
-              size="small"
-              icon={Save}
-            >
-              Guardar Gasto
-            </Button>
-          </div>
+      {/* Valor */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Valor *
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">S/</span>
+          <input
+            type="number"
+            value={gastoForm.valor}
+            onChange={(e) => handleGastoFormChange('valor', e.target.value)}
+            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+            required
+          />
         </div>
-      </Modal>
+      </div>
+
+      {/* ¿Se Factura? */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          ¿Se Factura al Cliente? *
+        </label>
+        <div className="flex space-x-4">
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="se_factura"
+              value={true}
+              checked={gastoForm.se_factura === true}
+              onChange={(e) => handleGastoFormChange('se_factura', e.target.value === 'true' ? true : e.target.value)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="ml-2 text-sm">SÍ</span>
+          </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="se_factura"
+              value={false}
+              checked={gastoForm.se_factura === false}
+              onChange={(e) => handleGastoFormChange('se_factura', e.target.value === 'false' ? false : e.target.value)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="ml-2 text-sm">NO</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    {/* Observaciones */}
+    <div className="col-span-1 md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Observaciones
+      </label>
+      <textarea
+        value={gastoForm.observaciones}
+        onChange={(e) => handleGastoFormChange('observaciones', e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+        placeholder="Observaciones adicionales..."
+        rows="3"
+      />
+    </div>
+
+    {/* Botones */}
+    <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+      <Button
+        onClick={handleCloseGastoModal}
+        variant="secondary"
+        size="small"
+      >
+        Cancelar
+      </Button>
+      <Button
+        onClick={handleSaveGasto}
+        variant="primary"
+        size="small"
+        icon={Save}
+      >
+        Guardar Gasto
+      </Button>
+    </div>
+  </div>
+</Modal>
 
       {/* Modal de confirmación para eliminar gasto */}
       <Modal
