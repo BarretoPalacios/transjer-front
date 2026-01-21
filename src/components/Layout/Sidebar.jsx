@@ -241,6 +241,18 @@ const Sidebar = ({
           path: "/gerencia/gerencia",
         },
         {
+          id: "monitoreo-placas",
+          label: "Monitoreo de Placas",
+          icon: MonitorCheck,
+          path: "/gerencia/monitoreo-placas",
+        },
+        {
+          id: "monitoreo-proveedores",
+          label: "Monitoreo de Proveedores",
+          icon: MonitorCheck,
+          path: "/gerencia/monitoreo-placas",
+        },
+        {
           id: "analiticas",
           label: "Analiticas",
           path: "/gerencia/analiticas",

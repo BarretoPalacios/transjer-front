@@ -33,6 +33,7 @@ import BuscarServicio from "../pages/dashboard/BuscarServicio/BuscarServicio";
 import Gastos from "../pages/dashboard/Gastos/Gastos";
 import ReportesGastos from "../pages/dashboard/Gastos/ReportesGastos";
 import GastosAsociados from "../pages/dashboard/GastosAsociados/GastosAsociados";
+import MonitoreoPlacas from "../pages/dashboard/MonitoreoPlacas/MonitoreoPlacas";
 
 const AppRouter = () => {
   return (
@@ -94,6 +95,7 @@ const AppRouter = () => {
           <Route path="gerencia/actividad" element={<Historicos />} />
           <Route path="gerencia/gerencia" element={<Gerencia />} />
           <Route path="gerencia/analiticas" element={<AnaliticasGerenciales />} />
+          <Route path="gerencia/monitoreo-placas" element={<MonitoreoPlacas />} />
           <Route path="documentos" element={<Documentos />} />
           
         </Route>

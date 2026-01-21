@@ -126,6 +126,44 @@ getKpisCompletos: async (filters = {}, pagination = {}) => {
     };
   },
 
+getResumenPorPlaca: async (filters = {}) => {
+    const params = new URLSearchParams();
+
+    // Parámetros de filtrado
+    if (filters.placa) params.append('placa', filters.placa);
+    if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+    if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+
+    const response = await axiosInstance.get(`/gerencia/resumen-por-placa?${params.toString()}`);
+    
+    console.log('Resumen por Placa Response:', response.data);
+    
+    // Formatear la respuesta para consistencia
+    return {
+      resumen: response.data.resumen || {
+        total_placas: 0,
+        total_servicios: 0,
+        total_vendido: 0
+      },
+      filtros_aplicados: response.data.filtros_aplicados || {
+        placa: null,
+        fecha_inicio: null,
+        fecha_fin: null
+      },
+      detalle_por_placa: response.data.detalle_por_placa || [],
+      items: response.data.detalle_por_placa || [], // Para compatibilidad con paginación
+      pagination: {
+        total: response.data.detalle_por_placa?.length || 0,
+        page: 1,
+        pageSize: response.data.detalle_por_placa?.length || 0,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false
+      }
+    };
+  },
+
+
   // Obtener gestión por ID
   getGestionById: async (gestionId) => {
     const response = await axiosInstance.get(`/facturacion-gestion/${gestionId}`);
