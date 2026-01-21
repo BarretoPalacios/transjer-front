@@ -80,7 +80,7 @@ export const facturacionGestionAPI = {
     };
   },
 
-  getAllGestionesAdvance: async (filters = {}, pagination = {}) => {
+getKpisCompletos: async (filters = {}, pagination = {}) => {
     const params = new URLSearchParams();
 
     // Parámetros de paginación
@@ -90,24 +90,38 @@ export const facturacionGestionAPI = {
     params.append('page', page);
     params.append('page_size', pageSize);
 
-    if (filters.fecha_servicio_inicio) params.append('fecha_servicio_inicio', filters.fecha_servicio_inicio);
-    if (filters.fecha_servicio_fin) params.append('fecha_servicio_fin', filters.fecha_servicio_fin);
+    // Parámetros de filtro (nombres actualizados según la nueva API)
     if (filters.nombre_cliente) params.append('nombre_cliente', filters.nombre_cliente);
-    
+    if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+    if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
 
-    const response = await axiosInstance.get(`/facturacion-gestion/advance-list/?${params.toString()}`);
+    const response = await axiosInstance.get(`/gerencia/kpis-completos/?${params.toString()}`);
     
-    // Devuelve toda la respuesta paginada
+    console.log('KPI Completos Response:', response.data); // Para debugging
+    
+    // Formatear la respuesta para que coincida con la estructura esperada por el frontend
     return {
-      summary:response.data.summary,
-      items: response.data.items,
+      summary: response.data.summary || {
+        total_vendido: 0,
+        total_facturado: 0,
+        total_pagado: 0,
+        total_pendiente: 0,
+        total_detracciones: 0,
+        total_pagado_detracc: 0,
+        total_pendiente_detracc: 0,
+        cantidad_fletes_vendidos: 0,
+        total_facturas: 0,
+        cliente_buscado: '',
+        cliente_encontrado: ''
+      },
+      items: response.data.items || [],
       pagination: {
-        total: response.data.total,
-        page: response.data.page,
-        pageSize: response.data.page_size,
-        totalPages: response.data.total_pages,
-        hasNext: response.data.has_next,
-        hasPrev: response.data.has_prev
+        total: response.data.pagination?.total || 0,
+        page: response.data.pagination?.page || page,
+        pageSize: response.data.pagination?.page_size || pageSize,
+        totalPages: response.data.pagination?.total_pages || 1,
+        hasNext: response.data.pagination?.has_next || false,
+        hasPrev: response.data.pagination?.has_prev || false
       }
     };
   },
