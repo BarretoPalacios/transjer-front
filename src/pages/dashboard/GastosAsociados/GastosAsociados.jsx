@@ -495,14 +495,14 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
         </div>
         
         <div className="flex items-center space-x-2 mt-4 lg:mt-0">
-          <Button
+          {/* <Button
             onClick={handleCreate}
             variant="primary"
             size="small"
             icon={Plus}
           >
             Nuevo Gasto
-          </Button>
+          </Button> */}
         </div>
       </div>
 
