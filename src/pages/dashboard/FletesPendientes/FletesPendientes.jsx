@@ -1916,6 +1916,12 @@ const formatHora = (fecha) => {
                 </th>
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
                   <div className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" />
+                    Tipo Servicio
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
                     <CheckCircle className="h-3 w-3" />
                     Estado
                   </div>
@@ -1988,7 +1994,11 @@ const formatHora = (fecha) => {
                         </div>
                       )}
                     </td>
-
+<td className="px-3 py-2 border-r border-gray-200">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}>
+                        {flete?.servicio?.tipo_servicio || flete?.servicio?.modalidad_servicio }
+                      </span>
+                    </td>
                     {/* Estado */}
                     <td className="px-3 py-2 border-r border-gray-200">
                       <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getEstadoBadgeClass(flete.estado_flete)}`}>
