@@ -95,7 +95,7 @@ getKpisCompletos: async (filters = {}, pagination = {}) => {
     if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
     if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
 
-    const response = await axiosInstance.get(`/gerencia/kpis-completos/?${params.toString()}`);
+    const response = await axiosInstance.get(`/gerencia/kpis-completos?${params.toString()}`);
     
     console.log('KPI Completos Response:', response.data); // Para debugging
     
