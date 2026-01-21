@@ -80,6 +80,38 @@ export const facturacionGestionAPI = {
     };
   },
 
+  getAllGestionesAdvance: async (filters = {}, pagination = {}) => {
+    const params = new URLSearchParams();
+
+    // Parámetros de paginación
+    const page = pagination.page || 1;
+    const pageSize = pagination.pageSize || 100;
+    
+    params.append('page', page);
+    params.append('page_size', pageSize);
+
+    if (filters.fecha_servicio_inicio) params.append('fecha_servicio_inicio', filters.fecha_servicio_inicio);
+    if (filters.fecha_servicio_fin) params.append('fecha_servicio_fin', filters.fecha_servicio_fin);
+    if (filters.nombre_cliente) params.append('nombre_cliente', filters.nombre_cliente);
+    
+
+    const response = await axiosInstance.get(`/facturacion-gestion/advance-list/?${params.toString()}`);
+    
+    // Devuelve toda la respuesta paginada
+    return {
+      summary:response.data.summary,
+      items: response.data.items,
+      pagination: {
+        total: response.data.total,
+        page: response.data.page,
+        pageSize: response.data.page_size,
+        totalPages: response.data.total_pages,
+        hasNext: response.data.has_next,
+        hasPrev: response.data.has_prev
+      }
+    };
+  },
+
   // Obtener gestión por ID
   getGestionById: async (gestionId) => {
     const response = await axiosInstance.get(`/facturacion-gestion/${gestionId}`);

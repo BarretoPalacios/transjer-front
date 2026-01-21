@@ -796,14 +796,14 @@ const formatDate = (dateString) => {
   <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-xs font-medium text-gray-500 mb-1">Neto Total</p>
+        <p className="text-xs font-medium text-gray-500 mb-1">Total Facturado</p>
         <p className="text-lg font-semibold text-gray-900">
           S/ {estadisticas.montos_totales?.neto || "0.00"}
         </p>
       </div>
       <DollarSign className="text-green-500 h-5 w-5" />
     </div>
-    <p className="text-xs text-gray-400 mt-2">Monto neto total de gestiones</p>
+    <p className="text-xs text-gray-400 mt-2">Monto total facturado</p>
   </div>
 
   {/* Pagado Total */}

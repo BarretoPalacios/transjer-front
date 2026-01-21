@@ -77,7 +77,7 @@ const AppRouter = () => {
           <Route path="contabilidad/fletes-por-facturar" element={<FletesPorFacturar />} />
           <Route path="contabilidad/facturacion" element={<Facturacion />} />
           <Route path="contabilidad/segimineto" element={<SeguimientoFacturas />} />
-          <Route path="contabilidad/reportes" element={<Generales />} />
+          {/* <Route path="contabilidad/reportes" element={<Generales />} /> */}
 
           <Route path="gastos" element={<Gastos />} />
           <Route path="gastos-reportes" element={<ReportesGastos />} />

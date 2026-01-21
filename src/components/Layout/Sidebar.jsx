@@ -153,12 +153,12 @@ const Sidebar = ({
           path: "/contabilidad/segimineto",
           icon: Receipt,
         },
-        {
-          id: "reportes",
-          label: "Reportes Generales",
-          icon: BarChart3,
-          path: "/contabilidad/reportes",
-        },
+        // {
+        //   id: "reportes",
+        //   label: "Reportes Generales",
+        //   icon: BarChart3,
+        //   path: "/contabilidad/reportes",
+        // },
       ],
     },
     {
