@@ -32,6 +32,7 @@ import AnaliticasGerenciales from "../pages/dashboard/GerenciaMonitoreo/Analitic
 import BuscarServicio from "../pages/dashboard/BuscarServicio/BuscarServicio";
 import Gastos from "../pages/dashboard/Gastos/Gastos";
 import ReportesGastos from "../pages/dashboard/Gastos/ReportesGastos";
+import GastosAsociados from "../pages/dashboard/GastosAsociados/GastosAsociados";
 
 const AppRouter = () => {
   return (
@@ -77,7 +78,7 @@ const AppRouter = () => {
           <Route path="contabilidad/fletes-por-facturar" element={<FletesPorFacturar />} />
           <Route path="contabilidad/facturacion" element={<Facturacion />} />
           <Route path="contabilidad/segimineto" element={<SeguimientoFacturas />} />
-          {/* <Route path="contabilidad/reportes" element={<Generales />} /> */}
+          <Route path="contabilidad/gastos-adicionales" element={<GastosAsociados />} />
 
           <Route path="gastos" element={<Gastos />} />
           <Route path="gastos-reportes" element={<ReportesGastos />} />
@@ -87,7 +88,8 @@ const AppRouter = () => {
           <Route path="gestion/proveedores" element={<Proveedores />} />
           <Route path="gestion/flotas" element={<Flotas />} />
           <Route path="gestion/personal" element={<Personal />} />
-          
+
+         
 
           <Route path="gerencia/actividad" element={<Historicos />} />
           <Route path="gerencia/gerencia" element={<Gerencia />} />

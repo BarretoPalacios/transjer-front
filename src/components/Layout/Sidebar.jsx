@@ -40,6 +40,8 @@ import {
   Search,
   DollarSign,
   BanknoteArrowDownIcon,
+  PlusCircle,
+  Users2Icon,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -148,11 +150,18 @@ const Sidebar = ({
           icon: ArrowBigRightIcon,
         },
         {
+          id: "gastos-adicionales",
+          label: "Gastos Adicionales",
+          path: "/contabilidad/gastos-adicionales",
+          icon: PlusCircle,
+        },
+        {
           id: "segimineto",
           label: "Segimineto De Facturas",
           path: "/contabilidad/segimineto",
           icon: Receipt,
         },
+        
         // {
         //   id: "reportes",
         //   label: "Reportes Generales",
@@ -255,6 +264,12 @@ const Sidebar = ({
       label: "Configuración",
       icon: Settings,
       path: "/configuracion",
+    },
+    {
+      id: "usuarios",
+      label: "Usuarios",
+      icon: Users2Icon,
+      path: "/usuarios",
     },
   ];
 
