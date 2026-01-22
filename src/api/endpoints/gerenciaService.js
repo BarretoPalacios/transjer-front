@@ -347,6 +347,76 @@ export const gerenciaServiceAPI = {
     }
   },
 
+
+  // ==========================================
+// Resumen por Proveedor
+// ==========================================
+
+getResumenPorProveedor: async (filters = {}) => {
+  const params = new URLSearchParams();
+
+  // Parámetros de filtrado
+  if (filters.proveedor) params.append('nombre_proveedor', filters.proveedor);
+  if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+  if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+
+  const response = await axiosInstance.get(`/gerencia/resumen-por-proveedor?${params.toString()}`);
+  
+  console.log('Resumen por Proveedor Response:', response.data);
+  
+  // Formatear la respuesta para consistencia
+  return {
+    resumen: response.data.resumen || {
+      total_proveedores: 0,
+      total_servicios: 0,
+      total_vendido: 0
+    },
+    filtros_aplicados: response.data.filtros_aplicados || {
+      proveedor: null,
+      fecha_inicio: null,
+      fecha_fin: null
+    },
+    detalle_por_proveedor: response.data.detalle_por_proveedor || [],
+    items: response.data.detalle_por_proveedor || [], // Para compatibilidad con paginación
+    pagination: {
+      total: response.data.detalle_por_proveedor?.length || 0,
+      page: 1,
+      pageSize: response.data.detalle_por_proveedor?.length || 0,
+      totalPages: 1,
+      hasNext: false,
+      hasPrev: false
+    }
+  };
+},
+
+// ==========================================
+// Sugerencias de Proveedores (autocompletado)
+// ==========================================
+
+getProveedoresSugerencias: async () => {
+  try {
+    // Primero obtenemos el resumen sin filtros para todos los proveedores
+    const response = await gerenciaServiceAPI.getResumenPorProveedor({});
+    
+    // Extraemos solo los nombres de proveedores del detalle
+    const proveedores = response.detalle_por_proveedor?.map(item => item.proveedor) || [];
+    
+    // Eliminar duplicados y ordenar alfabéticamente
+    return [...new Set(proveedores)].sort();
+  } catch (error) {
+    console.error('Error obteniendo sugerencias de proveedores:', error);
+    
+    // Si hay error, intentamos obtener directamente del backend
+    try {
+      const response = await axiosInstance.get('/gerencia/proveedores-sugerencias');
+      return response.data;
+    } catch (fallbackError) {
+      console.error('Error en fallback de sugerencias:', fallbackError);
+      return [];
+    }
+  }
+},
+
   // Obtener clientes para sugerencias
   getClientesSugerencias: async () => {
     try {

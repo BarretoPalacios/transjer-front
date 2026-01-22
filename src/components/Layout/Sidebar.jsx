@@ -250,7 +250,7 @@ const Sidebar = ({
           id: "monitoreo-proveedores",
           label: "Monitoreo de Proveedores",
           icon: MonitorCheck,
-          path: "/gerencia/monitoreo-placas",
+          path: "/gerencia/monitoreo-proveedores",
         },
         {
           id: "analiticas",

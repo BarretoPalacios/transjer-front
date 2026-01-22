@@ -34,6 +34,7 @@ import Gastos from "../pages/dashboard/Gastos/Gastos";
 import ReportesGastos from "../pages/dashboard/Gastos/ReportesGastos";
 import GastosAsociados from "../pages/dashboard/GastosAsociados/GastosAsociados";
 import MonitoreoPlacas from "../pages/dashboard/MonitoreoPlacas/MonitoreoPlacas";
+import MonitoreoProveedores from "../pages/dashboard/MonitoreoProveedores/MonitoreoProveedores";
 
 const AppRouter = () => {
   return (
@@ -96,6 +97,7 @@ const AppRouter = () => {
           <Route path="gerencia/gerencia" element={<Gerencia />} />
           <Route path="gerencia/analiticas" element={<AnaliticasGerenciales />} />
           <Route path="gerencia/monitoreo-placas" element={<MonitoreoPlacas />} />
+          <Route path="gerencia/monitoreo-proveedores" element={<MonitoreoProveedores />} />
           <Route path="documentos" element={<Documentos />} />
           
         </Route>

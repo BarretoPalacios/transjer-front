@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  Truck,
+  Users,
   Filter,
   Calendar,
   DollarSign,
@@ -8,9 +8,9 @@ import {
   X,
   CheckCircle,
   TrendingUp,
-  Download,
-  Printer,
-  Search
+  Search,
+  Building,
+  FileText
 } from 'lucide-react';
 
 // Componentes comunes
@@ -20,20 +20,19 @@ import Pagination from '../../../components/common/Pagination/Pagination';
 // API
 import { gerenciaServiceAPI } from '../../../api/endpoints/gerenciaService';
 
-
-const MonitoreoPlacas = () => {
+const MonitoreoProveedores = () => {
   const [data, setData] = useState({
     resumen: {
-      total_placas: 0,
+      total_proveedores: 0,
       total_servicios: 0,
       total_vendido: 0
     },
     filtros_aplicados: {
-      placa: null,
+      proveedor: null,
       fecha_inicio: null,
       fecha_fin: null
     },
-    detalle_por_placa: []
+    detalle_por_proveedor: []
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -51,7 +50,7 @@ const MonitoreoPlacas = () => {
   
   // Estados para filtros
   const [filters, setFilters] = useState({
-    placa: '',
+    proveedor: '',
     fecha_inicio: '',
     fecha_fin: ''
   });
@@ -63,8 +62,8 @@ const MonitoreoPlacas = () => {
     rango_fechas: ''
   });
   
-  // Sugerencias de placas
-  const [placasSugerencias, setPlacasSugerencias] = useState([]);
+  // Sugerencias de proveedores
+  const [proveedoresSugerencias, setProveedoresSugerencias] = useState([]);
   
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -114,10 +113,11 @@ const MonitoreoPlacas = () => {
           }
         });
         
-        const response = await gerenciaServiceAPI.getResumenPorPlaca(cleanFilters);
+        // Llamar a la API específica para proveedores
+        const response = await gerenciaServiceAPI.getResumenPorProveedor(cleanFilters);
         
         // Calcular paginación
-        const totalItems = response.detalle_por_placa?.length || 0;
+        const totalItems = response.detalle_por_proveedor?.length || 0;
         const totalPages = Math.ceil(totalItems / itemsPerPage);
         
         // Calcular índices para la página actual
@@ -125,11 +125,11 @@ const MonitoreoPlacas = () => {
         const endIndex = startIndex + itemsPerPage;
         
         // Obtener elementos de la página actual
-        const paginatedItems = response.detalle_por_placa?.slice(startIndex, endIndex) || [];
+        const paginatedItems = response.detalle_por_proveedor?.slice(startIndex, endIndex) || [];
         
         setData({
           ...response,
-          detalle_por_placa: paginatedItems
+          detalle_por_proveedor: paginatedItems
         });
         
         setPagination({
@@ -175,16 +175,16 @@ const MonitoreoPlacas = () => {
   // Cargar datos iniciales
   useEffect(() => {
     fetchResumen();
-    cargarPlacasSugerencias();
+    cargarProveedoresSugerencias();
   }, []);
 
-  // Cargar sugerencias de placas
-  const cargarPlacasSugerencias = useCallback(async () => {
+  // Cargar sugerencias de proveedores
+  const cargarProveedoresSugerencias = useCallback(async () => {
     try {
-      const placas = await gerenciaServiceAPI.getPlacasSugerencias();
-      setPlacasSugerencias(placas);
+      const proveedores = await gerenciaServiceAPI.getProveedoresSugerencias();
+      setProveedoresSugerencias(proveedores);
     } catch (err) {
-      console.error('Error cargando sugerencias de placas:', err);
+      console.error('Error cargando sugerencias de proveedores:', err);
     }
   }, []);
 
@@ -204,7 +204,7 @@ const MonitoreoPlacas = () => {
 
   const clearFilters = useCallback(() => {
     setFilters({
-      placa: '',
+      proveedor: '',
       fecha_inicio: '',
       fecha_fin: ''
     });
@@ -233,29 +233,13 @@ const MonitoreoPlacas = () => {
     [fetchResumen, filters]
   );
 
-  // Función para exportar a Excel
-  const handleExportExcel = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Aquí iría la lógica para exportar a Excel
-      // Por ahora solo mostramos un mensaje
-      setSuccessMessage('Función de exportación a Excel implementada en el backend');
-    } catch (err) {
-      setError('Error al exportar: ' + err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   // Formatear moneda
   const formatMoneda = (valor) => {
     return gerenciaServiceAPI.formatMoneda(valor);
   };
 
   // Mostrar loading solo en carga inicial
-  if (isLoading && data.detalle_por_placa.length === 0) {
+  if (isLoading && data.detalle_por_proveedor.length === 0) {
     return (
       <div className="p-4">
         <div className="animate-pulse">
@@ -274,10 +258,10 @@ const MonitoreoPlacas = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Resumen por Placa
+            Monitoreo de Proveedores
           </h1>
           <p className="text-gray-600 mt-1">
-            Análisis de servicios y ventas por vehículo
+            Análisis de servicios y ventas por proveedor
           </p>
         </div>
       </div>
@@ -287,10 +271,10 @@ const MonitoreoPlacas = () => {
         <div className="bg-white rounded-lg border border-blue-300 p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Placas</p>
-              <p className="text-2xl font-bold text-blue-700">{data.resumen.total_placas}</p>
+              <p className="text-sm text-gray-500">Total Proveedores</p>
+              <p className="text-2xl font-bold text-blue-700">{data.resumen.total_proveedores}</p>
             </div>
-            <Truck className="h-8 w-8 text-blue-500" />
+            <Users className="h-8 w-8 text-blue-500" />
           </div>
         </div>
         
@@ -386,30 +370,30 @@ const MonitoreoPlacas = () => {
 
         {/* Filtros en tiempo real */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Placa */}
+          {/* Proveedor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Placa del Vehículo
+              <Users className="h-4 w-4" />
+              Nombre del Proveedor
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                value={filters.placa}
-                onChange={(e) => handleFilterChange('placa', e.target.value.toUpperCase())}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm uppercase"
-                placeholder="Ej: ABC-123"
-                list="placas-sugerencias"
+                value={filters.proveedor}
+                onChange={(e) => handleFilterChange('proveedor', e.target.value)}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                placeholder="Ej: Transporte Guerrero"
+                list="proveedores-sugerencias"
               />
-              <datalist id="placas-sugerencias">
-                {placasSugerencias.map((placa, index) => (
-                  <option key={index} value={placa} />
+              <datalist id="proveedores-sugerencias">
+                {proveedoresSugerencias.map((proveedor, index) => (
+                  <option key={index} value={proveedor} />
                 ))}
               </datalist>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Deje vacío para ver todas las placas
+              Deje vacío para ver todos los proveedores
             </p>
           </div>
 
@@ -497,14 +481,17 @@ const MonitoreoPlacas = () => {
         )}
       </div>
 
-      {/* Tabla de Detalle por Placa */}
+      {/* Tabla de Detalle por Proveedor */}
       <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b border-gray-300">
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  PLACA
+                  PROVEEDOR
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  RAZÓN SOCIAL / RUC
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   TOTAL DE SERVICIOS
@@ -512,35 +499,46 @@ const MonitoreoPlacas = () => {
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   TOTAL VENDIDO
                 </th>
-                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   SERVICIOS DISTINTOS
-                </th> */}
-                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  FLETES ASOCIADOS
-                </th> */}
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  CANTIDAD DE FLETES
+                </th>
               </tr>
             </thead>
             <tbody>
-              {data.detalle_por_placa.map((item, index) => (
+              {data.detalle_por_proveedor.map((item, index) => (
                 <tr 
-                  key={`${item.placa}-${index}`} 
+                  key={`${item.proveedor}-${index}`} 
                   className="border-b border-gray-200 hover:bg-blue-50"
                 >
-                  {/* Placa */}
+                  {/* Proveedor */}
                   <td className="px-4 py-3">
-                    <div className="font-bold text-gray-900 text-lg">
-                      {item.placa}
+                    <div className="font-bold text-gray-900">
+                      {item.proveedor}
+                    </div>
+                  </td>
+
+                  {/* Razón Social / RUC */}
+                  <td className="px-4 py-3">
+                    <div className="text-gray-700">
+                      <div className="font-medium">{item.razon_social}</div>
+                      {item.ruc && (
+                        <div className="text-xs text-gray-500 mt-1">RUC: {item.ruc}</div>
+                      )}
                     </div>
                   </td>
 
                   {/* Total de Servicios */}
                   <td className="px-4 py-3">
-                    <div className="font-semibold text-gray-900 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full mr-2">
+                    <div className="flex items-center">
+                      <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold mr-2">
                         {item.total_servicios}
                       </span>
-                     
-                     
+                      <span className="text-gray-900 font-medium">
+                        servicio{item.total_servicios !== 1 ? 's' : ''}
+                      </span>
                     </div>
                   </td>
 
@@ -552,18 +550,28 @@ const MonitoreoPlacas = () => {
                   </td>
 
                   {/* Servicios Distintos */}
-                  {/* <td className="px-4 py-3">
-                    <div className="text-gray-900 text-center">
-                      {item.cantidad_servicios_distintos}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center">
+                      <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 text-gray-700 rounded text-xs font-medium mr-2">
+                        {item.cantidad_servicios_distintos}
+                      </span>
+                      <span className="text-gray-700">
+                        tipo{item.cantidad_servicios_distintos !== 1 ? 's' : ''}
+                      </span>
                     </div>
-                  </td> */}
+                  </td>
 
                   {/* Fletes Asociados */}
-                  {/* <td className="px-4 py-3">
-                    <div className="text-gray-900 text-center">
-                      {item.cantidad_fletes}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center">
+                      <span className="inline-flex items-center justify-center w-6 h-6 bg-orange-100 text-orange-700 rounded text-xs font-medium mr-2">
+                        {item.cantidad_fletes}
+                      </span>
+                      <span className="text-gray-700">
+                        flete{item.cantidad_fletes !== 1 ? 's' : ''}
+                      </span>
                     </div>
-                  </td> */}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -571,9 +579,9 @@ const MonitoreoPlacas = () => {
         </div>
 
         {/* Sin resultados */}
-        {data.detalle_por_placa.length === 0 && !isLoading && (
+        {data.detalle_por_proveedor.length === 0 && !isLoading && (
           <div className="text-center py-12">
-            <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron resultados</h3>
             <p className="text-gray-600 mb-6">
               {Object.values(filters).some(f => f && f.trim() !== '')
@@ -590,7 +598,7 @@ const MonitoreoPlacas = () => {
       </div>
 
       {/* Paginación y registros por página */}
-      {data.detalle_por_placa.length > 0 && (
+      {data.detalle_por_proveedor.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <span className="text-sm text-gray-600">Mostrar</span>
@@ -630,8 +638,8 @@ const MonitoreoPlacas = () => {
         <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
           <h4 className="text-sm font-semibold text-gray-700 mb-2">Filtros Aplicados:</h4>
           <div className="text-sm text-gray-600">
-            {data.filtros_aplicados.placa && (
-              <p>• Placa: <span className="font-medium">{data.filtros_aplicados.placa}</span></p>
+            {data.filtros_aplicados.proveedor && (
+              <p>• Proveedor: <span className="font-medium">{data.filtros_aplicados.proveedor}</span></p>
             )}
             {data.filtros_aplicados.fecha_inicio && (
               <p>• Fecha Inicio: <span className="font-medium">
@@ -650,4 +658,4 @@ const MonitoreoPlacas = () => {
   );
 };
 
-export default MonitoreoPlacas;
+export default MonitoreoProveedores;
