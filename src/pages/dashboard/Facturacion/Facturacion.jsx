@@ -77,7 +77,7 @@ const Facturacion = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState("codigo_factura");
   const [sortOrder, setSortOrder] = useState(-1);
 
@@ -106,52 +106,54 @@ const Facturacion = () => {
 
   const searchInputRef = useRef(null);
 
-  const fetchFacturas = useCallback(
-    async (searchValue = "", tab = activeTab) => {
-      setIsLoading(true);
-      setError(null);
+const fetchFacturas = useCallback(
+  async (searchValue = "", tab = activeTab) => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const filtersForAPI = facturasAPI.buildFilterParams({
-          ...filters,
-          ...(searchValue && { numero_factura: searchValue }),
-          ...(tab === "borradores" && { estado: "Borrador" }),
-          ...(tab === "emitidas" && { estado: "Emitida" }),
-        });
-        
-        const data = await facturasAPI.getAllFacturas(
-          filtersForAPI,
-          currentPage,
-          pageSize,
-          sortBy,
-          sortOrder
-        );
-        
-        setFacturas(data.items || []);
-        setTotalPages(data.total_pages || 1);
-        setTotalItems(data.total || 0);
+    try {
+      // Crear filtros combinando búsqueda por número y nombre de cliente
+      const filtersForAPI = facturasAPI.buildFilterParams({
+        ...filters,
+        // Si hay término de búsqueda, buscar por número de factura
+        ...(searchValue && { numero_factura: searchValue }),
+        // El filtro de cliente_nombre ya está en filters
+        ...(tab === "borradores" && { estado: "Borrador" }),
+        ...(tab === "emitidas" && { estado: "Emitida" }),
+      });
+      
+      const data = await facturasAPI.getAllFacturas(
+        filtersForAPI,
+        currentPage,
+        pageSize, // Ahora será 20
+        sortBy,
+        sortOrder
+      );
+      
+      setFacturas(data.items || []);
+      setTotalPages(data.total_pages || 1);
+      setTotalItems(data.total || 0);
 
-        setEstadisticas(prev => ({
-          ...prev,
-          facturas_borrador: data.items?.filter(f => f.estado === "Borrador").length || 0
-        }));
-      } catch (err) {
-        setError("Error al cargar las facturas: " + err.message);
-        console.error("Error fetching facturas:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [
-      filters,
-      currentPage,
-      pageSize,
-      sortBy,
-      sortOrder,
-      activeTab,
-    ]
-  );
-
+      setEstadisticas(prev => ({
+        ...prev,
+        facturas_borrador: data.items?.filter(f => f.estado === "Borrador").length || 0
+      }));
+    } catch (err) {
+      setError("Error al cargar las facturas: " + err.message);
+      console.error("Error fetching facturas:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  },
+  [
+    filters,
+    currentPage,
+    pageSize,
+    sortBy,
+    sortOrder,
+    activeTab,
+  ]
+);
   useEffect(() => {
     if (searchTimeout) {
       clearTimeout(searchTimeout);
@@ -391,28 +393,28 @@ const Facturacion = () => {
     setCurrentPage(1);
   }, []);
 
-  const clearFilters = useCallback(() => {
-    setFilters({
-      numero_factura: "",
-      estado: "",
-      moneda: "",
-      periodo: "",
-      fecha_emision_inicio: "",
-      fecha_emision_fin: "",
-      fecha_vencimiento_inicio: "",
-      fecha_vencimiento_fin: "",
-      fecha_pago_inicio: "",
-      fecha_pago_fin: "",
-      monto_total_minimo: "",
-      monto_total_maximo: "",
-      cliente_nombre: "",
-    });
-    setSearchTerm("");
-    setCurrentPage(1);
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, []);
+const clearFilters = useCallback(() => {
+  setFilters({
+    numero_factura: "",
+    estado: "",
+    moneda: "",
+    periodo: "",
+    fecha_emision_inicio: "",
+    fecha_emision_fin: "",
+    fecha_vencimiento_inicio: "",
+    fecha_vencimiento_fin: "",
+    fecha_pago_inicio: "",
+    fecha_pago_fin: "",
+    monto_total_minimo: "",
+    monto_total_maximo: "",
+    cliente_nombre: "",
+  });
+  setSearchTerm("");
+  setCurrentPage(1);
+  if (searchInputRef.current) {
+    searchInputRef.current.focus();
+  }
+}, []);
 
   const getActiveFiltersCount = useCallback(() => {
     return (
@@ -1059,7 +1061,7 @@ const Facturacion = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={`Buscar por número de factura o código...`}
+                placeholder={`Ejem: F001-001`}
                 className="w-full pl-8 pr-4 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               />
               {searchTerm && (
@@ -1072,6 +1074,27 @@ const Facturacion = () => {
               )}
             </div>
           </div>
+
+          <div className="flex-1">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            type="text"
+            value={filters.cliente_nombre}
+            onChange={(e) => handleFilterChange("cliente_nombre", e.target.value)}
+            placeholder="Ejem: SONEPAR"
+            className="w-full pl-8 pr-4 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+          />
+          {filters.cliente_nombre && (
+            <button
+              onClick={() => handleFilterChange("cliente_nombre", "")}
+              className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
 
           <div className="flex items-center space-x-2 mt-2 lg:mt-0">
             <Button
@@ -1489,29 +1512,42 @@ const Facturacion = () => {
         )}
       </div>
 
-      {facturas.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs text-gray-700 mb-3 sm:mb-0">
-            Mostrando{" "}
-            <span className="font-medium">
-              {Math.min((currentPage - 1) * pageSize + 1, totalItems)}
-            </span>{" "}
-            a{" "}
-            <span className="font-medium">
-              {Math.min(currentPage * pageSize, totalItems)}
-            </span>{" "}
-            de <span className="font-medium">{totalItems}</span> resultados
-          </div>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={pageSize}
-            onPageChange={setCurrentPage}
-            size="small"
-          />
-        </div>
-      )}
+{facturas.length > 0 && (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="text-xs text-gray-700 mb-3 sm:mb-0 flex items-center gap-2">
+      Mostrando{" "}
+      <span className="font-medium">
+        {Math.min((currentPage - 1) * pageSize + 1, totalItems)}
+      </span>{" "}
+      a{" "}
+      <span className="font-medium">
+        {Math.min(currentPage * pageSize, totalItems)}
+      </span>{" "}
+      de <span className="font-medium">{totalItems}</span> resultados
+      <select
+        value={pageSize}
+        onChange={(e) => {
+          setPageSize(Number(e.target.value));
+          setCurrentPage(1);
+        }}
+        className="ml-2 border border-gray-300 rounded text-xs p-1"
+      >
+        <option value={10}>10 por página</option>
+        <option value={20}>20 por página</option>
+        <option value={50}>50 por página</option>
+      </select>
+    </div>
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalItems={totalItems}
+      itemsPerPage={pageSize}
+      onPageChange={setCurrentPage}
+      size="small"
+    />
+  </div>
+)}
+
 
       <Modal
         isOpen={modalState.show}

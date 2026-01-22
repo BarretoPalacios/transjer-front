@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
-import Button from "../../common/Button/Button";
+import Button from "../../../components/common/Button/Button";
 
 const UsuarioForm = ({ 
   initialData, 

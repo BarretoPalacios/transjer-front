@@ -32,31 +32,37 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
-  const login = async (email, password) => {
-    try {
-      setError(null);
-      const response = await authAPI.login({ email, password });
-      console.log(response)
-      
-      const token = response.access_token;
-      localStorage.setItem('token', token);
-
-      
-    const user = await authAPI.verifyUser(token);
-    console.log(user);
-    localStorage.setItem('user', JSON.stringify(user));
+ const login = async (email, password) => {
+  try {
+    setError(null);
+    const response = await authAPI.login({ email, password });
     
-    setUser(user);
-
-      return { success: true, data: response };
-
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Error al iniciar sesión';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
+    const token = response.access_token;
+    localStorage.setItem('token', token);
+    
+    const user = await authAPI.verifyUser(token);
+    
+    // Crear un mapa simple de permisos
+    user.permissionsMap = {};
+    if (user.roles && Array.isArray(user.roles)) {
+      user.roles.forEach(role => {
+        role.permissions.forEach(perm => {
+          const key = `${perm.resource}_${perm.action}`;
+          user.permissionsMap[key] = true;
+        });
+      });
     }
-  };
-
+    
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+    
+    return { success: true, data: response };
+  } catch (err) {
+    const errorMessage = err.response?.data?.message || 'Error al iniciar sesión';
+    setError(errorMessage);
+    return { success: false, error: errorMessage };
+  }
+};
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -65,17 +71,7 @@ export const AuthProvider = ({ children }) => {
     // authAPI.logout();
   };
 
-  const register = async (userData) => {
-    try {
-      setError(null);
-      const response = await authAPI.register(userData);
-      return { success: true, data: response };
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Error al registrar';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    }
-  };
+
 
   return (
     <AuthContext.Provider value={{
@@ -84,7 +80,7 @@ export const AuthProvider = ({ children }) => {
       error,
       login,
       logout,
-      register,
+      // register,
       setError,
       isAuthenticated: !!user
     }}>

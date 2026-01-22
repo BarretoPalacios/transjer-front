@@ -21,7 +21,7 @@ export const authAPI = {
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
     
-    const response = await axiosInstance.get('/users/me');
+    const response = await axiosInstance.get('/users/me/advance');
     return response.data;
   },
   

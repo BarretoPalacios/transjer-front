@@ -1,6 +1,5 @@
 import axiosInstance from './axiosConfig';
 
-// Interceptor para agregar el token a cada request
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -9,19 +8,20 @@ axiosInstance.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar respuestas
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Verificamos que no estemos YA en el login para evitar bucles infinitos
+    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      
+      // Opcional: Guardar la URL actual para redirigir al usuario después del login
+      const currentPath = window.location.pathname;
+      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
     }
     return Promise.reject(error);
   }

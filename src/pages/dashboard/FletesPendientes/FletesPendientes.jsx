@@ -571,7 +571,7 @@ const formatHora = (fecha) => {
                       </div>
                     </td>
 
-                     {/* Fecha Servicio */}
+                     
                     <td className="px-3  border-r border-gray-200 whitespace-nowrap">
                       <div className="text-gray-900">
                         {formatFecha(flete?.servicio?.fecha_servicio)}

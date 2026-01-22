@@ -53,7 +53,7 @@ export const facturasAPI = {
   },
 
   // Obtener todas las facturas con filtros y paginación
-  getAllFacturas: async (filters = {}, page = 1, pageSize = 10, sortBy = 'fecha_emision', sortOrder = -1) => {
+  getAllFacturas: async (filters = {}, page = 1, pageSize = 10, sortBy = 'fecha_emnumero_facturaision', sortOrder = -1) => {
     try {
       const params = new URLSearchParams();
 
@@ -85,6 +85,8 @@ export const facturasAPI = {
       
       // Filtro de período
       if (filters.periodo) params.append('periodo', filters.periodo);
+
+      if (filters.cliente_nombre) params.append('nombre_cliente', filters.cliente_nombre);
 
       // Parámetros de paginación y ordenamiento
       params.append('page', page);
