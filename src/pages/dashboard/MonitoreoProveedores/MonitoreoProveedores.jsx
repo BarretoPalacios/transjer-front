@@ -490,21 +490,21 @@ const MonitoreoProveedores = () => {
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   PROVEEDOR
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   RAZÓN SOCIAL / RUC
-                </th>
+                </th> */}
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   TOTAL DE SERVICIOS
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   TOTAL VENDIDO
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   SERVICIOS DISTINTOS
-                </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                </th> */}
+                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   CANTIDAD DE FLETES
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody>
@@ -516,19 +516,19 @@ const MonitoreoProveedores = () => {
                   {/* Proveedor */}
                   <td className="px-4 py-3">
                     <div className="font-bold text-gray-900">
-                      {item.proveedor}
+                      {item.proveedor ? item.proveedor: "PROVEEDOR SIN NOMBRE (CUADRILLA / ALAMACEN)"}
                     </div>
                   </td>
 
                   {/* Razón Social / RUC */}
-                  <td className="px-4 py-3">
+                  {/* <td className="px-4 py-3">
                     <div className="text-gray-700">
                       <div className="font-medium">{item.razon_social}</div>
                       {item.ruc && (
                         <div className="text-xs text-gray-500 mt-1">RUC: {item.ruc}</div>
                       )}
                     </div>
-                  </td>
+                  </td> */}
 
                   {/* Total de Servicios */}
                   <td className="px-4 py-3">
@@ -550,7 +550,7 @@ const MonitoreoProveedores = () => {
                   </td>
 
                   {/* Servicios Distintos */}
-                  <td className="px-4 py-3">
+                  {/* <td className="px-4 py-3">
                     <div className="flex items-center">
                       <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 text-gray-700 rounded text-xs font-medium mr-2">
                         {item.cantidad_servicios_distintos}
@@ -559,10 +559,10 @@ const MonitoreoProveedores = () => {
                         tipo{item.cantidad_servicios_distintos !== 1 ? 's' : ''}
                       </span>
                     </div>
-                  </td>
+                  </td> */}
 
                   {/* Fletes Asociados */}
-                  <td className="px-4 py-3">
+                  {/* <td className="px-4 py-3">
                     <div className="flex items-center">
                       <span className="inline-flex items-center justify-center w-6 h-6 bg-orange-100 text-orange-700 rounded text-xs font-medium mr-2">
                         {item.cantidad_fletes}
@@ -571,7 +571,7 @@ const MonitoreoProveedores = () => {
                         flete{item.cantidad_fletes !== 1 ? 's' : ''}
                       </span>
                     </div>
-                  </td>
+                  </td> */}
                 </tr>
               ))}
             </tbody>

@@ -529,7 +529,7 @@ const MonitoreoPlacas = () => {
                   {/* Placa */}
                   <td className="px-4 py-3">
                     <div className="font-bold text-gray-900 text-lg">
-                      {item.placa}
+                      {item.placa? item.placa:"SIN PLACA (CUADRILLA / ALMACEN)"}
                     </div>
                   </td>
 
