@@ -127,7 +127,7 @@ const Sidebar = ({
       "gastos-reportes": ["gastos", "view"],
       
       // Gerencia
-      "gerencia": ["gerencia", "view"],
+      "monitoreo-facturas": ["gerencia", "view"],
       "monitoreo-placas": ["gerencia", "view"],
       "monitoreo-proveedores": ["gerencia", "view"],
       "analiticas": ["gerencia", "view"],
@@ -310,11 +310,11 @@ const Sidebar = ({
         show: shouldShowItem({ id: "gerencia" }),
         submenu: [
           {
-            id: "gerencia",
-            label: "Gerencia",
+            id: "monitoreo-facturas",
+            label: "Monitoreo de Facturas",
             icon: MonitorCheck,
             path: "/gerencia/gerencia",
-            show: shouldShowSubItem({ id: "gerencia" }),
+            show: shouldShowSubItem({ id: "monitoreo-facturas" }),
           },
           {
             id: "monitoreo-placas",

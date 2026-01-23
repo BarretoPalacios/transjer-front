@@ -71,10 +71,11 @@ const SeguimientoFacturas = () => {
     hasPrev: false,
   });
 
-  // Estados para filtros simplificados
+  // Estados para filtros - AÑADIR nombre_cliente
   const [filters, setFilters] = useState({
     estado_pago_neto: "",
     prioridad: "",
+    nombre_cliente: "", // NUEVO CAMPO
   });
 
   const [appliedFilters, setAppliedFilters] = useState(filters);
@@ -360,6 +361,7 @@ const calcularEstadisticas = useCallback(async () => {
     const emptyFilters = {
       estado_pago_neto: "",
       prioridad: "",
+      nombre_cliente: "", // LIMPIAR NUEVO CAMPO
     };
     setFilters(emptyFilters);
     setAppliedFilters(emptyFilters);
@@ -866,12 +868,30 @@ const formatDate = (dateString) => {
           className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-xs"
         />
       </div>
-      <Button
+      {/* NUEVO: Filtro por Nombre de Cliente */}
+    <div className="w-60">
+      <div className="relative">
+        <User className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+        <input
+          type="text"
+          value={filters.nombre_cliente}
+          onChange={(e) => setFilters({ ...filters, nombre_cliente: e.target.value })}
+          onKeyDown={(e) => {
+    if (e.key === 'Enter') {
+      aplicarFiltros();
+    }
+  }}
+          placeholder="Cliente..."
+          className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-xs h-8"
+        />
+      </div>
+    </div>
+      {/* <Button
         onClick={handleSearch}
         className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 h-8"
       >
         Buscar
-      </Button>
+      </Button> */}
     </div>
 
     {/* Filtro por Estado */}
@@ -893,7 +913,7 @@ const formatDate = (dateString) => {
     </div>
 
     {/* Filtro por Prioridad */}
-    <div className="w-40">
+    <div className="w-70 flex">
       <select
         value={filters.prioridad}
         onChange={(e) => setFilters({ ...filters, prioridad: e.target.value })}
@@ -905,13 +925,21 @@ const formatDate = (dateString) => {
         <option value="Media">Media</option>
         <option value="Baja">Baja</option>
       </select>
+      <Button
+        onClick={aplicarFiltros}
+        icon={Filter}
+        className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 h-8"
+      >
+        Filtrar
+      </Button>
     </div>
+
+    
 
     {/* Botones de acción agrupados */}
     <div className="flex gap-1 ml-auto">
       <Button
         onClick={aplicarFiltros}
-        // variant="secondary"
         icon={Filter}
         className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 h-8"
       >

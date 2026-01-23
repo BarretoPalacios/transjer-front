@@ -28,12 +28,17 @@ const turnosTrabajo = [
 ];
 
 const categoriasLicencia = [
-  { value: "A-I", label: "A-I" },
+  // { value: "A-I", label: "A-I" },
   { value: "A-II-a", label: "A-II-a" },
   { value: "A-II-b", label: "A-II-b" },
   { value: "A-III-a", label: "A-III-a" },
-  { value: "A-III-b", label: "A-III-b" },
+  // { value: "A-III-b", label: "A-III-b" },
   { value: "A-III-c", label: "A-III-c" },
+
+  { value: "A1", label: "A1" },
+  { value: "A3C", label: "A3C "},
+  { value: "A3B", label: "A3B" },
+  { value: "A-III-b", label: "A-III-b" },
 ];
 
 const bancosPeru = [
