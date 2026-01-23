@@ -107,7 +107,7 @@ const ServicioDetalle = () => {
         
         conductor: data.conductor ? Array.isArray(data.conductor) ? data.conductor.map(c => ({
           id: c._id || c.id,
-          nombre: c.nombres_completos || c.nombres || "Sin nombre",
+          nombre: c.nombres_completos || c.nombre || "Sin nombre",
           licencia: c.licencia_conducir || "",
           dni: c.dni || ""
         })) : [{
@@ -462,7 +462,7 @@ const ServicioDetalle = () => {
                 <div className="space-y-3">
                   {servicio.conductor.map((cond, index) => (
                     <div key={cond.id || index} className="pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-                      <div className="font-medium">{cond.nombre}</div>
+                      <div className="font-medium">{cond.nombre || servicio.conductor?.[0]?.nombres_completos || servicio.conductor?.[0]?.nombres || servicio.conductor?.[0]?.nombre || 'N/A'}</div> 
                       <div className="text-sm text-gray-600 space-y-1">
                         {cond.licencia && <div>Licencia: {cond.licencia}</div>}
                         {cond.dni && <div>DNI: {cond.dni}</div>}
@@ -579,8 +579,8 @@ const ServicioDetalle = () => {
                   variant="outline"
                   className="w-full"
                   icon={Printer}
-                >
-                  Imprimir
+                >  
+                  Imprimir ahora
                 </Button>
                 <Button
                   onClick={() => navigate('/servicios')}
