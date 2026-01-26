@@ -90,6 +90,8 @@ const Gerencia = () => {
     total_pagado_detracc: 0,
     total_pendiente_detracc: 0,
     cantidad_fletes_vendidos: 0,
+    total_pendiente_vencido:0,
+    cantidad_vencidas:0,
     total_facturas: 0,
     cliente_buscado: '',
     cliente_encontrado: ''
@@ -696,6 +698,13 @@ const Gerencia = () => {
             subtitle={`${Math.round((summary.total_pagado / summary.total_facturado) * 100)}% del total`}
             icon={CheckCircle}
             color="green"
+          />
+          <MetricCard
+            title="Total vencido"
+            value={formatCurrency(summary.total_pendiente_vencido)}
+            subtitle={`${summary.cantidad_vencidas} facturas del total`}
+            icon={AlertTriangle}
+            color="red"
           />
         </div>
 
