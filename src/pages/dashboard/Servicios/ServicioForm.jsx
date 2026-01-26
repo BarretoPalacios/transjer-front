@@ -568,7 +568,7 @@ const handleAddAuxiliar = useCallback((auxiliar) => {
           { field: "zona", label: "Zona" },
           { field: "solicitud", label: "Solicitud" },
           { field: "mes", label: "Mes" },
-          { field: "giaRr", label: "GIA RR" },
+          // { field: "giaRr", label: "GIA RR" },
           { field: "giaRt", label: "GIA RT" },
         ];
 
@@ -663,8 +663,8 @@ const handleAddAuxiliar = useCallback((auxiliar) => {
           { field: "zona", label: "Zona" },
           { field: "solicitud", label: "Solicitud" },
           { field: "mes", label: "Mes" },
-          { field: "giaRr", label: "GIA RR" },
-          { field: "giaRt", label: "GIA RT" },
+          // { field: "giaRr", label: "GUIA RR" },
+          { field: "giaRt", label: "GUIA RT" },
         ];
 
         for (const { field, label } of requiredFields) {
@@ -1413,30 +1413,30 @@ const destinoOptions = useMemo(() => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    GIA RR <span className="text-red-500">*</span>
+                    GUIA RR <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="giaRr"
                     value={formData.giaRr}
                     onChange={handleInputChange}
-                    placeholder="Número GIA RR"
+                    placeholder="Número GUIA RR"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     disabled={loading}
-                    required
+                    
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    GIA RT <span className="text-red-500">*</span>
+                    GUIA RT <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="giaRt"
                     value={formData.giaRt}
                     onChange={handleInputChange}
-                    placeholder="Número GIA RT"
+                    placeholder="Número GUIA RT"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     disabled={loading}
                     required
@@ -1455,7 +1455,7 @@ const destinoOptions = useMemo(() => {
                   name="descripcion"
                   value={formData.descripcion}
                   onChange={handleInputChange}
-                  placeholder="Descripciones adicionales, instrucciones especiales, comentarios..."
+                  placeholder="COLOCAR EL NUMERO DE FO"
                   rows={4}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   disabled={loading}

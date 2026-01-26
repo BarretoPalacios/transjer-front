@@ -47,6 +47,7 @@ const Servicios = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
+    codigo_servicio_principal:'',
     cliente_nombre: '',
     flota_placa: '',
     fecha_servicio: '',
@@ -249,6 +250,7 @@ const Servicios = () => {
 
   const clearFilters = useCallback(() => {
     setFilters({
+      codigo_servicio_principal:'',
       cliente_nombre: '',
       flota_placa: '',
       fecha_servicio: '',
@@ -468,8 +470,21 @@ const Servicios = () => {
             />
           </div>
 
+           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Codigo
+            </label>
+            <input
+              type="text"
+              value={filters.codigo_servicio_principal}
+              onChange={(e) => setFilters({...filters, codigo_servicio_principal: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              placeholder="SRV-000000001"
+            />
+          </div>
+
           {/* Proveedor */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Proveedor
             </label>
@@ -480,10 +495,10 @@ const Servicios = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               placeholder="Nombre del proveedor"
             />
-          </div>
+          </div> */}
 
           {/* Cuenta */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Cuenta
             </label>
@@ -494,10 +509,10 @@ const Servicios = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               placeholder="Nombre de la cuenta"
             />
-          </div>
+          </div> */}
 
           {/* GIA RR */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <FileText className="h-4 w-4" />
               GIA RR
@@ -509,10 +524,10 @@ const Servicios = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               placeholder="Número GIA RR"
             />
-          </div>
+          </div> */}
 
           {/* GIA RT */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <FileText className="h-4 w-4" />
               GIA RT
@@ -524,7 +539,7 @@ const Servicios = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               placeholder="Número GIA RT"
             />
-          </div>
+          </div> */}
         </div>
 
         {/* Contador de filtros activos */}

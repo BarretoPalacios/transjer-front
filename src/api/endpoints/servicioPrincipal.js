@@ -71,7 +71,7 @@ export const serviciosPrincipalesAPI = {
   
   getAllServiciosPrincipales: async (filters = {}) => {
     const params = new URLSearchParams();
-    
+    if (filters.codigo_servicio_principal) params.append('codigo_servicio_principal', filters.codigo_servicio_principal);
     if (filters.mes) params.append('mes', filters.mes);
     if (filters.tipo_servicio) params.append('tipo_servicio', filters.tipo_servicio);
     if (filters.zona) params.append('zona', filters.zona);
