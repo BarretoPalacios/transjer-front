@@ -100,7 +100,8 @@ export const serviciosPrincipalesAPI = {
     if (filters.gia_rr) params.append('gia_rr', filters.gia_rr);
     if (filters.gia_rt) params.append('gia_rt', filters.gia_rt);
     if (filters.pertenece_a_factura == false) params.append('pertenece_a_factura', filters.pertenece_a_factura);
-
+    if (filters.page) params.append('page', filters.page);
+    if (filters.page_size) params.append('page_size', filters.page_size);
     console.log("filtros por enviar",filters)
 
     const response = await axiosInstance.get(`/servicios-principales/?${params.toString()}`);
