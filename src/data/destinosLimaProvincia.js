@@ -8,7 +8,8 @@ export const DISTRITOS_LIMA = [
   "San Isidro", "San Juan de Lurigancho", "San Juan de Miraflores",
   "San Luis", "San Martín de Porres", "San Miguel", "Santa Anita",
   "Santa María del Mar", "Santa Rosa", "Santiago de Surco", "Surquillo",
-  "Villa El Salvador", "Villa María del Triunfo"
+  "Villa El Salvador", "Villa María del Triunfo","Bellavista", "Callao (Cercado)", "Carmen de la Legua", 
+  "La Perla", "La Punta", "Mi Perú", "Ventanilla",
 ];
 
 export const DEPARTAMENTOS_PERU = [
@@ -16,5 +17,6 @@ export const DEPARTAMENTOS_PERU = [
   "Callao", "Cusco", "Huancavelica", "Huánuco", "Ica", "Junín",
   "La Libertad", "Lambayeque", "Lima", "Loreto", "Madre de Dios",
   "Moquegua", "Pasco", "Piura", "Puno", "San Martín", "Tacna",
-  "Tumbes", "Ucayali"
+  "Tumbes", "Ucayali","Barranca","Bellavista", "Callao (Cercado)", "Carmen de la Legua", 
+  "La Perla", "La Punta", "Mi Perú", "Ventanilla"
 ];
