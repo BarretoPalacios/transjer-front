@@ -913,11 +913,11 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                 Limpiar filtros
               </Button>
             )}
-            <div className="mt-4">
+            {/* <div className="mt-4">
               <Button onClick={handleCreate} variant="primary" icon={Plus}>
                 Registrar primer gasto
               </Button>
-            </div>
+            </div> */}
           </div>
         )}
       </div>
