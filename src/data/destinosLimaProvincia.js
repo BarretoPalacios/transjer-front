@@ -17,6 +17,6 @@ export const DEPARTAMENTOS_PERU = [
   "Callao", "Cusco", "Huancavelica", "Huánuco", "Ica", "Junín",
   "La Libertad", "Lambayeque", "Lima", "Loreto", "Madre de Dios",
   "Moquegua", "Pasco", "Piura", "Puno", "San Martín", "Tacna",
-  "Tumbes", "Ucayali","Barranca","Bellavista", "Callao (Cercado)", "Carmen de la Legua", 
-  "La Perla", "La Punta", "Mi Perú", "Ventanilla"
+  "Tumbes", "Ucayali","Barranca", "Cajatambo", "Canta", "Cañete", "Huaral", 
+  "Huarochirí", "Huaura (Huacho)", "Oyón", "Yauyos"
 ];
