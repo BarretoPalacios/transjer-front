@@ -558,7 +558,7 @@ const handleAddAuxiliar = useCallback((auxiliar) => {
           { field: "tn", label: "TN" },
           { field: "flota", label: "Placa" },
           { field: "origen", label: "Origen" },
-          { field: "destino", label: "Destino" },
+          // { field: "destino", label: "Destino" },
           { field: "conductor", label: "Conductor" },
           { field: "fechaServicio", label: "Fecha de Servicio" },
           { field: "fechaSalida", label: "Fecha de Salida" },
@@ -595,9 +595,15 @@ const handleAddAuxiliar = useCallback((auxiliar) => {
           formData.modalidad === "otro"
             ? formData.modalidadCustom
             : formData.modalidad;
-        const finalDestino = showDestinoPersonalizado 
-          ? formData.destinoPersonalizado 
-          : formData.destino;
+const finalDestino = showDestinoPersonalizado 
+  ? formData.destinoPersonalizado 
+  : formData.destino;
+
+if (!finalDestino || finalDestino.trim() === "") {
+  alert("El campo Destino es requerido");
+  setLoading(false);
+  return;
+}
 
         const servicioData = {
           cliente: formData.cliente,
@@ -653,7 +659,7 @@ const handleAddAuxiliar = useCallback((auxiliar) => {
           { field: "tn", label: "TN" },
           { field: "flota", label: "Placa" },
           { field: "origen", label: "Origen" },
-          { field: "destino", label: "Destino" },
+          // { field: "destino", label: "Destino" },
           { field: "conductor", label: "Conductor" },
           { field: "fechaServicio", label: "Fecha de Servicio" },
           { field: "fechaSalida", label: "Fecha de Salida" },
@@ -690,9 +696,16 @@ const handleAddAuxiliar = useCallback((auxiliar) => {
           formData.modalidad === "otro"
             ? formData.modalidadCustom
             : formData.modalidad;
-        const finalDestino = showDestinoPersonalizado 
-          ? formData.destinoPersonalizado 
-          : formData.destino;
+// VALIDACIÓN ESPECIAL PARA DESTINO
+const finalDestino = showDestinoPersonalizado 
+  ? formData.destinoPersonalizado 
+  : formData.destino;
+
+if (!finalDestino || finalDestino.trim() === "") {
+  alert("El campo Destino es requerido");
+  setLoading(false);
+  return;
+}
 
         const servicioData = {
           cliente: formData.cliente,
@@ -833,7 +846,7 @@ const destinoOptions = useMemo(() => {
         value: depto,
         label: depto
       })),
-      { value: "personalizado", label: "Personalizado..." }
+      // { value: "personalizado", label: "Personalizado..." }
     ];
   }
   return [];
@@ -1239,54 +1252,90 @@ const destinoOptions = useMemo(() => {
 
                 {/* Destino */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Destino <span className="text-red-500">*</span>
-                  </label>
-                  {formData.tipoServicio && (formData.tipoServicio === "Local" || formData.tipoServicio === "Nacional") ? (
-                    <>
-                      <select
-                        name="destino"
-                        value={formData.destino}
-                        onChange={handleDestinoChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                        disabled={loading}
-                        required
-                      >
-                        <option value="">Seleccionar destino</option>
-  {destinoOptions.map((option) => (
-    <option key={option.value} value={option.value}>
-      {option.label}
-    </option>
-  ))}
-                      </select>
-                      {showDestinoPersonalizado && (
-                        <div className="mt-2">
-                          <input
-                            type="text"
-                            name="destinoPersonalizado"
-                            value={formData.destinoPersonalizado}
-                            onChange={handleInputChange}
-                            placeholder="Ingrese destino personalizado"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                            disabled={loading}
-                            required
-                          />
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <input
-                      type="text"
-                      name="destino"
-                      value={formData.destino}
-                      onChange={handleInputChange}
-                      placeholder="Ingrese destino"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                      required
-                      disabled={loading}
-                    />
-                  )}
-                </div>
+  <label className="block text-sm font-medium text-gray-700">
+    Destino <span className="text-red-500">*</span>
+  </label>
+  {formData.tipoServicio && (formData.tipoServicio === "Local" || formData.tipoServicio === "Nacional") ? (
+    <div className="space-y-2">
+      <select
+        name="destino"
+        value={showDestinoPersonalizado ? "" : formData.destino}
+        onChange={(e) => {
+          if (e.target.value === "") return;
+          setFormData(prev => ({ 
+            ...prev, 
+            destino: e.target.value 
+          }));
+        }}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+        disabled={loading || showDestinoPersonalizado}
+      >
+        <option value="">Seleccionar destino</option>
+        {destinoOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      
+      {/* Checkbox para destino personalizado */}
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="destinoPersonalizadoCheckbox"
+          checked={showDestinoPersonalizado}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            setShowDestinoPersonalizado(checked);
+            if (checked) {
+              setFormData(prev => ({ 
+                ...prev, 
+                destino: "",
+                destinoPersonalizado: "" 
+              }));
+            } else {
+              setFormData(prev => ({ 
+                ...prev, 
+                destinoPersonalizado: "" 
+              }));
+            }
+          }}
+          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          disabled={loading}
+        />
+        <label htmlFor="destinoPersonalizadoCheckbox" className="ml-2 text-sm text-gray-700">
+          Usar destino personalizado
+        </label>
+      </div>
+      
+      {showDestinoPersonalizado && (
+        <div className="mt-2">
+          <input
+            type="text"
+            name="destinoPersonalizado"
+            value={formData.destinoPersonalizado}
+            onChange={handleInputChange}
+            placeholder="Ingrese destino personalizado"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            disabled={loading}
+            required={showDestinoPersonalizado}
+          />
+        </div>
+      )}
+    </div>
+  ) : (
+    <input
+      type="text"
+      name="destino"
+      value={formData.destino}
+      onChange={handleInputChange}
+      placeholder="Ingrese destino"
+      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+      required
+      disabled={loading}
+    />
+  )}
+</div>
 
                 {/* Solicitud */}
                 <div className="space-y-2">
