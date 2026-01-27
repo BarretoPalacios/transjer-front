@@ -1347,7 +1347,7 @@ const destinoOptions = useMemo(() => {
                     name="fechaServicio"
                     value={formData.fechaServicio}
                     onChange={handleInputChange}
-                    min={minDate}
+                    // min={minDate}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     disabled={loading}
                     required
@@ -1363,7 +1363,7 @@ const destinoOptions = useMemo(() => {
                     name="fechaSalida"
                     value={formData.fechaSalida}
                     onChange={handleInputChange}
-                    min={minDate}
+                    // min={minDate}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     disabled={loading}
                     required
