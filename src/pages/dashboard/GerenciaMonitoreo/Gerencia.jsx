@@ -801,7 +801,7 @@ const Gerencia = () => {
 
                 {/* Fletes Por Facturar (Valorizados) */}
                 <h3 className="text-xs font-medium text-gray-500">
-                  Fletes Por facturar
+                  Fletes con Valor
                 </h3>
                 <p className="text-lg font-bold text-gray-800 mt-1">
                   {fletesStats.resumen_estados?.VALORIZADO || 0}
