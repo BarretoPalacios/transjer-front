@@ -361,14 +361,6 @@ const FlotaForm = ({
       errors.placa = "La placa debe tener al menos 6 caracteres";
     }
 
-    if (!formData.marca.trim()) {
-      errors.marca = "La marca es requerida";
-    }
-
-    if (!formData.modelo.trim()) {
-      errors.modelo = "El modelo es requerido";
-    }
-
     if (!formData.anio) {
       errors.anio = "El año es requerido";
     } else if (formData.anio < 1990 || formData.anio > new Date().getFullYear()) {
