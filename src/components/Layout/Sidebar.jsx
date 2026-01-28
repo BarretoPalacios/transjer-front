@@ -330,13 +330,13 @@ const Sidebar = ({
             path: "/gerencia/monitoreo-proveedores",
             show: shouldShowSubItem({ id: "monitoreo-proveedores" }),
           },
-          {
-            id: "analiticas",
-            label: "Analíticas",
-            path: "/gerencia/analiticas",
-            icon: BarChart3,
-            show: shouldShowSubItem({ id: "analiticas" }),
-          },
+          // {
+          //   id: "analiticas",
+          //   label: "Analíticas",
+          //   path: "/gerencia/analiticas",
+          //   icon: BarChart3,
+          //   show: shouldShowSubItem({ id: "analiticas" }),
+          // },
           {
             id: "historial",
             label: "Historial de Cambios",
@@ -353,13 +353,13 @@ const Sidebar = ({
 
   const getSystemItems = () => {
     return [
-      {
-        id: "configuracion",
-        label: "Configuración",
-        icon: Settings,
-        path: "/configuracion",
-        show: shouldShowItem({ id: "configuracion" }),
-      },
+      // {
+      //   id: "configuracion",
+      //   label: "Configuración",
+      //   icon: Settings,
+      //   path: "/configuracion",
+      //   show: shouldShowItem({ id: "configuracion" }),
+      // },
       {
         id: "usuarios",
         label: "Usuarios",

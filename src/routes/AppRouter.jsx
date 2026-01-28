@@ -202,11 +202,11 @@ const AppRouter = () => {
             </ProtectedRoute>
           } />
           
-          <Route path="gerencia/analiticas" element={
+          {/* <Route path="gerencia/analiticas" element={
             <ProtectedRoute requirePermission={['gerencia', 'view']}>
               <AnaliticasGerenciales />
             </ProtectedRoute>
-          } />
+          } /> */}
           
           <Route path="gerencia/monitoreo-placas" element={
             <ProtectedRoute requirePermission={['gerencia', 'view']}>
