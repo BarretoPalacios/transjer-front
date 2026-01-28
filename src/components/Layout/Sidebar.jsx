@@ -130,6 +130,7 @@ const Sidebar = ({
       "monitoreo-facturas": ["gerencia", "view"],
       "monitoreo-placas": ["gerencia", "view"],
       "monitoreo-proveedores": ["gerencia", "view"],
+      "monitoreo-clientes": ["gerencia", "view"],
       "analiticas": ["gerencia", "view"],
       "historial": ["gerencia", "view"],
     };
@@ -311,24 +312,31 @@ const Sidebar = ({
         submenu: [
           {
             id: "monitoreo-facturas",
-            label: "Monitoreo de Facturas",
+            label: "Resumen de Facturas",
             icon: MonitorCheck,
             path: "/gerencia/gerencia",
             show: shouldShowSubItem({ id: "monitoreo-facturas" }),
           },
           {
             id: "monitoreo-placas",
-            label: "Monitoreo de Placas",
+            label: "Resumen de Placas",
             icon: MonitorCheck,
             path: "/gerencia/monitoreo-placas",
             show: shouldShowSubItem({ id: "monitoreo-placas" }),
           },
           {
             id: "monitoreo-proveedores",
-            label: "Monitoreo de Proveedores",
+            label: "Resumen de Proveedores",
             icon: MonitorCheck,
             path: "/gerencia/monitoreo-proveedores",
             show: shouldShowSubItem({ id: "monitoreo-proveedores" }),
+          },
+          {
+            id: "monitoreo-clientes",
+            label: "Resumen de clientes",
+            icon: MonitorCheck,
+            path: "/gerencia/monitoreo-clientes",
+            show: shouldShowSubItem({ id: "monitoreo-clientes" }),
           },
           // {
           //   id: "analiticas",

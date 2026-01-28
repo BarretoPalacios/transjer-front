@@ -389,6 +389,47 @@ getResumenPorProveedor: async (filters = {}) => {
   };
 },
 
+
+getResumenPorCliente: async (filters = {}) => {
+  const params = new URLSearchParams();
+
+  // Parámetros de filtrado específicos para Clientes
+  if (filters.cliente) params.append('nombre_cliente', filters.cliente);
+  if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+  if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+
+  const response = await axiosInstance.get(`/gerencia/resumen-por-cliente?${params.toString()}`);
+  
+  console.log('Resumen por Cliente Response:', response.data);
+  
+  // Extraemos los datos del response
+  const resumenGeneral = response.data.resumen_general || {};
+  const detalleClientes = response.data.detalle_por_cliente || [];
+  
+  // Formatear la respuesta para mantener consistencia con tus componentes de tabla
+  return {
+    resumen: {
+      total_clientes: resumenGeneral.cantidad_clientes || 0,
+      total_servicios: resumenGeneral.total_servicios || 0,
+      total_vendido: resumenGeneral.total_vendido_acumulado || 0
+    },
+    filtros_aplicados: response.data.filtros_aplicados || {
+      cliente: filters.cliente || null,
+      fecha_inicio: filters.fecha_inicio || null,
+      fecha_fin: filters.fecha_fin || null
+    },
+    detalle_por_cliente: detalleClientes,
+    items: detalleClientes, // Mapeo para componentes que consumen "items"
+    pagination: {
+      total: detalleClientes.length,
+      page: 1,
+      pageSize: detalleClientes.length,
+      totalPages: 1,
+      hasNext: false,
+      hasPrev: false
+    }
+  };
+},
 // ==========================================
 // Sugerencias de Proveedores (autocompletado)
 // ==========================================
@@ -417,16 +458,30 @@ getProveedoresSugerencias: async () => {
   }
 },
 
-  // Obtener clientes para sugerencias
-  getClientesSugerencias: async () => {
+getClientesSugerencias: async () => {
+  try {
+    // 1. Intentamos obtener la lista desde el resumen general de clientes
+    const response = await gerenciaServiceAPI.getResumenPorCliente({});
+    
+    // Extraemos los nombres de clientes del detalle
+    const clientes = response.detalle_por_cliente?.map(item => item.cliente) || [];
+    
+    // Eliminar duplicados y ordenar alfabéticamente
+    return [...new Set(clientes)].sort();
+    
+  } catch (error) {
+    console.error('Error obteniendo sugerencias de clientes:', error);
+    
+    // 2. Si falla, intentamos el endpoint directo de sugerencias (si existe en tu API)
     try {
       const response = await axiosInstance.get('/gerencia/clientes-sugerencias');
       return response.data;
-    } catch (error) {
-      console.error('Error obteniendo sugerencias de clientes:', error);
+    } catch (fallbackError) {
+      console.error('Error en fallback de sugerencias de clientes:', fallbackError);
       return [];
     }
-  },
+  }
+},
 
   // ==========================================
   // Funciones para descargar archivos

@@ -31,6 +31,7 @@ import GastosAsociados from "../pages/dashboard/GastosAsociados/GastosAsociados"
 import MonitoreoPlacas from "../pages/dashboard/MonitoreoPlacas/MonitoreoPlacas";
 import MonitoreoProveedores from "../pages/dashboard/MonitoreoProveedores/MonitoreoProveedores";
 import Usuarios from "../pages/dashboard/Usuarios/Usuarios";
+import MonitoreoClientes from "../pages/dashboard/MonitoreoClientes/MonitoreoClientes";
 
 const AppRouter = () => {
   return (
@@ -217,6 +218,11 @@ const AppRouter = () => {
           <Route path="gerencia/monitoreo-proveedores" element={
             <ProtectedRoute requirePermission={['gerencia', 'view']}>
               <MonitoreoProveedores />
+            </ProtectedRoute>
+          } />
+          <Route path="gerencia/monitoreo-clientes" element={
+            <ProtectedRoute requirePermission={['gerencia', 'view']}>
+              <MonitoreoClientes />
             </ProtectedRoute>
           } />
 
