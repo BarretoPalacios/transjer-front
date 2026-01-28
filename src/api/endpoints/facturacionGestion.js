@@ -103,6 +103,7 @@ getKpisCompletos: async (filters = {}, pagination = {}) => {
     return {
       summary: response.data.summary || {
         total_vendido: 0,
+        total_vendido_bruto:0,
         total_facturado: 0,
         total_pagado: 0,
         total_pendiente: 0,
@@ -163,6 +164,10 @@ getResumenPorPlaca: async (filters = {}) => {
     };
   },
 
+  getFletesIndicator:async () =>{
+const response = await axiosInstance.get(`/gerencia/fletes_indicador`);
+    return response.data;
+  },
 
   // Obtener gestión por ID
   getGestionById: async (gestionId) => {

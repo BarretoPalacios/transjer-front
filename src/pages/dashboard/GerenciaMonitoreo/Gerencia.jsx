@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   DollarSign,
   FileText,
@@ -36,13 +36,13 @@ import {
   BarChart3,
   Filter as FilterIcon,
   RefreshCw,
-  Sparkles
-} from 'lucide-react';
-import Button from '../../../components/common/Button/Button';
-import Modal from '../../../components/common/Modal/Modal';
-import Pagination from '../../../components/common/Pagination/Pagination';
-import { formatCurrency, formatDate } from '../../../utils/facturacionUtils';
-import { facturacionGestionAPI } from '../../../api/endpoints/facturacionGestion';
+  Sparkles,
+} from "lucide-react";
+import Button from "../../../components/common/Button/Button";
+import Modal from "../../../components/common/Modal/Modal";
+import Pagination from "../../../components/common/Pagination/Pagination";
+import { formatCurrency, formatDate } from "../../../utils/facturacionUtils";
+import { facturacionGestionAPI } from "../../../api/endpoints/facturacionGestion";
 import { fletesAPI } from "../../../api/endpoints/fletes";
 
 const Gerencia = () => {
@@ -50,21 +50,21 @@ const Gerencia = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
-  
+
   // Estados para filtros (almacenados temporalmente)
   const [tempFilters, setTempFilters] = useState({
-    nombre_cliente: '',
-    fecha_inicio: '',
-    fecha_fin: '',
+    nombre_cliente: "",
+    fecha_inicio: "",
+    fecha_fin: "",
   });
-  
+
   // Estados para filtros aplicados
   const [appliedFilters, setAppliedFilters] = useState({
-    nombre_cliente: '',
-    fecha_inicio: '',
-    fecha_fin: '',
+    nombre_cliente: "",
+    fecha_inicio: "",
+    fecha_fin: "",
   });
-  
+
   // Estados para paginación
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -72,17 +72,18 @@ const Gerencia = () => {
     totalPages: 0,
     hasNext: false,
     hasPrev: false,
-    pageSize: 100
+    pageSize: 100,
   });
-  
+
   // Estados para detalles
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [expandedFreightIndex, setExpandedFreightIndex] = useState(null);
-  
+
   // Estados para totales del summary
   const [summary, setSummary] = useState({
     total_vendido: 0,
+    total_vendido_bruto: 0,
     total_facturado: 0,
     total_pagado: 0,
     total_pendiente: 0,
@@ -90,11 +91,16 @@ const Gerencia = () => {
     total_pagado_detracc: 0,
     total_pendiente_detracc: 0,
     cantidad_fletes_vendidos: 0,
-    total_pendiente_vencido:0,
-    cantidad_vencidas:0,
+    total_pendiente_vencido: 0,
+    cantidad_vencidas: 0,
     total_facturas: 0,
-    cliente_buscado: '',
-    cliente_encontrado: ''
+    cliente_buscado: "",
+    cliente_encontrado: "",
+  });
+
+  const [fletesStats, setFletesStats] = useState({
+    total_fletes: 0,
+    resumen_estados: {},
   });
 
   // Estados para filtros expandidos
@@ -115,65 +121,69 @@ const Gerencia = () => {
   // Obtener días hasta vencimiento
   const getDaysUntilDue = (dueDateString) => {
     if (!dueDateString) return null;
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const dueDate = new Date(dueDateString);
     dueDate.setHours(0, 0, 0, 0);
-    
+
     const diffTime = dueDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return diffDays;
   };
 
   // Obtener colores según estado
-  const getStatusColor = (status, type = 'detraction') => {
-    if (!status) return 'bg-gray-50 text-gray-700 border-gray-200';
-    
+  const getStatusColor = (status, type = "detraction") => {
+    if (!status) return "bg-gray-50 text-gray-700 border-gray-200";
+
     switch (type) {
-      case 'detraction':
-        return status === 'Pendiente' 
-          ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-          : status === 'Pagado'
-          ? 'bg-green-50 text-green-700 border-green-200'
-          : 'bg-gray-50 text-gray-700 border-gray-200';
-      
-      case 'payment':
-        return status === 'Pendiente'
-          ? 'bg-red-50 text-red-700 border-red-200'
-          : 'bg-green-50 text-green-700 border-green-200';
-      
-      case 'priority':
+      case "detraction":
+        return status === "Pendiente"
+          ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+          : status === "Pagado"
+            ? "bg-green-50 text-green-700 border-green-200"
+            : "bg-gray-50 text-gray-700 border-gray-200";
+
+      case "payment":
+        return status === "Pendiente"
+          ? "bg-red-50 text-red-700 border-red-200"
+          : "bg-green-50 text-green-700 border-green-200";
+
+      case "priority":
         switch (status) {
-          case 'Alta': return 'bg-red-50 text-red-700 border-red-200';
-          case 'Media': return 'bg-yellow-50 text-yellow-700 border-yellow-200';
-          case 'Baja': return 'bg-blue-50 text-blue-700 border-blue-200';
-          default: return 'bg-gray-50 text-gray-700 border-gray-200';
+          case "Alta":
+            return "bg-red-50 text-red-700 border-red-200";
+          case "Media":
+            return "bg-yellow-50 text-yellow-700 border-yellow-200";
+          case "Baja":
+            return "bg-blue-50 text-blue-700 border-blue-200";
+          default:
+            return "bg-gray-50 text-gray-700 border-gray-200";
         }
-      
+
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
 
   // Función para obtener gastos de un flete
   const fetchFreightExpenses = useCallback(async (fleteId) => {
     if (!fleteId) return;
-    
-    setLoadingExpenses(prev => ({ ...prev, [fleteId]: true }));
-    
+
+    setLoadingExpenses((prev) => ({ ...prev, [fleteId]: true }));
+
     try {
       const response = await fletesAPI.getGastosByCodeFlete(fleteId);
-      
-      setFreightExpenses(prev => ({
+
+      setFreightExpenses((prev) => ({
         ...prev,
-        [fleteId]: response
+        [fleteId]: response,
       }));
     } catch (error) {
       console.error(`Error fetching expenses for freight ${fleteId}:`, error);
-      setFreightExpenses(prev => ({
+      setFreightExpenses((prev) => ({
         ...prev,
         [fleteId]: {
           id_flete: fleteId,
@@ -181,60 +191,79 @@ const Gerencia = () => {
           total_recuperable_cliente: 0,
           total_costo_operativo: 0,
           cantidad_gastos: 0,
-          gastos: []
-        }
+          gastos: [],
+        },
       }));
     } finally {
-      setLoadingExpenses(prev => ({ ...prev, [fleteId]: false }));
+      setLoadingExpenses((prev) => ({ ...prev, [fleteId]: false }));
     }
   }, []);
 
   // Función para obtener todas las gestiones usando get_kpis_completos
-  const fetchInvoices = useCallback(async (page = 1, pageSize = pagination.pageSize) => {
-    setLoadingData(true);
-    
-    try {
-      // Llamar a la API get_kpis_completos con los filtros aplicados
-      const response = await facturacionGestionAPI.getKpisCompletos({
-        ...appliedFilters,
-      }, {
-        page: page,
-        pageSize: pageSize
-      });
-      
-      console.log('API Response:', response);
-      
-      // Actualizar estado con los datos recibidos
-      setInvoices(response.items || []);
-      
-      // Actualizar summary
-      if (response.summary) {
-        setSummary(response.summary);
+  const fetchInvoices = useCallback(
+    async (page = 1, pageSize = pagination.pageSize) => {
+      setLoadingData(true);
+
+      try {
+        // Llamar a la API get_kpis_completos con los filtros aplicados
+        const response = await facturacionGestionAPI.getKpisCompletos(
+          {
+            ...appliedFilters,
+          },
+          {
+            page: page,
+            pageSize: pageSize,
+          },
+        );
+
+        console.log("API Response:", response);
+
+        // Actualizar estado con los datos recibidos
+        setInvoices(response.items || []);
+
+        // Actualizar summary
+        if (response.summary) {
+          setSummary(response.summary);
+        }
+        await fetchFletesStats();
+        // Actualizar paginación
+        setPagination({
+          currentPage: response.pagination?.page || 1,
+          totalItems: response.pagination?.total || 0,
+          totalPages: response.pagination?.totalPages || 1,
+          hasNext: response.pagination?.hasNext || false,
+          hasPrev: response.pagination?.hasPrev || false,
+          pageSize: pageSize,
+        });
+      } catch (error) {
+        console.error("Error fetching invoices:", error);
+      } finally {
+        setLoading(false);
+        setLoadingData(false);
       }
-      
-      // Actualizar paginación
-      setPagination({
-        currentPage: response.pagination?.page || 1,
-        totalItems: response.pagination?.total || 0,
-        totalPages: response.pagination?.totalPages || 1,
-        hasNext: response.pagination?.hasNext || false,
-        hasPrev: response.pagination?.hasPrev || false,
-        pageSize: pageSize
+    },
+    [appliedFilters, pagination.pageSize],
+  );
+
+  const fetchFletesStats = useCallback(async () => {
+    try {
+      // Asumiendo que tu API tiene este endpoint
+      const response = await facturacionGestionAPI.getFletesIndicator();
+
+      setFletesStats({
+        total_fletes: response.total_fletes || 0,
+        resumen_estados: response.resumen_estados || {},
       });
-      
     } catch (error) {
-      console.error('Error fetching invoices:', error);
-    } finally {
-      setLoading(false);
-      setLoadingData(false);
+      console.error("Error fetching fletes stats:", error);
     }
-  }, [appliedFilters, pagination.pageSize]);
+  }, []);
 
   // Función para aplicar filtros
   const applyFilters = () => {
     // Copiar los filtros temporales a los aplicados
     setAppliedFilters(tempFilters);
-    
+
     // Si hay cliente en los filtros, dar foco al input de cliente
     if (tempFilters.nombre_cliente && clienteInputRef.current) {
       clienteInputRef.current.focus();
@@ -244,20 +273,20 @@ const Gerencia = () => {
   // Función para limpiar filtros
   const clearFilters = () => {
     setTempFilters({
-      nombre_cliente: '',
-      fecha_inicio: '',
-      fecha_fin: '',
+      nombre_cliente: "",
+      fecha_inicio: "",
+      fecha_fin: "",
     });
     setAppliedFilters({
-      nombre_cliente: '',
-      fecha_inicio: '',
-      fecha_fin: '',
+      nombre_cliente: "",
+      fecha_inicio: "",
+      fecha_fin: "",
     });
   };
 
   // Función para manejar la tecla Enter en el input de cliente
   const handleClienteKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       applyFilters();
     }
   };
@@ -269,7 +298,7 @@ const Gerencia = () => {
 
   // Función para cambiar items por página
   const handleItemsPerPageChange = (newPageSize) => {
-    setPagination(prev => ({ ...prev, pageSize: newPageSize }));
+    setPagination((prev) => ({ ...prev, pageSize: newPageSize }));
     fetchInvoices(1, newPageSize);
   };
 
@@ -281,24 +310,27 @@ const Gerencia = () => {
   };
 
   // Función para alternar detalles de flete
-  const toggleFreightDetails = useCallback(async (index, freight) => {
-    const fleteId = freight.codigo_flete;
-    
-    if (expandedFreightIndex === index) {
-      setExpandedFreightIndex(null);
-    } else {
-      setExpandedFreightIndex(index);
-      
-      if (fleteId && !freightExpenses[fleteId]) {
-        await fetchFreightExpenses(fleteId);
+  const toggleFreightDetails = useCallback(
+    async (index, freight) => {
+      const fleteId = freight.codigo_flete;
+
+      if (expandedFreightIndex === index) {
+        setExpandedFreightIndex(null);
+      } else {
+        setExpandedFreightIndex(index);
+
+        if (fleteId && !freightExpenses[fleteId]) {
+          await fetchFreightExpenses(fleteId);
+        }
       }
-    }
-  }, [expandedFreightIndex, freightExpenses, fetchFreightExpenses]);
+    },
+    [expandedFreightIndex, freightExpenses, fetchFreightExpenses],
+  );
 
   // Renderizar detalles de gastos
   const renderExpensesDetails = (fleteId) => {
     const expensesData = freightExpenses[fleteId];
-    
+
     if (loadingExpenses[fleteId]) {
       return (
         <div className="flex justify-center items-center py-4">
@@ -307,7 +339,7 @@ const Gerencia = () => {
         </div>
       );
     }
-    
+
     if (!expensesData || expensesData.cantidad_gastos === 0) {
       return (
         <div className="text-center py-4 text-gray-500 text-sm">
@@ -315,9 +347,14 @@ const Gerencia = () => {
         </div>
       );
     }
-    
-    const { gastos = [], total_gastos, total_recuperable_cliente, total_costo_operativo } = expensesData;
-    
+
+    const {
+      gastos = [],
+      total_gastos,
+      total_recuperable_cliente,
+      total_costo_operativo,
+    } = expensesData;
+
     return (
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2 text-xs">
@@ -340,7 +377,7 @@ const Gerencia = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead>
@@ -361,9 +398,14 @@ const Gerencia = () => {
             </thead>
             <tbody>
               {gastos.map((gasto, index) => (
-                <tr key={gasto.id || index} className="border-b border-gray-200 hover:bg-gray-50">
+                <tr
+                  key={gasto.id || index}
+                  className="border-b border-gray-200 hover:bg-gray-50"
+                >
                   <td className="py-1 px-2 border border-gray-200">
-                    <span className="font-mono text-xs">{gasto.codigo_gasto}</span>
+                    <span className="font-mono text-xs">
+                      {gasto.codigo_gasto}
+                    </span>
                   </td>
                   <td className="py-1 px-2 border border-gray-200">
                     {gasto.tipo_gasto}
@@ -372,7 +414,7 @@ const Gerencia = () => {
                     {formatCurrency(gasto.valor)}
                   </td>
                   <td className="py-1 px-2 border border-gray-200">
-                    {gasto.se_factura_cliente ? 'Sí' : 'No'}
+                    {gasto.se_factura_cliente ? "Sí" : "No"}
                   </td>
                 </tr>
               ))}
@@ -387,53 +429,88 @@ const Gerencia = () => {
   const renderFreightDetails = (freight, index) => {
     const isExpanded = expandedFreightIndex === index;
     const fleteId = freight.codigo_flete;
-    
+
     return (
-      <div key={freight.codigo_flete || index} className="border border-gray-200 rounded-lg mb-2">
-        <div 
+      <div
+        key={freight.codigo_flete || index}
+        className="border border-gray-200 rounded-lg mb-2"
+      >
+        <div
           className="flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer rounded-lg"
           onClick={() => toggleFreightDetails(index, freight)}
         >
           <div className="flex items-center space-x-3">
             <Truck className="h-4 w-4 text-gray-500" />
             <div>
-              <span className="font-medium text-sm text-gray-900">{freight.codigo_flete}</span>
-              <span className="ml-2 text-xs text-gray-500">{freight.cliente || 'N/A'}</span>
+              <span className="font-medium text-sm text-gray-900">
+                {freight.codigo_flete}
+              </span>
+              <span className="ml-2 text-xs text-gray-500">
+                {freight.cliente || "N/A"}
+              </span>
             </div>
             <span className="text-sm font-medium text-gray-900">
               {formatCurrency(parseFloat(freight.monto_flete || 0))}
             </span>
           </div>
           <div className="flex items-center space-x-2">
-            <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`h-4 w-4 text-gray-500 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            />
           </div>
         </div>
-        
+
         {isExpanded && (
           <div className="p-4 bg-white border-t border-gray-200">
             <div className="grid grid-cols-2 gap-4 mb-4 text-xs">
               <div>
                 <div className="font-medium mb-1">Información del Flete</div>
                 <div className="space-y-1">
-                  <div><span className="text-gray-600">Cliente:</span> {freight.cliente}</div>
-                  <div><span className="text-gray-600">Proveedor:</span> {freight.proveedor}</div>
-                  <div><span className="text-gray-600">Conductor:</span> {freight.conductor}</div>
-                  <div><span className="text-gray-600">Placa:</span> {freight.placa}</div>
+                  <div>
+                    <span className="text-gray-600">Cliente:</span>{" "}
+                    {freight.cliente}
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Proveedor:</span>{" "}
+                    {freight.proveedor}
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Conductor:</span>{" "}
+                    {freight.conductor}
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Placa:</span>{" "}
+                    {freight.placa}
+                  </div>
                 </div>
               </div>
               <div>
                 <div className="font-medium mb-1">Detalles del Servicio</div>
                 <div className="space-y-1">
-                  <div><span className="text-gray-600">Tipo Servicio:</span> {freight.tipo_servicio}</div>
-                  <div><span className="text-gray-600">Fecha Servicio:</span> {formatDate(freight.fecha_servicio)}</div>
-                  <div><span className="text-gray-600">Origen:</span> {freight.servicio?.origen || 'N/A'}</div>
-                  <div><span className="text-gray-600">Destino:</span> {freight.servicio?.destino || 'N/A'}</div>
+                  <div>
+                    <span className="text-gray-600">Tipo Servicio:</span>{" "}
+                    {freight.tipo_servicio}
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Fecha Servicio:</span>{" "}
+                    {formatDate(freight.fecha_servicio)}
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Origen:</span>{" "}
+                    {freight.servicio?.origen || "N/A"}
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Destino:</span>{" "}
+                    {freight.servicio?.destino || "N/A"}
+                  </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="border-t pt-4">
-              <h4 className="text-xs font-semibold text-gray-700 mb-2">Gastos Adicionales</h4>
+              <h4 className="text-xs font-semibold text-gray-700 mb-2">
+                Gastos Adicionales
+              </h4>
               {renderExpensesDetails(fleteId)}
             </div>
           </div>
@@ -448,18 +525,33 @@ const Gerencia = () => {
   }, [fetchInvoices]);
 
   // Componente de tarjeta de métrica
-  const MetricCard = ({ title, value, subtitle, icon: Icon, color = 'blue', highlight = false }) => (
-    <div className={`bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow ${highlight ? 'ring-1 ring-red-300' : ''}`}>
+  const MetricCard = ({
+    title,
+    value,
+    subtitle,
+    icon: Icon,
+    color = "blue",
+    highlight = false,
+  }) => (
+    <div
+      className={`bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow ${highlight ? "ring-1 ring-red-300" : ""}`}
+    >
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xs font-medium text-gray-500 mb-1">{title}</h3>
-          <p className={`text-lg font-bold ${highlight ? 'text-red-600' : 'text-gray-800'}`}>
+          <p
+            className={`text-lg font-bold ${highlight ? "text-red-600" : "text-gray-800"}`}
+          >
             {value}
           </p>
           {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
         </div>
-        <div className={`p-2 rounded-lg ${color === 'red' ? 'bg-red-50' : color === 'yellow' ? 'bg-yellow-50' : color === 'green' ? 'bg-green-50' : 'bg-blue-50'}`}>
-          <Icon className={`h-5 w-5 ${color === 'red' ? 'text-red-600' : color === 'yellow' ? 'text-yellow-600' : color === 'green' ? 'text-green-600' : 'text-blue-600'}`} />
+        <div
+          className={`p-2 rounded-lg ${color === "red" ? "bg-red-50" : color === "yellow" ? "bg-yellow-50" : color === "green" ? "bg-green-50" : "bg-blue-50"}`}
+        >
+          <Icon
+            className={`h-5 w-5 ${color === "red" ? "text-red-600" : color === "yellow" ? "text-yellow-600" : color === "green" ? "text-green-600" : "text-blue-600"}`}
+          />
         </div>
       </div>
     </div>
@@ -483,8 +575,12 @@ const Gerencia = () => {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard de Gerencia</h1>
-              <p className="text-gray-600 text-sm">Visión completa de facturación, pagos y pendientes</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Dashboard de Gerencia
+              </h1>
+              <p className="text-gray-600 text-sm">
+                Visión completa de facturación, pagos y pendientes
+              </p>
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -496,7 +592,9 @@ const Gerencia = () => {
                 Actualizar
               </Button>
               <Button
-                onClick={() => {/* Implementar exportación */}}
+                onClick={() => {
+                  /* Implementar exportación */
+                }}
                 variant="secondary"
                 icon={Download}
                 className="px-3 py-1.5 text-xs"
@@ -545,14 +643,21 @@ const Gerencia = () => {
                   ref={clienteInputRef}
                   type="text"
                   value={tempFilters.nombre_cliente}
-                  onChange={(e) => setTempFilters({...tempFilters, nombre_cliente: e.target.value})}
+                  onChange={(e) =>
+                    setTempFilters({
+                      ...tempFilters,
+                      nombre_cliente: e.target.value,
+                    })
+                  }
                   onKeyPress={handleClienteKeyPress}
                   placeholder="Escriba el nombre del cliente..."
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 />
                 {tempFilters.nombre_cliente && (
                   <button
-                    onClick={() => setTempFilters({...tempFilters, nombre_cliente: ''})}
+                    onClick={() =>
+                      setTempFilters({ ...tempFilters, nombre_cliente: "" })
+                    }
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     <X className="h-4 w-4" />
@@ -573,7 +678,12 @@ const Gerencia = () => {
               <input
                 type="date"
                 value={tempFilters.fecha_inicio}
-                onChange={(e) => setTempFilters({...tempFilters, fecha_inicio: e.target.value})}
+                onChange={(e) =>
+                  setTempFilters({
+                    ...tempFilters,
+                    fecha_inicio: e.target.value,
+                  })
+                }
                 className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
@@ -587,18 +697,22 @@ const Gerencia = () => {
               <input
                 type="date"
                 value={tempFilters.fecha_fin}
-                onChange={(e) => setTempFilters({...tempFilters, fecha_fin: e.target.value})}
+                onChange={(e) =>
+                  setTempFilters({ ...tempFilters, fecha_fin: e.target.value })
+                }
                 className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
           </div>
 
           {/* Indicador de filtros aplicados */}
-          {Object.values(appliedFilters).some(filter => filter !== '') && (
+          {Object.values(appliedFilters).some((filter) => filter !== "") && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center">
                 <Sparkles className="h-4 w-4 text-blue-500 mr-2" />
-                <span className="text-sm font-medium text-gray-700">Filtros aplicados:</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Filtros aplicados:
+                </span>
                 <div className="flex flex-wrap gap-2 ml-3">
                   {appliedFilters.nombre_cliente && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -627,14 +741,23 @@ const Gerencia = () => {
             <div className="flex items-center">
               <Building className="h-5 w-5 text-blue-600 mr-3" />
               <div>
-                <h3 className="font-medium text-gray-900">Información del Cliente</h3>
+                <h3 className="font-medium text-gray-900">
+                  Información del Cliente
+                </h3>
                 <p className="text-sm text-gray-600">
-                  Buscando: <span className="font-semibold">{summary.cliente_buscado}</span>
-                  {summary.cliente_encontrado && summary.cliente_encontrado !== summary.cliente_buscado && (
-                    <span className="ml-3">
-                      → Encontrado: <span className="font-semibold">{summary.cliente_encontrado}</span>
-                    </span>
-                  )}
+                  Buscando:{" "}
+                  <span className="font-semibold">
+                    {summary.cliente_buscado}
+                  </span>
+                  {summary.cliente_encontrado &&
+                    summary.cliente_encontrado !== summary.cliente_buscado && (
+                      <span className="ml-3">
+                        → Encontrado:{" "}
+                        <span className="font-semibold">
+                          {summary.cliente_encontrado}
+                        </span>
+                      </span>
+                    )}
                 </p>
               </div>
             </div>
@@ -643,35 +766,86 @@ const Gerencia = () => {
 
         {/* Resumen de Métricas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">
+                  Total Vendido Neto
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.total_vendido)}
+                </p>
+                <h3 className="text-xs font-medium text-gray-500">
+                  Total Vendido Bruto
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.total_vendido_bruto)}
+                </p>
+              </div>
+              <div className="p-2 bg-yellow-50 rounded-lg">
+                <DollarSign className="h-5 w-5 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                {/* Fletes Pendientes */}
+                <h3 className="text-xs font-medium text-gray-500">
+                  Fletes Pendientes
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {fletesStats.resumen_estados?.PENDIENTE || 0}
+                </p>
+
+                {/* Fletes Por Facturar (Valorizados) */}
+                <h3 className="text-xs font-medium text-gray-500">
+                  Fletes Por facturar
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {fletesStats.resumen_estados?.VALORIZADO || 0}
+                </p>
+
+                {/* Si quieres mostrar el Total General */}
+                <h3 className="text-xs font-medium text-gray-500">
+                  Total Fletes
+                </h3>
+                <p className="text-lg font-bold text-blue-600 mt-1">
+                  {fletesStats.total_fletes || 0}
+                </p>
+              </div>
+            
+            </div>
+          </div>
+
           <MetricCard
-            title="Total Vendido"
-            value={formatCurrency(summary.total_vendido)}
-            subtitle={`${summary.cantidad_fletes_vendidos > 0 ? summary.cantidad_fletes_vendidos : "Todos Los"} fletes`}
-            icon={DollarSign}
-            color="blue"
-          />
-          
-          <MetricCard
-            title="Total Facturado"
+            title="Total Facturado Bruto"
             value={formatCurrency(summary.total_facturado)}
             subtitle={`${summary.total_facturas} facturas`}
             icon={FileText}
             color="blue"
           />
-          
+
           <MetricCard
             title="Saldo Pendiente"
             value={formatCurrency(summary.total_pendiente)}
-            subtitle={summary.total_pendiente > 0 ? "⚠️ Pendiente por cobrar" : "✅ Al día"}
+            subtitle={
+              summary.total_pendiente > 0
+                ? "⚠️ Pendiente por cobrar"
+                : "✅ Al día"
+            }
             icon={Clock}
             color="red"
             highlight={summary.total_pendiente > 0}
           />
-          
+
           <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-medium text-gray-500">Total Detracciones</h3>
+                <h3 className="text-xs font-medium text-gray-500">
+                  Total Detracciones
+                </h3>
                 <p className="text-lg font-bold text-gray-800 mt-1">
                   {formatCurrency(summary.total_detracciones)}
                 </p>
@@ -691,7 +865,7 @@ const Gerencia = () => {
               </div>
             </div>
           </div>
-          
+
           <MetricCard
             title="Total Pagado"
             value={formatCurrency(summary.total_pagado)}
@@ -723,9 +897,12 @@ const Gerencia = () => {
               <div className="flex items-center">
                 <FileText className="h-5 w-5 text-gray-700 mr-2" />
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Facturas</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Facturas
+                  </h2>
                   <p className="text-gray-600 text-sm">
-                    Mostrando {invoices.length} de {pagination.totalItems} facturas
+                    Mostrando {invoices.length} de {pagination.totalItems}{" "}
+                    facturas
                   </p>
                 </div>
               </div>
@@ -735,7 +912,7 @@ const Gerencia = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
@@ -752,7 +929,7 @@ const Gerencia = () => {
                       Factura
                     </div>
                   </th>
-                  
+
                   <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[110px]">
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-2" />
@@ -819,12 +996,12 @@ const Gerencia = () => {
                   const servicio = invoice.servicio || {};
                   const fletesInfo = invoice.fletes_incluidos || {};
                   const fechas = invoice.fechas || {};
-                  
+
                   const rowBalance = calculateRowBalance(invoice);
                   const daysUntilDue = getDaysUntilDue(fechas.vencimiento);
-                  
+
                   return (
-                    <tr 
+                    <tr
                       key={invoice.id}
                       className="border-b border-gray-200 hover:bg-blue-50 transition-colors group"
                     >
@@ -837,7 +1014,9 @@ const Gerencia = () => {
                         )} */}
                       </td>
                       <td className="py-3 px-4 border-r border-gray-200">
-                        <div className="font-medium text-gray-900 font-mono">{invoice.codigo_factura || invoice.numero_factura }</div>
+                        <div className="font-medium text-gray-900 font-mono">
+                          {invoice.codigo_factura || invoice.numero_factura}
+                        </div>
                         {/* <div className="text-gray-500 text-xs truncate">{}</div> */}
                       </td>
                       <td className="py-3 px-4 border-r border-gray-200">
@@ -847,29 +1026,37 @@ const Gerencia = () => {
                         <div className="flex flex-col">
                           <span>{formatDate(fechas.vencimiento)}</span>
                           {daysUntilDue !== null && daysUntilDue < 30 && (
-                            <span className={`text-xs font-medium px-1 rounded ${daysUntilDue < 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                              {daysUntilDue < 0 ? `Vencido ${Math.abs(daysUntilDue)}d` : `Vence en ${daysUntilDue}d`}
+                            <span
+                              className={`text-xs font-medium px-1 rounded ${daysUntilDue < 0 ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}
+                            >
+                              {daysUntilDue < 0
+                                ? `Vencido ${Math.abs(daysUntilDue)}d`
+                                : `Vence en ${daysUntilDue}d`}
                             </span>
                           )}
                         </div>
                       </td>
-                      
+
                       <td className="py-3 px-4 border-r border-gray-200 font-semibold text-gray-900">
                         {formatCurrency(financiero.monto_total)}
                       </td>
-                      
+
                       <td className="py-3 px-4 border-r border-gray-200">
-                        <div className="font-semibold">{formatCurrency(financiero.monto_neto)}</div>
+                        <div className="font-semibold">
+                          {formatCurrency(financiero.monto_neto)}
+                        </div>
                         {financiero.monto_total > financiero.monto_neto && (
                           <div className="text-xs text-yellow-600 flex items-center">
-                            <Percent className="h-3 w-3 mr-1" />
-                            -{formatCurrency(financiero.monto_detraccion)}
+                            <Percent className="h-3 w-3 mr-1" />-
+                            {formatCurrency(financiero.monto_detraccion)}
                           </div>
                         )}
                       </td>
-                      
+
                       <td className="py-3 px-4 border-r border-gray-200">
-                        <div className="font-semibold">{formatCurrency(financiero.monto_pagado_acumulado)}</div>
+                        <div className="font-semibold">
+                          {formatCurrency(financiero.monto_pagado_acumulado)}
+                        </div>
                         {financiero.monto_pagado_acumulado > 0 && (
                           <div className="text-xs text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -877,26 +1064,31 @@ const Gerencia = () => {
                           </div>
                         )}
                       </td>
-                      
+
                       <td className="py-3 px-4 border-r border-gray-200">
-                        <div className={`font-bold ${rowBalance > 0 ? 'text-red-600' : rowBalance < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                        <div
+                          className={`font-bold ${rowBalance > 0 ? "text-red-600" : rowBalance < 0 ? "text-green-600" : "text-gray-600"}`}
+                        >
                           {formatCurrency(rowBalance)}
-                        </div>
-                      </td>
-                      
-<td className="py-3 px-4 border-r border-gray-200">
-                        <div className="space-y-1">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs`}>
-                            {estados.estado_pago_neto || 'N/A'}
-                          </span>
-                          
                         </div>
                       </td>
 
                       <td className="py-3 px-4 border-r border-gray-200">
                         <div className="space-y-1">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs ${getStatusColor(estados.estado_detraccion, 'detraction')}`}>
-                            {estados.estado_detraccion || 'N/A'}
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs`}
+                          >
+                            {estados.estado_pago_neto || "N/A"}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4 border-r border-gray-200">
+                        <div className="space-y-1">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs ${getStatusColor(estados.estado_detraccion, "detraction")}`}
+                          >
+                            {estados.estado_detraccion || "N/A"}
                           </span>
                           {financiero.monto_detraccion > 0 && (
                             <div className="text-xs text-gray-500">
@@ -905,11 +1097,13 @@ const Gerencia = () => {
                           )}
                         </div>
                       </td>
-                      
+
                       <td className="py-3 px-4 border-r border-gray-200">
                         <div className="flex items-center">
                           <Truck className="h-4 w-4 text-gray-500 mr-2" />
-                          <span className="font-semibold">{fletesInfo.cantidad || 0}</span>
+                          <span className="font-semibold">
+                            {fletesInfo.cantidad || 0}
+                          </span>
                         </div>
                         {/* {estados.prioridad && (
                           <span className={`inline-block px-2 py-1 rounded text-xs mt-1 ${getStatusColor(estados.prioridad, 'priority')}`}>
@@ -917,7 +1111,7 @@ const Gerencia = () => {
                           </span>
                         )} */}
                       </td>
-                      
+
                       <td className="py-3 px-4 sticky right-0 bg-white group-hover:bg-blue-50 z-10">
                         <Button
                           onClick={() => handleRowClick(invoice)}
@@ -945,7 +1139,9 @@ const Gerencia = () => {
               <select
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={pagination.pageSize}
-                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                onChange={(e) =>
+                  handleItemsPerPageChange(Number(e.target.value))
+                }
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -953,7 +1149,9 @@ const Gerencia = () => {
                 <option value={100}>100</option>
                 <option value={200}>200</option>
               </select>
-              <span className="text-sm text-gray-600">registros por página</span>
+              <span className="text-sm text-gray-600">
+                registros por página
+              </span>
             </div>
 
             <Pagination
@@ -962,10 +1160,12 @@ const Gerencia = () => {
               totalItems={pagination.totalItems}
               itemsPerPage={pagination.pageSize}
               onPageChange={handlePageChange}
-              startIndex={(pagination.currentPage - 1) * pagination.pageSize + 1}
+              startIndex={
+                (pagination.currentPage - 1) * pagination.pageSize + 1
+              }
               endIndex={Math.min(
                 pagination.currentPage * pagination.pageSize,
-                pagination.totalItems
+                pagination.totalItems,
               )}
               size="medium"
             />
@@ -980,11 +1180,11 @@ const Gerencia = () => {
               No se encontraron facturas
             </h3>
             <p className="text-gray-600 mb-6 text-sm">
-              {Object.values(appliedFilters).some(filter => filter !== '')
+              {Object.values(appliedFilters).some((filter) => filter !== "")
                 ? "No hay resultados para los filtros aplicados. Intenta ajustar los criterios de búsqueda."
                 : "No hay facturas registradas en el sistema."}
             </p>
-            {Object.values(appliedFilters).some(filter => filter !== '') && (
+            {Object.values(appliedFilters).some((filter) => filter !== "") && (
               <Button
                 onClick={clearFilters}
                 variant="primary"
@@ -1003,7 +1203,9 @@ const Gerencia = () => {
           title={
             <div className="flex items-center">
               <FileText className="h-5 w-5 mr-2" />
-              <span>Detalles de Factura: {selectedInvoice?.codigo_factura}</span>
+              <span>
+                Detalles de Factura: {selectedInvoice?.codigo_factura}
+              </span>
             </div>
           }
           size="xlarge"
@@ -1021,19 +1223,27 @@ const Gerencia = () => {
                   <div className="space-y-2 text-sm">
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Número:</span>
-                      <span className="font-medium">{selectedInvoice.numero_factura}</span>
+                      <span className="font-medium">
+                        {selectedInvoice.numero_factura}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Código:</span>
-                      <span className="font-medium font-mono">{selectedInvoice.codigo_factura}</span>
+                      <span className="font-medium font-mono">
+                        {selectedInvoice.codigo_factura}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Emisión:</span>
-                      <span className="font-medium">{formatDate(selectedInvoice.fechas?.emision)}</span>
+                      <span className="font-medium">
+                        {formatDate(selectedInvoice.fechas?.emision)}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Vencimiento:</span>
-                      <span className="font-medium">{formatDate(selectedInvoice.fechas?.vencimiento)}</span>
+                      <span className="font-medium">
+                        {formatDate(selectedInvoice.fechas?.vencimiento)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1047,24 +1257,42 @@ const Gerencia = () => {
                   <div className="space-y-2 text-sm">
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Monto Total:</span>
-                      <span className="font-medium">{formatCurrency(selectedInvoice.financiero?.monto_total)}</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          selectedInvoice.financiero?.monto_total,
+                        )}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Monto Neto:</span>
-                      <span className="font-medium">{formatCurrency(selectedInvoice.financiero?.monto_neto)}</span>
+                      <span className="font-medium">
+                        {formatCurrency(selectedInvoice.financiero?.monto_neto)}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Detracción:</span>
-                      <span className="font-medium">{formatCurrency(selectedInvoice.financiero?.monto_detraccion)}</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          selectedInvoice.financiero?.monto_detraccion,
+                        )}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Pagado:</span>
-                      <span className="font-medium">{formatCurrency(selectedInvoice.financiero?.monto_pagado_acumulado)}</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          selectedInvoice.financiero?.monto_pagado_acumulado,
+                        )}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Saldo:</span>
-                      <span className={`font-bold ${selectedInvoice.financiero?.saldo_pendiente > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {formatCurrency(selectedInvoice.financiero?.saldo_pendiente)}
+                      <span
+                        className={`font-bold ${selectedInvoice.financiero?.saldo_pendiente > 0 ? "text-red-600" : "text-green-600"}`}
+                      >
+                        {formatCurrency(
+                          selectedInvoice.financiero?.saldo_pendiente,
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1079,19 +1307,27 @@ const Gerencia = () => {
                   <div className="space-y-2 text-sm">
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Cliente:</span>
-                      <span className="font-medium">{selectedInvoice.servicio?.cliente}</span>
+                      <span className="font-medium">
+                        {selectedInvoice.servicio?.cliente}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Cuenta:</span>
-                      <span className="font-medium">{selectedInvoice.servicio?.cuenta}</span>
+                      <span className="font-medium">
+                        {selectedInvoice.servicio?.cuenta}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Proveedor:</span>
-                      <span className="font-medium">{selectedInvoice.servicio?.proveedor}</span>
+                      <span className="font-medium">
+                        {selectedInvoice.servicio?.proveedor}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Conductor:</span>
-                      <span className="font-medium">{selectedInvoice.servicio?.conductor}</span>
+                      <span className="font-medium">
+                        {selectedInvoice.servicio?.conductor}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1105,14 +1341,22 @@ const Gerencia = () => {
                     Estados
                   </h4>
                   <div className="flex flex-wrap gap-2">
-                    <span className={`px-4 py-2 rounded-lg text-sm ${getStatusColor(selectedInvoice.estados?.estado_detraccion, 'detraction')}`}>
-                      Detracción: {selectedInvoice.estados?.estado_detraccion || 'N/A'}
+                    <span
+                      className={`px-4 py-2 rounded-lg text-sm ${getStatusColor(selectedInvoice.estados?.estado_detraccion, "detraction")}`}
+                    >
+                      Detracción:{" "}
+                      {selectedInvoice.estados?.estado_detraccion || "N/A"}
                     </span>
-                    <span className={`px-4 py-2 rounded-lg text-sm ${getStatusColor(selectedInvoice.estados?.estado_pago_neto, 'payment')}`}>
-                      Pago Neto: {selectedInvoice.estados?.estado_pago_neto || 'N/A'}
+                    <span
+                      className={`px-4 py-2 rounded-lg text-sm ${getStatusColor(selectedInvoice.estados?.estado_pago_neto, "payment")}`}
+                    >
+                      Pago Neto:{" "}
+                      {selectedInvoice.estados?.estado_pago_neto || "N/A"}
                     </span>
-                    <span className={`px-4 py-2 rounded-lg text-sm ${getStatusColor(selectedInvoice.estados?.prioridad, 'priority')}`}>
-                      Prioridad: {selectedInvoice.estados?.prioridad || 'N/A'}
+                    <span
+                      className={`px-4 py-2 rounded-lg text-sm ${getStatusColor(selectedInvoice.estados?.prioridad, "priority")}`}
+                    >
+                      Prioridad: {selectedInvoice.estados?.prioridad || "N/A"}
                     </span>
                   </div>
                 </div>
@@ -1125,15 +1369,29 @@ const Gerencia = () => {
                   <div className="space-y-2 text-sm">
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Pago Detracción:</span>
-                      <span className="font-medium">{selectedInvoice.fechas?.pago_detraccion ? formatDate(selectedInvoice.fechas.pago_detraccion) : 'Pendiente'}</span>
+                      <span className="font-medium">
+                        {selectedInvoice.fechas?.pago_detraccion
+                          ? formatDate(selectedInvoice.fechas.pago_detraccion)
+                          : "Pendiente"}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Probable Pago:</span>
-                      <span className="font-medium">{selectedInvoice.fechas?.probable_pago ? formatDate(selectedInvoice.fechas.probable_pago) : 'No definido'}</span>
+                      <span className="font-medium">
+                        {selectedInvoice.fechas?.probable_pago
+                          ? formatDate(selectedInvoice.fechas.probable_pago)
+                          : "No definido"}
+                      </span>
                     </div>
                     <div className="grid grid-cols-2">
                       <span className="text-gray-600">Últ. Actualización:</span>
-                      <span className="font-medium">{selectedInvoice.fechas?.ultima_actualizacion ? formatDate(selectedInvoice.fechas.ultima_actualizacion) : 'N/A'}</span>
+                      <span className="font-medium">
+                        {selectedInvoice.fechas?.ultima_actualizacion
+                          ? formatDate(
+                              selectedInvoice.fechas.ultima_actualizacion,
+                            )
+                          : "N/A"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1147,13 +1405,14 @@ const Gerencia = () => {
                     Fletes ({selectedInvoice.fletes_incluidos?.cantidad || 0})
                   </h4>
                   <div className="text-sm text-gray-500 font-semibold">
-                    Total fletes: {formatCurrency(selectedInvoice.financiero?.monto_total)}
+                    Total fletes:{" "}
+                    {formatCurrency(selectedInvoice.financiero?.monto_total)}
                   </div>
                 </div>
-                
-                {selectedInvoice.fletes_incluidos?.detalles?.map((freight, index) => (
-                  renderFreightDetails(freight, index)
-                ))}
+
+                {selectedInvoice.fletes_incluidos?.detalles?.map(
+                  (freight, index) => renderFreightDetails(freight, index),
+                )}
               </div>
 
               {/* Información Adicional */}
@@ -1164,22 +1423,42 @@ const Gerencia = () => {
                     Información Adicional
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    {selectedInvoice.informacion_adicional.nro_constancia_detraccion && (
+                    {selectedInvoice.informacion_adicional
+                      .nro_constancia_detraccion && (
                       <div className="bg-gray-50 p-3 rounded border">
-                        <span className="text-gray-600 block mb-1">Constancia Detracción:</span>
-                        <span className="font-medium">{selectedInvoice.informacion_adicional.nro_constancia_detraccion}</span>
+                        <span className="text-gray-600 block mb-1">
+                          Constancia Detracción:
+                        </span>
+                        <span className="font-medium">
+                          {
+                            selectedInvoice.informacion_adicional
+                              .nro_constancia_detraccion
+                          }
+                        </span>
                       </div>
                     )}
                     {selectedInvoice.informacion_adicional.banco_destino && (
                       <div className="bg-gray-50 p-3 rounded border">
-                        <span className="text-gray-600 block mb-1">Banco Destino:</span>
-                        <span className="font-medium">{selectedInvoice.informacion_adicional.banco_destino}</span>
+                        <span className="text-gray-600 block mb-1">
+                          Banco Destino:
+                        </span>
+                        <span className="font-medium">
+                          {selectedInvoice.informacion_adicional.banco_destino}
+                        </span>
                       </div>
                     )}
-                    {selectedInvoice.informacion_adicional.observaciones_admin && (
+                    {selectedInvoice.informacion_adicional
+                      .observaciones_admin && (
                       <div className="col-span-2 bg-gray-50 p-3 rounded border">
-                        <span className="text-gray-600 block mb-2">Observaciones:</span>
-                        <p className="font-medium">{selectedInvoice.informacion_adicional.observaciones_admin}</p>
+                        <span className="text-gray-600 block mb-2">
+                          Observaciones:
+                        </span>
+                        <p className="font-medium">
+                          {
+                            selectedInvoice.informacion_adicional
+                              .observaciones_admin
+                          }
+                        </p>
                       </div>
                     )}
                   </div>
