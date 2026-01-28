@@ -583,17 +583,29 @@ const formatHora = (fecha) => {
                 </th>
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
                   <div className="flex items-center gap-1">
+                    <Hash className="h-3 w-3" />
+                    Origen
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Hash className="h-3 w-3" />
+                    Destino
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
                     <CheckCircle className="h-3 w-3" />
                     Estado
                   </div>
                 </th>
                
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                {/* <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <FileText className="h-3 w-3" />
                     Observaciones
                   </div>
-                </th>
+                </th> */}
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 whitespace-nowrap">
                   Acciones
                 </th>
@@ -718,6 +730,16 @@ const formatHora = (fecha) => {
                         {flete?.servicio?.tipo_servicio || flete?.servicio?.modalidad_servicio }
                       </span>
                     </td>
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}>
+                        {flete?.servicio?.origen }
+                      </span> 
+                    </td>
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}>
+                        {flete?.servicio?.destino }
+                      </span>
+                    </td>
                     {/* Estado */}
                     <td className="px-3 py-2 border-r border-gray-200">
                       <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getEstadoBadgeClass(flete.estado_flete)}`}>
@@ -725,8 +747,9 @@ const formatHora = (fecha) => {
                       </span>
                     </td>
 
+                    
                     {/* Observaciones */}
-                    <td className="px-3 py-2 border-r border-gray-200">
+                    {/* <td className="px-3 py-2 border-r border-gray-200">
                       {isEditing ? (
                         <textarea
                           value={editForm.observaciones}
@@ -740,7 +763,7 @@ const formatHora = (fecha) => {
                           {flete.observaciones || 'Sin observaciones'}
                         </div>
                       )}
-                    </td>
+                    </td> */}
 
                     {/* Acciones - Solo editar y detalles */}
                     <td className="px-3 py-2">
