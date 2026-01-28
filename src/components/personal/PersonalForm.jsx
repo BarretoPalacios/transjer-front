@@ -273,15 +273,15 @@ const PersonalForm = ({
         errors.categoria_licencia = "La categoría de licencia es requerida para conductores";
       }
 
-      if (!formData.fecha_venc_licencia) {
-        errors.fecha_venc_licencia = "La fecha de vencimiento de licencia es requerida para conductores";
-      } else {
-        const fechaVencimiento = new Date(formData.fecha_venc_licencia);
-        const hoy = new Date();
-        if (fechaVencimiento < hoy) {
-          errors.fecha_venc_licencia = "La licencia está vencida";
-        }
-      }
+      // if (!formData.fecha_venc_licencia) {
+      //   errors.fecha_venc_licencia = "La fecha de vencimiento de licencia es requerida para conductores";
+      // } else {
+      //   const fechaVencimiento = new Date(formData.fecha_venc_licencia);
+      //   const hoy = new Date();
+      //   if (fechaVencimiento < hoy) {
+      //     errors.fecha_venc_licencia = "La licencia está vencida";
+      //   }
+      // }
     }
 
     // Validar salario (si existe)
