@@ -66,7 +66,9 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
   const [successMessage, setSuccessMessage] = useState(null);
   
   const itemsPerPageOptions = [10, 20, 30, 50];
-
+  // NUEVOS ESTADOS
+const [editingMonto, setEditingMonto] = useState(null);
+const [montoEditValue, setMontoEditValue] = useState("");
   // Función principal para cargar fletes
   const fetchFletes = useCallback(
     async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
@@ -153,6 +155,60 @@ const FletesPendientes = ({ servicioId, servicioCodigo }) => {
   React.useEffect(() => {
     fetchFletes();
   }, []);
+
+  // Función para manejar clic en el monto
+const handleMontoClick = useCallback((flete, e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  // Si ya está en edición, no hacer nada
+  if (editingMonto === flete.id) return;
+  
+  setEditingMonto(flete.id);
+  setMontoEditValue(flete.monto_flete?.toString() || "0.00");
+  
+  // Limpiar modo de edición completo si está activo
+  setEditingFlete(null);
+  setEditForm({
+    monto_flete: "",
+    observaciones: "",
+  });
+}, [editingMonto]);
+
+// Función para guardar el monto editado
+const handleSaveMonto = useCallback(async (fleteId) => {
+  if (!montoEditValue || parseFloat(montoEditValue) < 0) {
+    setError("El monto debe ser mayor o igual a 0");
+    setEditingMonto(null);
+    return;
+  }
+
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    const updateData = {
+      monto_flete: parseFloat(montoEditValue),
+    };
+
+    await fletesAPI.updateFlete(fleteId, updateData);
+
+    setSuccessMessage("Monto actualizado exitosamente");
+    setEditingMonto(null);
+    setMontoEditValue("");
+    fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
+  } catch (err) {
+    setError("Error al actualizar el monto: " + err.message);
+  } finally {
+    setIsLoading(false);
+  }
+}, [montoEditValue, fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
+
+// Función para cancelar edición de monto
+const handleCancelMontoEdit = useCallback(() => {
+  setEditingMonto(null);
+  setMontoEditValue("");
+}, []);
 
   const handleViewDetalle = useCallback((flete) => {
     setFleteSeleccionado(flete);
@@ -579,26 +635,84 @@ const formatHora = (fecha) => {
                     </td>  
 
                     {/* Monto Flete */}
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500">S/.</span>
-                          <input
-                            type="number"
-                            value={editForm.monto_flete}
-                            onChange={(e) => setEditForm({...editForm, monto_flete: e.target.value})}
-                            className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                            placeholder="0.00"
-                            step="0.01"
-                            min="0"
-                          />
-                        </div>
-                      ) : (
-                        <div className="font-medium text-gray-900">
-                          S/. {parseFloat(flete.monto_flete).toFixed(2)}
-                        </div>
-                      )}
-                    </td>
+                    
+<td 
+  className="px-3 py-2 border-r border-gray-200"
+  onClick={(e) => {
+    if (editingFlete !== flete.id) { // Solo permitir si no está en modo edición completo
+      handleMontoClick(flete, e);
+    }
+  }}
+>
+  {editingMonto === flete.id ? (
+    <div className="flex items-center gap-2">
+      <span className="text-gray-500">S/.</span>
+      <input
+        type="number"
+        value={montoEditValue}
+        onChange={(e) => setMontoEditValue(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+        placeholder="0.00"
+        step="0.01"
+        min="0"
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            handleSaveMonto(flete.id);
+          } else if (e.key === 'Escape') {
+            handleCancelMontoEdit();
+          }
+        }}
+        onBlur={() => handleSaveMonto(flete.id)}
+      />
+      <div className="flex space-x-1">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSaveMonto(flete.id);
+          }}
+          className="p-1 rounded text-green-600 hover:text-green-800 hover:bg-green-100"
+          title="Guardar monto"
+        >
+          <Save className="h-3 w-3" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCancelMontoEdit();
+          }}
+          className="p-1 rounded text-red-600 hover:text-red-800 hover:bg-red-100"
+          title="Cancelar edición"
+        >
+          <XCircle className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  ) : editingFlete === flete.id ? (
+    // Mantener el input original cuando está en modo edición completo
+    <div className="flex items-center gap-2">
+      <span className="text-gray-500">S/.</span>
+      <input
+        type="number"
+        value={editForm.monto_flete}
+        onChange={(e) => setEditForm({...editForm, monto_flete: e.target.value})}
+        className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+        placeholder="0.00"
+        step="0.01"
+        min="0"
+      />
+    </div>
+  ) : (
+    <div 
+       className="font-medium text-gray-900 cursor-pointer hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors border border-transparent hover:border-blue-200"
+  title="Haz clic para editar el monto"
+    >
+      S/. {parseFloat(flete.monto_flete).toFixed(2)}
+    </div>
+  )}
+</td>
+
 <td className="px-3 py-2 border-r border-gray-200">
                       <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}>
                         {flete?.servicio?.tipo_servicio || flete?.servicio?.modalidad_servicio }
