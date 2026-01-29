@@ -37,6 +37,7 @@ import {
   Filter as FilterIcon,
   RefreshCw,
   Sparkles,
+  TriangleAlert,
 } from "lucide-react";
 import Button from "../../../components/common/Button/Button";
 import Modal from "../../../components/common/Modal/Modal";
@@ -96,11 +97,6 @@ const Gerencia = () => {
     total_facturas: 0,
     cliente_buscado: "",
     cliente_encontrado: "",
-  });
-
-  const [fletesStats, setFletesStats] = useState({
-    total_fletes: 0,
-    resumen_estados: {},
   });
 
   // Estados para filtros expandidos
@@ -225,7 +221,8 @@ const Gerencia = () => {
         if (response.summary) {
           setSummary(response.summary);
         }
-        await fetchFletesStats();
+        // Obtener métricas financieras específicas
+        await fetchFinancialKPIs();
         // Actualizar paginación
         setPagination({
           currentPage: response.pagination?.page || 1,
@@ -245,19 +242,28 @@ const Gerencia = () => {
     [appliedFilters, pagination.pageSize],
   );
 
-  const fetchFletesStats = useCallback(async () => {
-    try {
-      // Asumiendo que tu API tiene este endpoint
-      const response = await facturacionGestionAPI.getFletesIndicator();
-
-      setFletesStats({
-        total_fletes: response.total_fletes || 0,
-        resumen_estados: response.resumen_estados || {},
-      });
-    } catch (error) {
-      console.error("Error fetching fletes stats:", error);
-    }
-  }, []);
+ // Función para obtener métricas financieras específicas
+const fetchFinancialKPIs = useCallback(async () => {
+  try {
+    const response = await facturacionGestionAPI.getKpisFinancierosEspecificos();
+    
+    // Actualizar el summary con los nuevos datos
+    setSummary(prev => ({
+      ...prev,
+      total_vendido_neto: response.total_vendido_neto || 0,
+      total_vendido_bruto: response.total_vendido_bruto || 0,
+      facturacion_bruta: response.facturacion_bruta || 0,
+      facturacion_bruta_pendiente: response.facturacion_bruta_pendiente || 0,
+      total_detracciones: response.total_detracciones || 0,
+      pendiente_por_cobrar: response.pendiente_por_cobrar || 0,
+      total_cobrado: response.total_cobrado || 0,
+      total_por_vencer: response.total_por_vencer || 0,
+      total_vencido: response.total_vencido || 0
+    }));
+  } catch (error) {
+    console.error("Error fetching financial KPIs:", error);
+  }
+}, []);
 
   // Función para aplicar filtros
   const applyFilters = () => {
@@ -766,121 +772,106 @@ const Gerencia = () => {
 
         {/* Resumen de Métricas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">
-                  Total Vendido Neto
-                </h3>
-                <p className="text-lg font-bold text-gray-800 mt-1">
-                  {formatCurrency(summary.total_vendido)}
-                </p>
-                <h3 className="text-xs font-medium text-gray-500">
-                  Total Vendido Bruto
-                </h3>
-                <p className="text-lg font-bold text-gray-800 mt-1">
-                  {formatCurrency(summary.total_vendido_bruto)}
-                </p>
-              </div>
-              <div className="p-2 bg-yellow-50 rounded-lg">
-                <DollarSign className="h-5 w-5 text-yellow-600" />
-              </div>
-            </div>
-          </div>
+  <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        <h3 className="text-xs font-medium text-gray-500">
+          Total Vendido Neto
+        </h3>
+        <p className="text-lg font-bold text-gray-800 mt-1">
+          {formatCurrency(summary.total_vendido_neto)}
+        </p>
+        <h3 className="text-xs font-medium text-gray-500">
+          Total Vendido Bruto
+        </h3>
+        <p className="text-lg font-bold text-gray-800 mt-1">
+          {formatCurrency(summary.total_vendido_bruto)}
+        </p>
+      </div>
+      <div className="p-2 bg-yellow-50 rounded-lg">
+        <DollarSign className="h-5 w-5 text-yellow-600" />
+      </div>
+    </div>
+  </div>
 
-          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                {/* Fletes Pendientes */}
-                <h3 className="text-xs font-medium text-gray-500">
-                  Fletes Pendientes
-                </h3>
-                <p className="text-lg font-bold text-gray-800 mt-1">
-                  {fletesStats.resumen_estados?.PENDIENTE || 0}
-                </p>
+  <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        {/* Facturación Bruta */}
+        <h3 className="text-xs font-medium text-gray-500">
+          Facturación Bruta
+        </h3>
+        <p className="text-lg font-bold text-gray-800 mt-1">
+          {formatCurrency(summary.facturacion_bruta)}
+        </p>
 
-                {/* Fletes Por Facturar (Valorizados) */}
-                <h3 className="text-xs font-medium text-gray-500">
-                  Fletes con Valor
-                </h3>
-                <p className="text-lg font-bold text-gray-800 mt-1">
-                  {fletesStats.resumen_estados?.VALORIZADO || 0}
-                </p>
+        {/* Pendiente por Cobrar */}
+        <h3 className="text-xs font-medium text-gray-500">
+          Facturacion Pendiente 
+        </h3>
+        <p className="text-lg font-bold text-gray-800 mt-1">
+          {formatCurrency(summary.facturacion_bruta_pendiente)}
+        </p>
+      </div>
+      <div className="p-2 bg-blue-50 rounded-lg">
+        <FileText className="h-5 w-5 text-blue-600" />
+      </div>
+    </div>
+  </div> 
+  
+   <MetricCard
+    title="Total de Detracciones"
+    value={formatCurrency(summary.total_detracciones)}
+    subtitle="Monto total en detracciones"  
+    icon={TriangleAlert}
+    color="yellow"
+  />
 
-                {/* Si quieres mostrar el Total General */}
-                <h3 className="text-xs font-medium text-gray-500">
-                  Total Fletes
-                </h3>
-                <p className="text-lg font-bold text-blue-600 mt-1">
-                  {fletesStats.total_fletes || 0}
-                </p>
-              </div>
-            
-            </div>
-          </div>
 
-          <MetricCard
-            title="Total Facturado Bruto"
-            value={formatCurrency(summary.total_facturado)}
-            subtitle={`${summary.total_facturas} facturas`}
-            icon={FileText}
-            color="blue"
-          />
+  <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        {/* Pendiente por Cobrar */}
+        <h3 className="text-xs font-medium text-gray-500">
+          Pendiente Cobrar
+        </h3>
+        <p className="text-lg font-bold text-gray-800 mt-1">
+          {formatCurrency(summary.pendiente_por_cobrar)}
+        </p>
+      </div>
+      <div className="p-2 bg-blue-50 rounded-lg">
+        <FileText className="h-5 w-5 text-blue-600" />
+      </div>
+    </div>
+  </div>
 
-          <MetricCard
-            title="Saldo Pendiente"
-            value={formatCurrency(summary.total_pendiente)}
-            subtitle={
-              summary.total_pendiente > 0
-                ? "⚠️ Pendiente por cobrar"
-                : "✅ Al día"
-            }
-            icon={Clock}
-            color="red"
-            highlight={summary.total_pendiente > 0}
-          />
+  <MetricCard
+    title="Cobrado"
+    value={formatCurrency(summary.total_cobrado)}
+    subtitle="Monto total recibido"
+    icon={CheckCircle}
+    color="green"
+  />
 
-          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">
-                  Total Detracciones
-                </h3>
-                <p className="text-lg font-bold text-gray-800 mt-1">
-                  {formatCurrency(summary.total_detracciones)}
-                </p>
-                <div className="text-xs text-gray-500 mt-2 space-y-1">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-3 w-3 text-green-500 mr-1" />
-                    Pagado: {formatCurrency(summary.total_pagado_detracc)}
-                  </div>
-                  <div className="flex items-center">
-                    <Clock className="h-3 w-3 text-yellow-500 mr-1" />
-                    Pendiente: {formatCurrency(summary.total_pendiente_detracc)}
-                  </div>
-                </div>
-              </div>
-              <div className="p-2 bg-yellow-50 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              </div>
-            </div>
-          </div>
+  <MetricCard
+    title="Por Vencer"
+    value={formatCurrency(summary.total_por_vencer)}
+    subtitle="Monto total recibido"
+    icon={CheckCircle}
+    color="green"
+  />
+  <MetricCard 
+    title="Vencidas"
+    value={formatCurrency(summary.total_vencido)}
+    subtitle="Monto total recibido"
+    icon={CheckCircle}
+    color="green"
+  />
 
-          <MetricCard
-            title="Total Pagado"
-            value={formatCurrency(summary.total_pagado)}
-            subtitle={`${Math.round((summary.total_pagado / summary.total_facturado) * 100)}% del total`}
-            icon={CheckCircle}
-            color="green"
-          />
-          <MetricCard
-            title="Total vencido"
-            value={formatCurrency(summary.total_pendiente_vencido)}
-            subtitle={`${summary.cantidad_vencidas} facturas del total`}
-            icon={AlertTriangle}
-            color="red"
-          />
-        </div>
+
+
+
+</div>
 
         {/* Indicador de carga */}
         {loadingData && (

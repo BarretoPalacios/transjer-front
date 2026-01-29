@@ -164,10 +164,15 @@ getResumenPorPlaca: async (filters = {}) => {
     };
   },
 
-  getFletesIndicator:async () =>{
-const response = await axiosInstance.get(`/gerencia/fletes_indicador`);
+  getKpisFinancierosEspecificos: async () => {
+  try {
+    const response = await axiosInstance.get('/gerencia/get_kpis_financieros_especificos');
     return response.data;
-  },
+  } catch (error) {
+    console.error('Error fetching financial KPIs:', error);
+    throw error;
+  }
+},
 
   // Obtener gestión por ID
   getGestionById: async (gestionId) => {
