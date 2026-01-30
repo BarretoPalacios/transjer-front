@@ -597,7 +597,7 @@ const Servicios = () => {
           </div>
 
           {/* Proveedor */}
-          {/* <div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Proveedor
             </label>
@@ -608,7 +608,7 @@ const Servicios = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               placeholder="Nombre del proveedor"
             />
-          </div> */}
+          </div>
 
           {/* Cuenta */}
           {/* <div>
