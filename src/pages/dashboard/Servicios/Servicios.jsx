@@ -58,6 +58,8 @@ const Servicios = () => {
     cliente_nombre: '',
     flota_placa: '',
     fecha_servicio: '',
+    fecha_inicio:'',
+    fecha_fin:"",
     gia_rr: '',
     gia_rt: '',
     estado: 'Programado',
@@ -79,6 +81,7 @@ const Servicios = () => {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [usuarioActual] = useState('admin@empresa.com');
+  const [loadingDownload,setloadingDownload]=useState(false);
 
   const itemsPerPageOptions = [10, 20, 30, 50];
 
@@ -192,6 +195,7 @@ const Servicios = () => {
 
   const handleExport = useCallback(async () => {
     try {
+      setloadingDownload(true)
       const filtersForAPI = {};
       
       // Solo enviar filtros que tengan valor
@@ -206,6 +210,7 @@ const Servicios = () => {
         blob, 
         `servicios_principales_${new Date().toISOString().split('T')[0]}.xlsx`
       );
+      setloadingDownload(false)
     } catch (err) {
       setError('Error al exportar: ' + err.message);
       console.error('Error exporting servicios:', err);
@@ -306,6 +311,8 @@ const Servicios = () => {
       cliente_nombre: '',
       flota_placa: '',
       fecha_servicio: '',
+       fecha_inicio:'',
+    fecha_fin:"",
       gia_rr: '',
       gia_rt: '',
       estado: '',
@@ -462,6 +469,7 @@ const Servicios = () => {
               variant="secondary"
               icon={Download}
               size="small"
+              isLoading={loadingDownload}  
             >
               Exportar
             </Button>
@@ -561,6 +569,30 @@ const Servicios = () => {
               onChange={(e) => handleFilterChange('codigo_servicio_principal', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
               placeholder="SRV-000000001"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Fecha Servicio Desde
+            </label>
+            <input
+              type="date"
+              value={filters.fecha_inicio}
+              onChange={(e) => handleFilterChange('fecha_inicio', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Fecha Servicio Hasta
+            </label> 
+            <input
+              type="date"
+              value={filters.fecha_fin}
+              onChange={(e) => handleFilterChange('fecha_fin', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
             />
           </div>
 
