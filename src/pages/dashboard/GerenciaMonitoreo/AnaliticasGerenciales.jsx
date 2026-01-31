@@ -225,7 +225,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Vendido Neto</h3>
-                <p className="text-blue-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.total_vendido_neto)}
                 </p>
               </div>
@@ -241,7 +241,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Vendido Bruto</h3>
-                <p className="text-green-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.total_vendido_bruto)}
                 </p>
               </div>
@@ -257,7 +257,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Facturación Bruta</h3>
-                <p className="text-purple-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.facturacion_bruta)}
                 </p>
               </div> 
@@ -278,7 +278,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Facturación Pendiente</h3>
-                <p className="text-yellow-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.facturacion_bruta_pendiente)}
                 </p>
               </div>
@@ -315,7 +315,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Pendiente por Cobrar</h3>
-                <p className="text-red-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.pendiente_por_cobrar)}
                 </p>
               </div>
@@ -362,7 +362,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Total Cobrado</h3>
-                <p className="text-green-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.total_cobrado)}
                 </p>
               </div>
@@ -397,7 +397,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Total Detracciones</h3>
-                <p className="text-indigo-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.total_detracciones)}
                 </p>
               </div>
@@ -442,7 +442,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Por Vencer</h3>
-                <p className="text-blue-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.total_por_vencer)}
                 </p>
               </div>
@@ -455,7 +455,7 @@ const AnaliticasGerenciales = () => {
               <div className="text-left">
                 <p className="text-gray-500 text-xs">Próximos vencimientos</p>
                 <p className="text-gray-400 text-xs">
-                  {dashboardData.cnt_vencido === 0 ? 'Sin documentos vencidos' : `${dashboardData.cnt_vencido} documento(s) vencido(s)`}
+                  {dashboardData.cnt_vencido === 0 ? 'Sin facturas vencidas' : `${dashboardData.cnt_vencido} factura(s) vencida(s)`}
                 </p>
               </div>
               <div className="text-right">
@@ -472,7 +472,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Vencido</h3>
-                <p className={`text-lg font-semibold ${dashboardData.total_vencido === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`text-lg font-semibold ${dashboardData.total_vencido === 0 ? 'text-green-600' : 'text-black'}`}>
                   {formatCurrency(dashboardData.total_vencido)}
                 </p>
               </div>
@@ -532,7 +532,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Fletes Pendientes</h3>
-                <p className="text-yellow-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {dashboardData.fletes.fletes_pendientes}
                 </p>
               </div>
@@ -548,7 +548,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Fletes Valorizados</h3>
-                <p className="text-blue-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {dashboardData.fletes.fletes_valorizados}
                 </p>
               </div>
@@ -564,7 +564,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Fletes con Factura</h3>
-                <p className="text-green-600 text-lg font-semibold">
+                <p className="text-black text-lg font-semibold">
                   {dashboardData.fletes.fletes_con_factura}
                 </p>
               </div>
@@ -643,7 +643,7 @@ const AnaliticasGerenciales = () => {
       </div>
       
       {/* Resumen general */}
-      <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg shadow-sm p-4 transition-transform hover:-translate-y-1">
+      {/* <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg shadow-sm p-4 transition-transform hover:-translate-y-1">
         <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
           <PieChart className="text-blue-600 mr-2 text-sm h-4 w-4" />
           Resumen General
@@ -721,12 +721,12 @@ const AnaliticasGerenciales = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
       
       {/* Pie de página */}
-      <footer className="mt-6 text-center text-gray-500 text-xs">
+      {/* <footer className="mt-6 text-center text-gray-500 text-xs">
         <p>Dashboard financiero • Datos actualizados desde API</p>
-      </footer>
+      </footer> */}
     </div>
   );
 };
