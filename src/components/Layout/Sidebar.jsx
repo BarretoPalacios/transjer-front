@@ -338,13 +338,13 @@ const Sidebar = ({
             path: "/gerencia/monitoreo-clientes",
             show: shouldShowSubItem({ id: "monitoreo-clientes" }),
           },
-          // {
-          //   id: "analiticas",
-          //   label: "Analíticas",
-          //   path: "/gerencia/analiticas",
-          //   icon: BarChart3,
-          //   show: shouldShowSubItem({ id: "analiticas" }),
-          // },
+          {
+            id: "analiticas",
+            label: "Resumen General",
+            path: "/gerencia/analiticas",
+            icon: BarChart3,
+            show: shouldShowSubItem({ id: "analiticas" }),
+          },
           {
             id: "historial",
             label: "Historial de Cambios",

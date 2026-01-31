@@ -1,699 +1,170 @@
-import React, { useEffect, useRef, useState } from 'react';
-import Chart from 'chart.js/auto';
-import { facturacionGestionAPI } from "../../../api/endpoints/facturacionGestion";
+import React, { useEffect, useState } from 'react';
 import {
   DollarSign,
   FileText,
   TrendingUp,
   Clock,
   Truck,
-  Users,
-  MapPin,
-  Building,
-  BarChart3,
+  CheckCircle,
+  Percent,
+  AlertCircle,
   Calendar,
   RefreshCw,
-  AlertCircle,
-  Filter,
-  TrendingDown,
-  CheckCircle,
-  Percent
+  BarChart3,
+  PieChart
 } from 'lucide-react';
-import Button from '../../../components/common/Button/Button';
+import { facturacionGestionAPI } from "../../../api/endpoints/facturacionGestion";
 
 const AnaliticasGerenciales = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [timeframe, setTimeframe] = useState('month'); // "day", "week", "month", "year"
-  const [data, setData] = useState({
-    kpis: {
-      facturado_total: "0.00",
-      pagado_total: "0.00",
-      pendiente_total: "0.00",
-      total_facturas: 0,
+  
+  // Datos iniciales del dashboard
+  const [dashboardData, setDashboardData] = useState({
+    total_vendido_neto: 0,
+    total_vendido_bruto: 0,
+    facturacion_bruta: 0,
+    cnt_facturas_bruta: 0,
+    facturacion_bruta_pendiente: 0,
+    total_detracciones: 0,
+    cnt_detracciones: 0,
+    pendiente_por_cobrar: 0,
+    total_cobrado: 0,
+    cnt_cobrado: 0,
+    total_por_vencer: 0,
+    total_vencido: 0,
+    cnt_vencido: 0,
+    fletes: {
       total_fletes: 0,
-      facturas_vencidas: 0
-    },
-    graficos: {
-      linea_tiempo: {
-        labels: [],
-        datasets: []
-      },
-      conductores_activos: {
-        labels: [],
-        data: []
-      },
-      rutas_top: {
-        labels: [],
-        data: []
-      },
-      clientes_top: {
-        labels: [],
-        data: []
-      },
-      proveedores_top: {
-        labels: [],
-        data: []
-      },
-      placas_activas: {
-        labels: [],
-        data: [],
-        tonelaje: []
-      },
-      tendencia_mensual: {
-        labels: [],
-        data: []
-      }
+      fletes_pendientes: 0,
+      fletes_valorizados: 0,
+      fletes_con_factura: 0
     }
   });
 
-  // Referencias para los gráficos
-  const chartLineaTiempoRef = useRef(null);
-  const chartConductoresRef = useRef(null);
-  const chartRutasRef = useRef(null);
-  const chartClientesRef = useRef(null);
-  const chartProveedoresRef = useRef(null);
-  const chartPlacasRef = useRef(null);
-  const chartTendenciaRef = useRef(null);
-  
-  const chartLineaTiempoInstance = useRef(null);
-  const chartConductoresInstance = useRef(null);
-  const chartRutasInstance = useRef(null);
-  const chartClientesInstance = useRef(null);
-  const chartProveedoresInstance = useRef(null);
-  const chartPlacasInstance = useRef(null);
-  const chartTendenciaInstance = useRef(null);
-
-  // Función para obtener los datos del backend
-  const fetchData = async (selectedTimeframe = timeframe) => {
+  // Función para obtener datos del backend
+  const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await facturacionGestionAPI.getAnalyticsAvanzadas(selectedTimeframe);
-      setData(response);
+      const response = await facturacionGestionAPI.getKpisFinancierosEspecificos();
+      
+      // Mapear los datos de la API al formato esperado
+      // NOTA: Ajusta este mapeo según la estructura real de la respuesta de tu API
+      setDashboardData({
+        total_vendido_neto: response.total_vendido_neto || 0,
+        total_vendido_bruto: response.total_vendido_bruto || 0,
+        facturacion_bruta: response.facturacion_bruta || 0,
+        cnt_facturas_bruta: response.cnt_facturas_bruta || 0,
+        facturacion_bruta_pendiente: response.facturacion_bruta_pendiente || 0,
+        total_detracciones: response.total_detracciones || 0,
+        cnt_detracciones: response.cnt_detracciones || 0,
+        pendiente_por_cobrar: response.pendiente_por_cobrar || 0,
+        total_cobrado: response.total_cobrado || 0,
+        cnt_cobrado: response.cnt_cobrado || 0,
+        total_por_vencer: response.total_por_vencer || 0,
+        total_vencido: response.total_vencido || 0,
+        cnt_vencido: response.cnt_vencido || 0,
+        fletes: {
+          total_fletes: response.fletes?.total_fletes || 0,
+          fletes_pendientes: response.fletes?.fletes_pendientes || 0,
+          fletes_valorizados: response.fletes?.fletes_valorizados || 0,
+          fletes_con_factura: response.fletes?.fletes_con_factura || 0
+        }
+      });
+      
       setLastUpdated(new Date());
     } catch (err) {
-      console.error('Error al obtener análisis gerenciales:', err);
-      setError('No se pudieron cargar los datos analíticos. Por favor, intente nuevamente.');
+      console.error('Error al obtener KPIs financieros:', err);
+      setError('No se pudieron cargar los datos financieros. Por favor, intente nuevamente.');
+      
+      // Datos de ejemplo en caso de error (para desarrollo)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Usando datos de ejemplo para desarrollo');
+        setDashboardData({
+          total_vendido_neto: 2500,
+          total_vendido_bruto: 2950,
+          facturacion_bruta: 1770,
+          cnt_facturas_bruta: 3,
+          facturacion_bruta_pendiente: 1180,
+          total_detracciones: 70.8,
+          cnt_detracciones: 3,
+          pendiente_por_cobrar: 1699.2,
+          total_cobrado: 566.4,
+          cnt_cobrado: 1,
+          total_por_vencer: 1132.8,
+          total_vencido: 0,
+          cnt_vencido: 0,
+          fletes: {
+            total_fletes: 6,
+            fletes_pendientes: 1,
+            fletes_valorizados: 2,
+            fletes_con_factura: 3
+          }
+        });
+        setLastUpdated(new Date());
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para formatear montos
+  // Función para formatear moneda
   const formatCurrency = (value) => {
-    // Si es string con comas, limpiarlo primero
-    let num;
-    if (typeof value === 'string') {
-      num = parseFloat(value.replace(/,/g, ''));
-    } else {
-      num = value;
-    }
-    
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
       currency: 'PEN',
-      minimumFractionDigits: 2
-    }).format(num);
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(numValue || 0);
   };
 
-  // Función para obtener la etiqueta del timeframe
-  const getTimeframeLabel = (tf) => {
-    switch(tf) {
-      case 'day': return 'Día';
-      case 'week': return 'Semana';
-      case 'month': return 'Mes';
-      case 'year': return 'Año';
-      default: return 'Mes';
-    }
-  };
+  // Calcular porcentajes
+  const calcularPorcentajes = () => {
+    const {
+      facturacion_bruta,
+      facturacion_bruta_pendiente,
+      total_cobrado,
+      pendiente_por_cobrar,
+      total_vendido_bruto,
+      total_detracciones,
+      fletes
+    } = dashboardData;
 
-  // Función para obtener el título del gráfico según timeframe
-  const getChartTitle = (baseTitle) => {
-    const tfLabel = getTimeframeLabel(timeframe);
-    switch(timeframe) {
-      case 'day':
-        return `${baseTitle} - Hoy`;
-      case 'week':
-        return `${baseTitle} - Esta semana`;
-      case 'month':
-        return `${baseTitle} - Este mes`;
-      case 'year':
-        return `${baseTitle} - Este año`;
-      default:
-        return baseTitle;
-    }
-  };
-
-  // Función para procesar etiquetas largas (rutas)
-  const procesarEtiquetasRutas = (rutas) => {
-    return rutas.map(ruta => {
-      if (ruta && ruta.length > 30) {
-        const [origen, destino] = ruta.split('→');
-        if (origen && destino) {
-          return `${origen.trim().substring(0, 15)}... → ${destino.trim().substring(0, 15)}...`;
-        }
-        return ruta.substring(0, 30) + '...';
-      }
-      return ruta || '';
-    });
-  };
-
-  // Función para calcular métricas adicionales
-  const calcularMetricasAdicionales = () => {
-    const facturado = parseFloat(data.kpis.facturado_total?.replace(/,/g, '') || 0);
-    const pagado = parseFloat(data.kpis.pagado_total?.replace(/,/g, '') || 0);
-    const pendiente = parseFloat(data.kpis.pendiente_total?.replace(/,/g, '') || 0);
-    const totalFacturas = data.kpis.total_facturas || 0;
-    const totalFletes = data.kpis.total_fletes || 0;
-    const facturasVencidas = data.kpis.facturas_vencidas || 0;
+    const facturacionTotal = facturacion_bruta + facturacion_bruta_pendiente;
+    const porcentajeFacturado = facturacionTotal > 0 ? (facturacion_bruta / facturacionTotal * 100) : 0;
+    const porcentajeCobrado = facturacion_bruta > 0 ? (total_cobrado / facturacion_bruta * 100) : 0;
+    const porcentajeDetracciones = total_vendido_bruto > 0 ? (total_detracciones / total_vendido_bruto * 100) : 0;
+    const porcentajePorVencer = pendiente_por_cobrar > 0 ? (dashboardData.total_por_vencer / pendiente_por_cobrar * 100) : 0;
+    const porcentajeFletesCompletados = fletes.total_fletes > 0 ? ((fletes.total_fletes - fletes.fletes_pendientes) / fletes.total_fletes * 100) : 0;
+    const porcentajeFletesFacturados = fletes.total_fletes > 0 ? (fletes.fletes_con_factura / fletes.total_fletes * 100) : 0;
 
     return {
-      tasaCobranza: facturado > 0 ? ((pagado / facturado) * 100).toFixed(1) : '0.0',
-      promedioPorFactura: totalFacturas > 0 ? (facturado / totalFacturas).toFixed(2) : '0.00',
-      promedioPorFlete: totalFletes > 0 ? (facturado / totalFletes).toFixed(2) : '0.00',
-      tasaVencimiento: totalFacturas > 0 ? ((facturasVencidas / totalFacturas) * 100).toFixed(1) : '0.0',
-      pendientePorcentaje: facturado > 0 ? ((pendiente / facturado) * 100).toFixed(1) : '0.0',
-      eficienciaCobranza: totalFacturas > 0 ? ((totalFacturas - facturasVencidas) / totalFacturas * 100).toFixed(1) : '100.0'
+      porcentajeFacturado: porcentajeFacturado.toFixed(0),
+      porcentajeFacturacionPendiente: (100 - porcentajeFacturado).toFixed(0),
+      porcentajeCobrado: porcentajeCobrado.toFixed(0),
+      porcentajeDetracciones: porcentajeDetracciones.toFixed(1),
+      porcentajePorVencer: porcentajePorVencer.toFixed(0),
+      porcentajeFletesCompletados: porcentajeFletesCompletados.toFixed(0),
+      porcentajeFletesFacturados: porcentajeFletesFacturados.toFixed(0),
+      facturacionTotal: facturacionTotal
     };
   };
 
-  // Función para manejar cambio de período
-  const handleTimeframeChange = (newTimeframe) => {
-    setTimeframe(newTimeframe);
-    fetchData(newTimeframe);
-  };
+  const porcentajes = calcularPorcentajes();
 
   useEffect(() => {
     fetchData();
   }, []);
-
-  useEffect(() => {
-    if (loading || error || !data.graficos) return;
-
-    // Destruir gráficos anteriores si existen
-    const destroyAllCharts = () => {
-      const charts = [
-        chartLineaTiempoInstance,
-        chartConductoresInstance,
-        chartRutasInstance,
-        chartClientesInstance,
-        chartProveedoresInstance,
-        chartPlacasInstance,
-        chartTendenciaInstance
-      ];
-      
-      charts.forEach(chartRef => {
-        if (chartRef.current) {
-          chartRef.current.destroy();
-          chartRef.current = null;
-        }
-      });
-    };
-
-    // Inicializar gráficos
-    const initCharts = () => {
-      // Colores para gráficos
-      const colors = {
-        primary: '#3b82f6',
-        secondary: '#10b981',
-        accent: '#f59e0b',
-        danger: '#ef4444',
-        purple: '#8b5cf6',
-        pink: '#ec4899',
-        indigo: '#6366f1',
-        cyan: '#06b6d4',
-        teal: '#14b8a6'
-      };
-
-      // 1. Gráfico de Línea de Tiempo (Facturas vs Monto)
-      if (chartLineaTiempoRef.current && data.graficos.linea_tiempo) {
-        chartLineaTiempoInstance.current = new Chart(chartLineaTiempoRef.current, {
-          type: 'line',
-          data: {
-            labels: data.graficos.linea_tiempo.labels || [],
-            datasets: (data.graficos.linea_tiempo.datasets || []).map((dataset, index) => ({
-              ...dataset,
-              borderColor: index === 0 ? colors.primary : colors.secondary,
-              backgroundColor: index === 0 ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-              borderWidth: 3,
-              pointBackgroundColor: index === 0 ? colors.primary : colors.secondary,
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 5,
-              fill: true,
-              tension: 0.4
-            }))
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  padding: 20,
-                  usePointStyle: true,
-                  font: {
-                    size: 11
-                  }
-                }
-              },
-              tooltip: {
-                mode: 'index',
-                intersect: false,
-                callbacks: {
-                  label: (context) => {
-                    const label = context.dataset.label || '';
-                    let value = context.raw;
-                    
-                    if (label.includes('Monto')) {
-                      return `${label}: ${formatCurrency(value)}`;
-                    }
-                    return `${label}: ${value}`;
-                  }
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                },
-                ticks: {
-                  callback: function(value) {
-                    const datasets = this.chart.data.datasets;
-                    const isMontoChart = datasets.some(ds => ds.label?.includes('Monto'));
-                    
-                    if (isMontoChart && datasets[0].label?.includes('Monto')) {
-                      return formatCurrency(value);
-                    }
-                    return value;
-                  }
-                }
-              },
-              x: {
-                grid: {
-                  display: false
-                }
-              }
-            },
-            interaction: {
-              intersect: false,
-              mode: 'nearest'
-            },
-            maintainAspectRatio: false
-          }
-        });
-      }
-
-      // 2. Gráfico de Conductores Activos
-      if (chartConductoresRef.current && data.graficos.conductores_activos) {
-        chartConductoresInstance.current = new Chart(chartConductoresRef.current, {
-          type: 'bar',
-          data: {
-            labels: data.graficos.conductores_activos.labels || [],
-            datasets: [{
-              label: 'Fletes Asignados',
-              data: data.graficos.conductores_activos.data || [],
-              backgroundColor: colors.indigo,
-              borderRadius: 6,
-              barPercentage: 0.7
-            }]
-          },
-          options: {
-            indexAxis: 'y',
-            responsive: true,
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    return `Fletes: ${context.parsed.x}`;
-                  }
-                }
-              }
-            },
-            scales: {
-              x: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                },
-                ticks: {
-                  stepSize: 1
-                }
-              },
-              y: {
-                grid: {
-                  display: false
-                }
-              }
-            },
-            maintainAspectRatio: false
-          }
-        });
-      }
-
-      // 3. Gráfico de Rutas Top (Horizontal Bar)
-      if (chartRutasRef.current && data.graficos.rutas_top) {
-        const etiquetasProcesadas = procesarEtiquetasRutas(data.graficos.rutas_top.labels || []);
-        
-        chartRutasInstance.current = new Chart(chartRutasRef.current, {
-          type: 'bar',
-          data: {
-            labels: etiquetasProcesadas,
-            datasets: [{
-              label: 'Viajes',
-              data: data.graficos.rutas_top.data || [],
-              backgroundColor: colors.accent,
-              borderRadius: 6,
-              barPercentage: 0.7
-            }]
-          },
-          options: {
-            indexAxis: 'y',
-            responsive: true,
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const index = context.dataIndex;
-                    return `Viajes: ${context.parsed.x}`;
-                  },
-                  afterLabel: (context) => {
-                    const index = context.dataIndex;
-                    return `Ruta completa: ${data.graficos.rutas_top.labels?.[index] || ''}`;
-                  }
-                }
-              }
-            },
-            scales: {
-              x: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                },
-                ticks: {
-                  stepSize: 1
-                }
-              },
-              y: {
-                grid: {
-                  display: false
-                },
-                ticks: {
-                  font: {
-                    size: 10
-                  }
-                }
-              }
-            },
-            maintainAspectRatio: false
-          }
-        });
-      }
-
-      // 4. Gráfico de Clientes Top (Doughnut)
-      if (chartClientesRef.current && data.graficos.clientes_top) {
-        chartClientesInstance.current = new Chart(chartClientesRef.current, {
-          type: 'doughnut',
-          data: {
-            labels: data.graficos.clientes_top.labels || [],
-            datasets: [{
-              data: data.graficos.clientes_top.data || [],
-              backgroundColor: [
-                colors.primary,
-                colors.secondary,
-                colors.accent,
-                colors.purple,
-                colors.pink,
-                colors.cyan,
-                colors.teal
-              ],
-              borderWidth: 0,
-              hoverOffset: 15
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'right',
-                labels: {
-                  padding: 15,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  font: {
-                    size: 10
-                  }
-                }
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const label = context.label || '';
-                    const value = context.raw || 0;
-                    return `${label}: ${formatCurrency(value)}`;
-                  }
-                }
-              }
-            },
-            cutout: '65%'
-          }
-        });
-      }
-
-      // 5. Gráfico de Proveedores Top
-      if (chartProveedoresRef.current && data.graficos.proveedores_top) {
-        chartProveedoresInstance.current = new Chart(chartProveedoresRef.current, {
-          type: 'bar',
-          data: {
-            labels: data.graficos.proveedores_top.labels || [],
-            datasets: [{
-              label: 'Monto Facturado',
-              data: data.graficos.proveedores_top.data || [],
-              backgroundColor: colors.purple,
-              borderRadius: 6,
-              barPercentage: 0.7
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    return `Monto: ${formatCurrency(context.raw)}`;
-                  }
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                },
-                ticks: {
-                  callback: (value) => formatCurrency(value)
-                }
-              },
-              x: {
-                grid: {
-                  display: false
-                },
-                ticks: {
-                  font: {
-                    size: 11
-                  }
-                }
-              }
-            },
-            maintainAspectRatio: false
-          }
-        });
-      }
-
-      // 6. Gráfico de Placas Activas (Doble Eje)
-      if (chartPlacasRef.current && data.graficos.placas_activas) {
-        chartPlacasInstance.current = new Chart(chartPlacasRef.current, {
-          type: 'bar',
-          data: {
-            labels: data.graficos.placas_activas.labels || [],
-            datasets: [
-              {
-                label: 'Fletes Asignados',
-                data: data.graficos.placas_activas.data || [],
-                backgroundColor: colors.primary,
-                borderRadius: 6,
-                barPercentage: 0.7,
-                yAxisID: 'y'
-              },
-              {
-                label: 'Tonelaje (TN)',
-                data: data.graficos.placas_activas.tonelaje || [],
-                type: 'line',
-                borderColor: colors.danger,
-                backgroundColor: 'transparent',
-                borderWidth: 3,
-                pointBackgroundColor: colors.danger,
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                yAxisID: 'y1'
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            interaction: {
-              mode: 'index',
-              intersect: false,
-            },
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  font: {
-                    size: 11
-                  }
-                }
-              }
-            },
-            scales: {
-              x: {
-                grid: {
-                  display: false
-                }
-              },
-              y: {
-                type: 'linear',
-                display: true,
-                position: 'left',
-                title: {
-                  display: true,
-                  text: 'Fletes',
-                  font: {
-                    size: 11
-                  }
-                },
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                },
-                ticks: {
-                  stepSize: 1
-                }
-              },
-              y1: {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                title: {
-                  display: true,
-                  text: 'Tonelaje (TN)',
-                  font: {
-                    size: 11
-                  }
-                },
-                grid: {
-                  drawOnChartArea: false,
-                }
-              }
-            },
-            maintainAspectRatio: false
-          }
-        });
-      }
-
-      // 7. Gráfico de Tendencia Mensual
-      if (chartTendenciaRef.current && data.graficos.tendencia_mensual) {
-        // Cambiar título según timeframe
-        let chartLabel = 'Facturación';
-        if (timeframe === 'day') chartLabel = 'Facturación del día';
-        else if (timeframe === 'week') chartLabel = 'Facturación semanal';
-        else if (timeframe === 'month') chartLabel = 'Facturación mensual';
-        else if (timeframe === 'year') chartLabel = 'Facturación anual';
-        
-        chartTendenciaInstance.current = new Chart(chartTendenciaRef.current, {
-          type: 'line',
-          data: {
-            labels: data.graficos.tendencia_mensual.labels || [],
-            datasets: [{
-              label: chartLabel,
-              data: data.graficos.tendencia_mensual.data || [],
-              borderColor: colors.secondary,
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              borderWidth: 3,
-              pointBackgroundColor: colors.secondary,
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 5,
-              fill: true,
-              tension: 0.4
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    return `${chartLabel}: ${formatCurrency(context.raw)}`;
-                  }
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                },
-                ticks: {
-                  callback: (value) => formatCurrency(value)
-                }
-              },
-              x: {
-                grid: {
-                  display: false
-                }
-              }
-            },
-            maintainAspectRatio: false
-          }
-        });
-      }
-    };
-
-    destroyAllCharts();
-    initCharts();
-
-    // Limpiar gráficos al desmontar el componente
-    return destroyAllCharts;
-  }, [data, loading, error, timeframe]);
-
-  // Calcular métricas adicionales
-  const metricasAdicionales = calcularMetricasAdicionales();
 
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[500px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando análisis gerenciales...</p>
+          <p className="mt-4 text-gray-600">Cargando datos financieros...</p>
         </div>
       </div>
     );
@@ -705,14 +176,13 @@ const AnaliticasGerenciales = () => {
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-gray-800 font-medium mb-2">{error}</p>
-          <Button
-            onClick={() => fetchData(timeframe)}
-            variant="primary"
-            icon={RefreshCw}
-            className="mt-4"
+          <button
+            onClick={fetchData}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 mx-auto"
           >
+            <RefreshCw className="h-4 w-4" />
             Reintentar
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -720,392 +190,543 @@ const AnaliticasGerenciales = () => {
 
   return (
     <div className="bg-gray-50 p-4 font-sans">
-      {/* Encabezado con filtros */}
+      {/* Encabezado */}
       <div className="mb-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Análisis Gerencial</h1>
-            <p className="text-gray-600 text-sm">Dashboard analítico de facturación logística</p>
+            <h1 className="text-xl font-bold text-gray-900 mb-1">Resumen Financiero</h1>
+            {/* <p className="text-gray-600 text-sm">Resumen completo de métricas financieras</p> */}
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Período:</span>
-            </div>
-            <div className="flex space-x-1">
-              <Button
-                onClick={() => handleTimeframeChange('day')}
-                variant={timeframe === 'day' ? 'primary' : 'secondary'}
-                className="text-xs px-3 py-1.5"
-              >
-                Día
-              </Button>
-              <Button
-                onClick={() => handleTimeframeChange('week')}
-                variant={timeframe === 'week' ? 'primary' : 'secondary'}
-                className="text-xs px-3 py-1.5"
-              >
-                Semana
-              </Button>
-              <Button
-                onClick={() => handleTimeframeChange('month')}
-                variant={timeframe === 'month' ? 'primary' : 'secondary'}
-                className="text-xs px-3 py-1.5"
-              >
-                Mes
-              </Button>
-              <Button
-                onClick={() => handleTimeframeChange('year')}
-                variant={timeframe === 'year' ? 'primary' : 'secondary'}
-                className="text-xs px-3 py-1.5"
-              >
-                Año
-              </Button>
-            </div>
-            <Button
-              onClick={() => fetchData(timeframe)}
-              variant="secondary"
-              icon={RefreshCw}
-              className="text-sm"
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchData}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Actualizar
-            </Button>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Actualizando...' : 'Actualizar'}
+            </button>
+          </div>
+        </div>
+        <div className="h-1 w-16 bg-blue-500 mt-2 rounded"></div>
+      </div>
+
+      {/* Sección de ventas */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center">
+          <BarChart3 className="text-blue-500 mr-2 text-sm h-4 w-4" />
+          Resumen de Ventas
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {/* Total Vendido Neto */}
+          <div className="bg-white rounded-lg shadow-sm p-3 border-l-3 border-blue-500 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Vendido Neto</h3>
+                <p className="text-blue-600 text-lg font-semibold">
+                  {formatCurrency(dashboardData.total_vendido_neto)}
+                </p>
+              </div>
+              <div className="p-2 bg-blue-100 text-blue-600 rounded-md">
+                <DollarSign className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs">Suma de todos los fletes valorizados</p>
+          </div>
+          
+          {/* Total Vendido Bruto */}
+          <div className="bg-white rounded-lg shadow-sm p-3 border-l-3 border-green-500 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Vendido Bruto</h3>
+                <p className="text-green-600 text-lg font-semibold">
+                  {formatCurrency(dashboardData.total_vendido_bruto)}
+                </p>
+              </div>
+              <div className="p-2 bg-green-100 text-green-600 rounded-md">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs">Vendido Neto + IVG</p>
+          </div>
+          
+          {/* Facturación Bruta */}
+          <div className="bg-white rounded-lg shadow-sm p-3 border-l-3 border-purple-500 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Facturación Bruta</h3>
+                <p className="text-purple-600 text-lg font-semibold">
+                  {formatCurrency(dashboardData.facturacion_bruta)}
+                </p>
+              </div> 
+              <div className="p-2 bg-purple-100 text-purple-600 rounded-md">
+                <FileText className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="flex justify-between items-center mt-1">
+              <p className="text-gray-500 text-xs">Total facturado</p>
+              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full">
+                {dashboardData.cnt_facturas_bruta} factura{dashboardData.cnt_facturas_bruta !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+          
+          {/* Facturación Bruta Pendiente */}
+          <div className="bg-white rounded-lg shadow-sm p-3 border-l-3 border-yellow-500 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Facturación Pendiente</h3>
+                <p className="text-yellow-600 text-lg font-semibold">
+                  {formatCurrency(dashboardData.facturacion_bruta_pendiente)}
+                </p>
+              </div>
+              <div className="p-2 bg-yellow-100 text-yellow-600 rounded-md">
+                <Clock className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-gray-500">Falta un </span>
+                <span className="font-medium">{porcentajes.porcentajeFacturacionPendiente}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-yellow-500 transition-all duration-500"
+                  style={{ width: `${porcentajes.porcentajeFacturacionPendiente}%` }}
+                ></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* KPIs Principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Facturado Total</p>
-              <p className="text-xl font-bold text-gray-800">
-                {formatCurrency(data.kpis.facturado_total)}
-              </p>
+      
+      {/* Sección de cobranza y detracciones */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center">
+          <DollarSign className="text-green-500 mr-2 text-sm h-4 w-4" />
+          Cobranza y Detracciones
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Pendiente por Cobrar */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Pendiente por Cobrar</h3>
+                <p className="text-red-600 text-lg font-semibold">
+                  {formatCurrency(dashboardData.pendiente_por_cobrar)}
+                </p>
+              </div>
+              <div className="p-2 bg-red-100 text-red-600 rounded-md">
+                <AlertCircle className="h-4 w-4" />
+              </div>
             </div>
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <DollarSign className="h-5 w-5 text-blue-600" />
-            </div>
-          </div>
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-500">{data.kpis.total_facturas} facturas</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Pagado Total</p>
-              <p className="text-xl font-bold text-green-600">
-                {formatCurrency(data.kpis.pagado_total)}
-              </p>
-            </div>
-            <div className="p-2 bg-green-50 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-green-600">
-              {metricasAdicionales.tasaCobranza}% de tasa de cobranza
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Pendiente Total</p>
-              <p className="text-xl font-bold text-red-600">
-                {formatCurrency(data.kpis.pendiente_total)}
-              </p>
-            </div>
-            <div className="p-2 bg-red-50 rounded-lg">
-              <Clock className="h-5 w-5 text-red-600" />
-            </div>
-          </div>
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-red-600">
-              {metricasAdicionales.pendientePorcentaje}% del facturado
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Total Fletes</p>
-              <p className="text-xl font-bold text-gray-800">{data.kpis.total_fletes}</p>
-            </div>
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <Truck className="h-5 w-5 text-purple-600" />
+            
+            <div className="space-y-2 mt-3">
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-600">Por Vencer</span>
+                  <span className="font-medium">
+                    {formatCurrency(dashboardData.total_por_vencer)}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-500 transition-all duration-500"
+                    style={{ width: `${porcentajes.porcentajePorVencer}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-600">Vencido</span>
+                  <span className="font-medium">
+                    {formatCurrency(dashboardData.total_vencido)}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-500 transition-all duration-500"
+                    style={{ width: dashboardData.total_vencido > 0 ? '100%' : '0%' }}
+                  ></div>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-500">
-              {formatCurrency(metricasAdicionales.promedioPorFlete)} por flete
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Facturas Vencidas</p>
-              <p className="text-xl font-bold text-orange-600">{data.kpis.facturas_vencidas}</p>
+          
+          {/* Total Cobrado */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Total Cobrado</h3>
+                <p className="text-green-600 text-lg font-semibold">
+                  {formatCurrency(dashboardData.total_cobrado)}
+                </p>
+              </div>
+              <div className="p-2 bg-green-100 text-green-600 rounded-md">
+                <TrendingUp className="h-4 w-4" />
+              </div>
             </div>
-            <div className="p-2 bg-orange-50 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-orange-600" />
+            
+            <div className="flex justify-between items-center mt-1 mb-3">
+              <p className="text-gray-500 text-xs">Monto cobrado</p>
+              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded-full">
+                {dashboardData.cnt_cobrado} factura{dashboardData.cnt_cobrado !== 1 ? 's' : ''} cobrada{dashboardData.cnt_cobrado !== 1 ? 's' : ''}
+              </span>
             </div>
+            
+            {/* <div> 
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-gray-500">Porcentaje cobrado</span>
+                <span className="font-medium">{porcentajes.porcentajeCobrado}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-green-500 transition-all duration-500"
+                  style={{ width: `${porcentajes.porcentajeCobrado}%` }}
+                ></div>
+              </div>
+            </div> */} 
           </div>
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-orange-600">
-              {metricasAdicionales.tasaVencimiento}% del total
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Eficiencia</p>
-              <p className="text-xl font-bold text-indigo-600">
-                {metricasAdicionales.eficienciaCobranza}%
-              </p>
+          
+          {/* Detracciones */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Total Detracciones</h3>
+                <p className="text-indigo-600 text-lg font-semibold">
+                  {formatCurrency(dashboardData.total_detracciones)}
+                </p>
+              </div>
+              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-md">
+                <Percent className="h-4 w-4" />
+              </div>
             </div>
-            <div className="p-2 bg-indigo-50 rounded-lg">
-              <Percent className="h-5 w-5 text-indigo-600" />
+            
+            <div className="flex justify-between items-center mt-1 mb-3">
+              <p className="text-gray-500 text-xs">Monto retenido</p>
+              <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">
+                {dashboardData.cnt_detracciones} factura{dashboardData.cnt_detracciones !== 1 ? 's' : ''}
+              </span>
             </div>
-          </div>
-          <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-500">Facturas sin vencer</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Gráficos - Primera Fila */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Línea de Tiempo */}
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <BarChart3 className="h-5 w-5 text-blue-600 mr-2" />
-              <h3 className="text-sm font-semibold text-gray-800">
-                {getChartTitle('Evolución Temporal')}
-              </h3>
-            </div>
-            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">
-              {getTimeframeLabel(timeframe)}
-            </span>
-          </div>
-          <div className="relative h-64">
-            <canvas ref={chartLineaTiempoRef}></canvas>
-          </div>
-        </div>
-
-        {/* Clientes Top */}
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Building className="h-5 w-5 text-green-600 mr-2" />
-              <h3 className="text-sm font-semibold text-gray-800">
-                Top Clientes por Facturación
-              </h3>
-            </div>
-            <span className="text-xs text-gray-500">
-              {data.graficos.clientes_top?.labels?.length || 0} clientes
-            </span>
-          </div>
-          <div className="relative h-64">
-            <canvas ref={chartClientesRef}></canvas>
+            
+            {/* <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-gray-500">% sobre ventas</span>
+                <span className="font-medium">{porcentajes.porcentajeDetracciones}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-indigo-500 transition-all duration-500"
+                  style={{ width: `${Math.min(parseFloat(porcentajes.porcentajeDetracciones) * 10, 100)}%` }}
+                ></div>
+              </div>
+            </div> */}
           </div>
         </div>
       </div>
-
-      {/* Gráficos - Segunda Fila */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Conductores Activos */}
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Users className="h-5 w-5 text-indigo-600 mr-2" />
-              <h3 className="text-sm font-semibold text-gray-800">
-                Conductores Más Activos ({getTimeframeLabel(timeframe)})
-              </h3>
+      
+      {/* Sección de vencimientos */}
+      <div className="mb-8">
+        <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center">
+          <Calendar className="text-orange-500 mr-2 text-sm h-4 w-4" />
+          Estado de Vencimientos
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Por Vencer */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Por Vencer</h3>
+                <p className="text-blue-600 text-lg font-semibold">
+                  {formatCurrency(dashboardData.total_por_vencer)}
+                </p>
+              </div>
+              <div className="p-2 bg-blue-100 text-blue-600 rounded-md">
+                <Calendar className="h-4 w-4" />
+              </div>
             </div>
-            <span className="text-xs text-gray-500">
-              {data.graficos.conductores_activos?.labels?.length || 0} conductores
-            </span>
-          </div>
-          <div className="relative h-56">
-            <canvas ref={chartConductoresRef}></canvas>
-          </div>
-        </div>
-
-        {/* Rutas Top */}
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <MapPin className="h-5 w-5 text-yellow-600 mr-2" />
-              <h3 className="text-sm font-semibold text-gray-800">
-                Rutas Más Frecuentes ({getTimeframeLabel(timeframe)})
-              </h3>
+            
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-left">
+                <p className="text-gray-500 text-xs">Próximos vencimientos</p>
+                <p className="text-gray-400 text-xs">
+                  {dashboardData.cnt_vencido === 0 ? 'Sin documentos vencidos' : `${dashboardData.cnt_vencido} documento(s) vencido(s)`}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-600">Estado</div>
+                <div className={`text-xs font-medium ${dashboardData.total_vencido === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {dashboardData.total_vencido === 0 ? 'Al día' : 'Con mora'}
+                </div>
+              </div>
             </div>
-            <span className="text-xs text-gray-500">
-              {data.graficos.rutas_top?.labels?.length || 0} rutas
-            </span>
           </div>
-          <div className="relative h-56">
-            <canvas ref={chartRutasRef}></canvas>
-          </div>
-        </div>
-
-        {/* Placas Activas */}
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Truck className="h-5 w-5 text-blue-600 mr-2" />
-              <h3 className="text-sm font-semibold text-gray-800">
-                Vehículos por Fletes y Tonelaje
-              </h3>
+          
+          {/* Vencido */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Vencido</h3>
+                <p className={`text-lg font-semibold ${dashboardData.total_vencido === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(dashboardData.total_vencido)}
+                </p>
+              </div>
+              <div className={`p-2 rounded-md ${dashboardData.total_vencido === 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                {dashboardData.total_vencido === 0 ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+              </div>
             </div>
-            <span className="text-xs text-gray-500">
-              {data.graficos.placas_activas?.labels?.length || 0} vehículos
-            </span>
-          </div>
-          <div className="relative h-56">
-            <canvas ref={chartPlacasRef}></canvas>
-          </div>
-        </div>
-      </div>
-
-      {/* Gráficos - Tercera Fila */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Proveedores Top */}
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Building className="h-5 w-5 text-purple-600 mr-2" />
-              <h3 className="text-sm font-semibold text-gray-800">
-                Top Proveedores por Facturación
-              </h3>
+            
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-left">
+                <p className="text-gray-500 text-xs">Documentos vencidos</p>
+                <p className="text-gray-400 text-xs">
+                  {dashboardData.total_vencido === 0 ? 'Sin mora en pagos' : 'Atención requerida'}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-600">Cantidad</div>
+                <div className="text-xs font-medium">
+                  {dashboardData.cnt_vencido} factura{dashboardData.cnt_vencido !== 1 ? 's' : ''}
+                </div>
+              </div>
             </div>
-            <span className="text-xs text-gray-500">
-              {data.graficos.proveedores_top?.labels?.length || 0} proveedores
-            </span>
-          </div>
-          <div className="relative h-56">
-            <canvas ref={chartProveedoresRef}></canvas>
-          </div>
-        </div>
-
-        {/* Tendencia */}
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Calendar className="h-5 w-5 text-green-600 mr-2" />
-              <h3 className="text-sm font-semibold text-gray-800">
-                {timeframe === 'day' ? 'Facturación del día' : 
-                 timeframe === 'week' ? 'Facturación semanal' :
-                 timeframe === 'month' ? 'Facturación mensual' :
-                 'Facturación anual'}
-              </h3>
-            </div>
-            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">
-              {getTimeframeLabel(timeframe)}
-            </span>
-          </div>
-          <div className="relative h-56">
-            <canvas ref={chartTendenciaRef}></canvas>
           </div>
         </div>
       </div>
-
-      {/* Resumen de Métricas */}
-      <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm mb-6">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">
-          Indicadores Clave de Desempeño (KPIs) - {getTimeframeLabel(timeframe)}
+      
+      {/* Sección de fletes */}
+      <div className="mb-6">
+        <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center">
+          <Truck className="text-teal-500 mr-2 text-sm h-4 w-4" />
+          Estado de Fletes
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          {/* Total Fletes */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Total Fletes</h3>
+                <p className="text-gray-800 text-lg font-semibold">
+                  {dashboardData.fletes.total_fletes}
+                </p>
+              </div>
+              <div className="p-2 bg-gray-100 text-gray-600 rounded-md">
+                <Truck className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs">Fletes registrados</p>
+          </div>
+          
+          {/* Fletes Pendientes */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Fletes Pendientes</h3>
+                <p className="text-yellow-600 text-lg font-semibold">
+                  {dashboardData.fletes.fletes_pendientes}
+                </p>
+              </div>
+              <div className="p-2 bg-yellow-100 text-yellow-600 rounded-md">
+                <Clock className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs">Por valorizar o facturar</p>
+          </div>
+          
+          {/* Fletes Valorizados */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Fletes Valorizados</h3>
+                <p className="text-blue-600 text-lg font-semibold">
+                  {dashboardData.fletes.fletes_valorizados}
+                </p>
+              </div>
+              <div className="p-2 bg-blue-100 text-blue-600 rounded-md">
+                <CheckCircle className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs">Valorizados sin factura</p>
+          </div>
+          
+          {/* Fletes con Factura */}
+          <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-gray-500 text-xs font-medium">Fletes con Factura</h3>
+                <p className="text-green-600 text-lg font-semibold">
+                  {dashboardData.fletes.fletes_con_factura}
+                </p>
+              </div>
+              <div className="p-2 bg-green-100 text-green-600 rounded-md">
+                <FileText className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs">Completamente procesados</p>
+          </div>
+        </div>
+        
+        {/* Gráfico de distribución de fletes */}
+        <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+          <h3 className="text-gray-700 text-sm font-medium mb-2">Distribución de Estados</h3>
+          <div className="flex items-center justify-between">
+            <div className="w-3/4">
+              <div className="flex items-center h-4 mb-2 rounded overflow-hidden">
+                {dashboardData.fletes.total_fletes > 0 && (
+                  <>
+                    <div 
+                      className="h-full bg-yellow-500" 
+                      style={{ 
+                        width: `${(dashboardData.fletes.fletes_pendientes / dashboardData.fletes.total_fletes) * 100}%` 
+                      }}
+                      title={`Pendientes: ${dashboardData.fletes.fletes_pendientes}`}
+                    ></div>
+                    <div 
+                      className="h-full bg-blue-500" 
+                      style={{ 
+                        width: `${(dashboardData.fletes.fletes_valorizados / dashboardData.fletes.total_fletes) * 100}%` 
+                      }}
+                      title={`Valorizados: ${dashboardData.fletes.fletes_valorizados}`}
+                    ></div>
+                    <div 
+                      className="h-full bg-green-500" 
+                      style={{ 
+                        width: `${(dashboardData.fletes.fletes_con_factura / dashboardData.fletes.total_fletes) * 100}%` 
+                      }}
+                      title={`Con factura: ${dashboardData.fletes.fletes_con_factura}`}
+                    ></div>
+                  </>
+                )}
+                {dashboardData.fletes.total_fletes === 0 && (
+                  <div className="h-full w-full bg-gray-200"></div>
+                )}
+              </div>
+            </div>
+            <div className="w-1/4 pl-4">
+              {dashboardData.fletes.total_fletes > 0 ? (
+                <div className="space-y-1">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 rounded-full bg-yellow-500 mr-1"></div>
+                    <span className="text-xs text-gray-600">
+                      {Math.round((dashboardData.fletes.fletes_pendientes / dashboardData.fletes.total_fletes) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
+                    <span className="text-xs text-gray-600">
+                      {Math.round((dashboardData.fletes.fletes_valorizados / dashboardData.fletes.total_fletes) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
+                    <span className="text-xs text-gray-600">
+                      {Math.round((dashboardData.fletes.fletes_con_factura / dashboardData.fletes.total_fletes) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400">Sin datos</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Resumen general */}
+      <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg shadow-sm p-4 transition-transform hover:-translate-y-1">
+        <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+          <PieChart className="text-blue-600 mr-2 text-sm h-4 w-4" />
+          Resumen General
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <Percent className="h-4 w-4 text-blue-600 mr-1" />
-              <p className="text-xs font-medium text-blue-600">Tasa de Cobranza</p>
-            </div>
-            <p className="text-lg font-bold text-gray-800">
-              {metricasAdicionales.tasaCobranza}%
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {formatCurrency(data.kpis.pagado_total)} / {formatCurrency(data.kpis.facturado_total)}
-            </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 className="text-gray-700 text-xs font-medium mb-2">Estado Financiero</h4>
+            <ul className="space-y-1">
+              <li className="flex justify-between text-xs">
+                <span className="text-gray-600">Ventas Brutas:</span>
+                <span className="font-medium">{formatCurrency(dashboardData.total_vendido_bruto)}</span>
+              </li>
+              <li className="flex justify-between text-xs">
+                <span className="text-gray-600">Facturación:</span>
+                <span className="font-medium">
+                  {formatCurrency(dashboardData.facturacion_bruta)} ({dashboardData.cnt_facturas_bruta} factura{dashboardData.cnt_facturas_bruta !== 1 ? 's' : ''})
+                </span>
+              </li>
+              <li className="flex justify-between text-xs">
+                <span className="text-gray-600">Por Cobrar:</span>
+                <span className="font-medium">{formatCurrency(dashboardData.pendiente_por_cobrar)}</span>
+              </li>
+              <li className="flex justify-between text-xs">
+                <span className="text-gray-600">Cobrado:</span>
+                <span className="font-medium">
+                  {formatCurrency(dashboardData.total_cobrado)} ({dashboardData.cnt_cobrado} cobro{dashboardData.cnt_cobrado !== 1 ? 's' : ''})
+                </span>
+              </li>
+            </ul>
           </div>
           
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-              <p className="text-xs font-medium text-green-600">Promedio por Factura</p>
-            </div>
-            <p className="text-lg font-bold text-gray-800">
-              {formatCurrency(metricasAdicionales.promedioPorFactura)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {data.kpis.total_facturas} facturas total
-            </p>
+          <div>
+            <h4 className="text-gray-700 text-xs font-medium mb-2">Retenciones y Logística</h4>
+            <ul className="space-y-1">
+              <li className="flex justify-between text-xs">
+                <span className="text-gray-600">Detracciones:</span>
+                <span className="font-medium">
+                  {formatCurrency(dashboardData.total_detracciones)} ({dashboardData.cnt_detracciones} retención{dashboardData.cnt_detracciones !== 1 ? 'es' : ''})
+                </span>
+              </li>
+              <li className="flex justify-between text-xs">
+                <span className="text-gray-600">Total Fletes:</span>
+                <span className="font-medium">{dashboardData.fletes.total_fletes} servicio{dashboardData.fletes.total_fletes !== 1 ? 's' : ''}</span>
+              </li>
+              <li className="flex justify-between text-xs">
+                <span className="text-gray-600">Fletes Pendientes:</span>
+                <span className="font-medium">
+                  {dashboardData.fletes.fletes_pendientes} ({porcentajes.porcentajeFletesCompletados}% completados)
+                </span>
+              </li>
+              <li className="flex justify-between text-xs">
+                <span className="text-gray-600">Fletes Facturados:</span>
+                <span className="font-medium">
+                  {dashboardData.fletes.fletes_con_factura} ({porcentajes.porcentajeFletesFacturados}%)
+                </span>
+              </li>
+            </ul>
           </div>
-          
-          <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <Truck className="h-4 w-4 text-purple-600 mr-1" />
-              <p className="text-xs font-medium text-purple-600">Promedio por Flete</p>
+        </div>
+        
+        <div className="mt-4 pt-3 border-t border-blue-200">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-gray-600 text-xs">Última actualización:</p>
+              <p className="font-medium text-xs">
+                {lastUpdated ? lastUpdated.toLocaleDateString('es-ES', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) : 'No disponible'}
+              </p>
             </div>
-            <p className="text-lg font-bold text-gray-800">
-              {formatCurrency(metricasAdicionales.promedioPorFlete)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {data.kpis.total_fletes} fletes total
-            </p>
-          </div>
-          
-          <div className="text-center p-3 bg-orange-50 rounded-lg">
-            <div className="flex items-center justify-center mb-1">
-              <CheckCircle className="h-4 w-4 text-orange-600 mr-1" />
-              <p className="text-xs font-medium text-orange-600">Eficiencia</p>
-            </div>
-            <p className="text-lg font-bold text-gray-800">
-              {metricasAdicionales.eficienciaCobranza}%
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {data.kpis.facturas_vencidas} de {data.kpis.total_facturas} facturas
-            </p>
           </div>
         </div>
       </div>
-
+      
       {/* Pie de página */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <div className="flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
-          <p>
-            Última actualización: {lastUpdated ? lastUpdated.toLocaleDateString('es-ES', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            }) : 'No disponible'}
-          </p>
-          <div className="flex items-center mt-2 md:mt-0">
-            <span className="mr-2">Período seleccionado:</span>
-            <span className="font-medium">
-              {getTimeframeLabel(timeframe)}
-            </span>
-            <span className="mx-2">•</span>
-            <span className="text-gray-400">
-              {data.graficos.linea_tiempo?.labels?.length || 0} períodos analizados
-            </span>
-          </div>
-        </div>
-      </div>
+      <footer className="mt-6 text-center text-gray-500 text-xs">
+        <p>Dashboard financiero • Datos actualizados desde API</p>
+      </footer>
     </div>
   );
 };
