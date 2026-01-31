@@ -97,6 +97,7 @@ const Gerencia = () => {
     total_facturas: 0,
     cliente_buscado: "",
     cliente_encontrado: "",
+    fletes: {},
   });
 
   // Estados para filtros expandidos
@@ -242,28 +243,30 @@ const Gerencia = () => {
     [appliedFilters, pagination.pageSize],
   );
 
- // Función para obtener métricas financieras específicas
-const fetchFinancialKPIs = useCallback(async () => {
-  try {
-    const response = await facturacionGestionAPI.getKpisFinancierosEspecificos();
-    
-    // Actualizar el summary con los nuevos datos
-    setSummary(prev => ({
-      ...prev,
-      total_vendido_neto: response.total_vendido_neto || 0,
-      total_vendido_bruto: response.total_vendido_bruto || 0,
-      facturacion_bruta: response.facturacion_bruta || 0,
-      facturacion_bruta_pendiente: response.facturacion_bruta_pendiente || 0,
-      total_detracciones: response.total_detracciones || 0,
-      pendiente_por_cobrar: response.pendiente_por_cobrar || 0,
-      total_cobrado: response.total_cobrado || 0,
-      total_por_vencer: response.total_por_vencer || 0,
-      total_vencido: response.total_vencido || 0
-    }));
-  } catch (error) {
-    console.error("Error fetching financial KPIs:", error);
-  }
-}, []);
+  // Función para obtener métricas financieras específicas
+  const fetchFinancialKPIs = useCallback(async () => {
+    try {
+      const response =
+        await facturacionGestionAPI.getKpisFinancierosEspecificos();
+
+      // Actualizar el summary con los nuevos datos
+      setSummary((prev) => ({
+        ...prev,
+        total_vendido_neto: response.total_vendido_neto || 0,
+        total_vendido_bruto: response.total_vendido_bruto || 0,
+        facturacion_bruta: response.facturacion_bruta || 0,
+        facturacion_bruta_pendiente: response.facturacion_bruta_pendiente || 0,
+        total_detracciones: response.total_detracciones || 0,
+        pendiente_por_cobrar: response.pendiente_por_cobrar || 0,
+        total_cobrado: response.total_cobrado || 0,
+        total_por_vencer: response.total_por_vencer || 0,
+        total_vencido: response.total_vencido || 0,
+        fletes: response.fletes || {},
+      }));
+    } catch (error) {
+      console.error("Error fetching financial KPIs:", error);
+    }
+  }, []);
 
   // Función para aplicar filtros
   const applyFilters = () => {
@@ -772,106 +775,154 @@ const fetchFinancialKPIs = useCallback(async () => {
 
         {/* Resumen de Métricas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-  <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-    <div className="flex items-center justify-between">
+          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">
+                  Total Vendido Neto
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.total_vendido_neto)}
+                </p>
+                <h3 className="text-xs font-medium text-gray-500">
+                  Total Vendido Bruto
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.total_vendido_bruto)}
+                </p>
+              </div>
+              <div className="p-2 bg-yellow-50 rounded-lg">
+                <DollarSign className="h-5 w-5 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                {/* Facturación Bruta */}
+                <h3 className="text-xs font-medium text-gray-500">
+                  Facturación Bruta
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.facturacion_bruta)}
+                </p>
+
+                {/* Pendiente por Cobrar */}
+                <h3 className="text-xs font-medium text-gray-500">
+                  Facturacion Pendiente
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.facturacion_bruta_pendiente)}
+                </p>
+              </div>
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <MetricCard
+            title="Total de Detracciones"
+            value={formatCurrency(summary.total_detracciones)}
+            subtitle="Monto total en detracciones"
+            icon={TriangleAlert}
+            color="yellow"
+          />
+
+          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                {/* Pendiente por Cobrar */}
+                <h3 className="text-xs font-medium text-gray-500">
+                  Pendiente Cobrar
+                </h3>
+                <p className="text-lg font-bold text-gray-800 mt-1">
+                  {formatCurrency(summary.pendiente_por_cobrar)}
+                </p>
+              </div>
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <MetricCard
+            title="Cobrado"
+            value={formatCurrency(summary.total_cobrado)}
+            subtitle="Monto total recibido"
+            icon={CheckCircle}
+            color="green"
+          />
+
+          <MetricCard
+            title="Por Vencer"
+            value={formatCurrency(summary.total_por_vencer)}
+            subtitle="Monto total recibido"
+            icon={CheckCircle}
+            color="green"
+          />
+          <MetricCard
+            title="Vencidas"
+            value={formatCurrency(summary.total_vencido)}
+            subtitle="Monto total recibido"
+            icon={CheckCircle}
+            color="green"
+          />
+
+          <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+  <div className="flex items-start justify-between">
+    {/* Contenedor Grid de 2 columnas */}
+    <div className="grid grid-cols-2 gap-4 w-full">
+      
+      {/* Total de Fletes */}
       <div>
-        <h3 className="text-xs font-medium text-gray-500">
-          Total Vendido Neto
+        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Total de Fletes
         </h3>
         <p className="text-lg font-bold text-gray-800 mt-1">
-          {formatCurrency(summary.total_vendido_neto)}
+          {summary.fletes?.total_fletes || 0}
         </p>
-        <h3 className="text-xs font-medium text-gray-500">
-          Total Vendido Bruto
+      </div>
+
+      {/* Fletes Pendientes */}
+      <div>
+        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Fletes Pendientes
         </h3>
         <p className="text-lg font-bold text-gray-800 mt-1">
-          {formatCurrency(summary.total_vendido_bruto)}
+          {summary.fletes?.fletes_pendientes || 0}
         </p>
       </div>
-      <div className="p-2 bg-yellow-50 rounded-lg">
-        <DollarSign className="h-5 w-5 text-yellow-600" />
+
+      {/* Fletes Con Valor */}
+      <div>
+        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Fletes Con Valor
+        </h3>
+        <p className="text-lg font-bold text-gray-800 mt-1">
+          {summary.fletes?.fletes_valorizados || 0}
+        </p>
       </div>
+
+      {/* Fletes Con Factura */}
+      <div>
+        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Fletes Con Factura
+        </h3>
+        <p className="text-lg font-bold text-gray-800 mt-1">
+          {summary.fletes?.fletes_con_factura || 0}
+        </p>
+      </div>
+    </div>
+
+    {/* Icono lateral */}
+    <div className="p-2 bg-blue-50 rounded-lg ml-4">
+      <FileText className="h-5 w-5 text-blue-600" />
     </div>
   </div>
-
-  <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-    <div className="flex items-center justify-between">
-      <div>
-        {/* Facturación Bruta */}
-        <h3 className="text-xs font-medium text-gray-500">
-          Facturación Bruta
-        </h3>
-        <p className="text-lg font-bold text-gray-800 mt-1">
-          {formatCurrency(summary.facturacion_bruta)}
-        </p>
-
-        {/* Pendiente por Cobrar */}
-        <h3 className="text-xs font-medium text-gray-500">
-          Facturacion Pendiente 
-        </h3>
-        <p className="text-lg font-bold text-gray-800 mt-1">
-          {formatCurrency(summary.facturacion_bruta_pendiente)}
-        </p>
-      </div>
-      <div className="p-2 bg-blue-50 rounded-lg">
-        <FileText className="h-5 w-5 text-blue-600" />
-      </div>
-    </div>
-  </div> 
-  
-   <MetricCard
-    title="Total de Detracciones"
-    value={formatCurrency(summary.total_detracciones)}
-    subtitle="Monto total en detracciones"  
-    icon={TriangleAlert}
-    color="yellow"
-  />
-
-
-  <div className="bg-white p-4 rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-    <div className="flex items-center justify-between">
-      <div>
-        {/* Pendiente por Cobrar */}
-        <h3 className="text-xs font-medium text-gray-500">
-          Pendiente Cobrar
-        </h3>
-        <p className="text-lg font-bold text-gray-800 mt-1">
-          {formatCurrency(summary.pendiente_por_cobrar)}
-        </p>
-      </div>
-      <div className="p-2 bg-blue-50 rounded-lg">
-        <FileText className="h-5 w-5 text-blue-600" />
-      </div>
-    </div>
-  </div>
-
-  <MetricCard
-    title="Cobrado"
-    value={formatCurrency(summary.total_cobrado)}
-    subtitle="Monto total recibido"
-    icon={CheckCircle}
-    color="green"
-  />
-
-  <MetricCard
-    title="Por Vencer"
-    value={formatCurrency(summary.total_por_vencer)}
-    subtitle="Monto total recibido"
-    icon={CheckCircle}
-    color="green"
-  />
-  <MetricCard 
-    title="Vencidas"
-    value={formatCurrency(summary.total_vencido)}
-    subtitle="Monto total recibido"
-    icon={CheckCircle}
-    color="green"
-  />
-
-
-
-
 </div>
+        </div>
 
         {/* Indicador de carga */}
         {loadingData && (
