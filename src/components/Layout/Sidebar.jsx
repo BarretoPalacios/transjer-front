@@ -311,6 +311,13 @@ const Sidebar = ({
         show: shouldShowItem({ id: "gerencia" }),
         submenu: [
           {
+            id: "analiticas",
+            label: "Resumen General",
+            path: "/gerencia/analiticas",
+            icon: BarChart3,
+            show: shouldShowSubItem({ id: "analiticas" }),
+          },
+          {
             id: "monitoreo-facturas",
             label: "Resumen de Facturas",
             icon: MonitorCheck,
@@ -338,13 +345,7 @@ const Sidebar = ({
             path: "/gerencia/monitoreo-clientes",
             show: shouldShowSubItem({ id: "monitoreo-clientes" }),
           },
-          {
-            id: "analiticas",
-            label: "Resumen General",
-            path: "/gerencia/analiticas",
-            icon: BarChart3,
-            show: shouldShowSubItem({ id: "analiticas" }),
-          },
+          
           {
             id: "historial",
             label: "Historial de Cambios",
