@@ -1,19 +1,16 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  Users,
   Filter,
   Calendar,
   DollarSign,
   RefreshCw,
   X,
   CheckCircle,
-  TrendingUp,
   Search,
-  Building,
-  FileText,
   User,
-  ShoppingBag,
-  Target
+  Percent,
+  FileText,
+  Eye
 } from 'lucide-react';
 
 // Componentes comunes
@@ -26,20 +23,24 @@ import { gerenciaServiceAPI } from '../../../api/endpoints/gerenciaService';
 const MonitoreoClientes = () => {
   const [data, setData] = useState({
     resumen_general: {
-      cantidad_clientes: 0,
-      total_servicios: 0,
-      total_vendido_acumulado: 0
+      clientes_activos: 0,
+      gran_total_facturado: 0,
+      gran_total_detraccion: 0,
+      gran_total_neto: 0,
+      gran_total_neto_pagado: 0,
+      gran_total_neto_pendiente: 0,
+      gran_total_neto_vencido: 0,
+      gran_total_neto_por_vencer: 0
     },
     detalle_por_cliente: []
   });
   
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTimeout, setSearchTimeout] = useState(null);
   
   // Estados de paginación
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    itemsPerPage: 10,
+    itemsPerPage: 50,
     totalItems: 0,
     totalPages: 0,
     hasNext: false,
@@ -62,6 +63,10 @@ const MonitoreoClientes = () => {
   
   // Sugerencias de clientes
   const [clientesSugerencias, setClientesSugerencias] = useState([]);
+  
+  // Modal de facturas
+  const [showFacturasModal, setShowFacturasModal] = useState(false);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
   
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -126,10 +131,15 @@ const MonitoreoClientes = () => {
         const paginatedItems = response.detalle_por_cliente?.slice(startIndex, endIndex) || [];
         
         setData({
-          resumen_general: response.resumen || {
-            cantidad_clientes: 0,
-            total_servicios: 0,
-            total_vendido_acumulado: 0
+          resumen_general: response.resumen_general || {
+            clientes_activos: 0,
+            gran_total_facturado: 0,
+            gran_total_detraccion: 0,
+            gran_total_neto: 0,
+            gran_total_neto_pagado: 0,
+            gran_total_neto_pendiente: 0,
+            gran_total_neto_vencido: 0,
+            gran_total_neto_por_vencer: 0
           },
           detalle_por_cliente: paginatedItems
         });
@@ -151,28 +161,6 @@ const MonitoreoClientes = () => {
     },
     []
   );
-
-  // Efecto para búsqueda en tiempo real con debounce
-  useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    const timeout = setTimeout(() => {
-      setPagination(prev => ({
-        ...prev,
-        currentPage: 1
-      }));
-      
-      fetchResumen(1, pagination.itemsPerPage, filters);
-    }, 500);
-
-    setSearchTimeout(timeout);
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [filters]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -204,6 +192,11 @@ const MonitoreoClientes = () => {
     handleFilterChange(field, today);
   }, [handleFilterChange]);
 
+  // Función para aplicar filtros
+  const aplicarFiltros = useCallback(() => {
+    fetchResumen(1, pagination.itemsPerPage, filters);
+  }, [fetchResumen, pagination.itemsPerPage, filters]);
+
   const clearFilters = useCallback(() => {
     setFilters({
       cliente: '',
@@ -215,6 +208,7 @@ const MonitoreoClientes = () => {
       fecha_fin: '',
       rango_fechas: ''
     });
+    fetchResumen(1, pagination.itemsPerPage, filters);
   }, []);
 
   const handleRefresh = useCallback(() => {
@@ -240,6 +234,24 @@ const MonitoreoClientes = () => {
     return gerenciaServiceAPI.formatMoneda(valor);
   };
 
+  // Función para calcular porcentaje
+  const calcularPorcentaje = (parcial, total) => {
+    if (total === 0) return 0;
+    return ((parcial / total) * 100).toFixed(1);
+  };
+
+  // Función para abrir modal de facturas
+  const abrirModalFacturas = useCallback((cliente) => {
+    setClienteSeleccionado(cliente);
+    setShowFacturasModal(true);
+  }, []);
+
+  // Función para cerrar modal
+  const cerrarModal = useCallback(() => {
+    setShowFacturasModal(false);
+    setClienteSeleccionado(null);
+  }, []);
+
   // Mostrar loading solo en carga inicial
   if (isLoading && data.detalle_por_cliente.length === 0) {
     return (
@@ -260,46 +272,8 @@ const MonitoreoClientes = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Monitoreo de Clientes
+            Monitoreo de Facturación por Cliente
           </h1>
-          <p className="text-gray-600 mt-1">
-            Análisis de servicios y ventas por cliente
-          </p>
-        </div>
-      </div>
-
-      {/* Panel de Resumen General */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-blue-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Clientes</p>
-              <p className="text-2xl font-bold text-blue-700">{data.resumen_general.total_clientes}</p>
-            </div>
-            <Users className="h-8 w-8 text-blue-500" />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-green-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Servicios</p>
-              <p className="text-2xl font-bold text-green-700">{data.resumen_general.total_servicios}</p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-green-500" />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-purple-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Vendido</p>
-              <p className="text-2xl font-bold text-purple-700">
-                {formatMoneda(data.resumen_general.total_vendido)}
-              </p>
-            </div>
-            <DollarSign className="h-8 w-8 text-purple-500" />
-          </div>
         </div>
       </div>
 
@@ -340,6 +314,70 @@ const MonitoreoClientes = () => {
         </div>
       )}
 
+      {/* Resumen General Acumulado - TODOS LOS CAMPOS */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 mb-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 mb-1">Clientes Activos</p>
+            <p className="text-xl font-bold text-blue-700">
+              {data.resumen_general.clientes_activos}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 mb-1">Total Facturado</p>
+            <p className="text-xl font-bold text-gray-900">
+              {formatMoneda(data.resumen_general.gran_total_facturado)}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 mb-1">Total Detracción</p>
+            <p className="text-xl font-bold text-gray-900">
+              {formatMoneda(data.resumen_general.gran_total_detraccion)}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 mb-1">Neto Total</p>
+            <p className="text-xl font-bold text-purple-700">
+              {formatMoneda(data.resumen_general.gran_total_neto)}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 mb-1">Neto Pagado</p>
+            <p className="text-xl font-bold text-green-700">
+              {formatMoneda(data.resumen_general.gran_total_neto_pagado)}
+            </p>
+            {data.resumen_general.gran_total_neto > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {calcularPorcentaje(data.resumen_general.gran_total_neto_pagado, data.resumen_general.gran_total_neto)}% del total
+              </p>
+            )}
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 mb-1">Neto Pendiente</p>
+            <p className="text-xl font-bold text-amber-700">
+              {formatMoneda(data.resumen_general.gran_total_neto_pendiente)}
+            </p>
+            {data.resumen_general.gran_total_neto > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {calcularPorcentaje(data.resumen_general.gran_total_neto_pendiente, data.resumen_general.gran_total_neto)}% del total
+              </p>
+            )}
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 mb-1">Neto Vencido</p>
+            <p className={`text-xl font-bold ${data.resumen_general.gran_total_neto_vencido > 0 ? 'text-red-700' : 'text-gray-700'}`}>
+              {formatMoneda(data.resumen_general.gran_total_neto_vencido)}
+            </p>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500 mb-1">Neto por Vencer</p>
+            <p className="text-xl font-bold text-gray-900">
+              {formatMoneda(data.resumen_general.gran_total_neto_por_vencer)}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Filtros */}
       <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
@@ -348,18 +386,19 @@ const MonitoreoClientes = () => {
               <Filter className="h-5 w-5 text-blue-600" />
               Filtros de Búsqueda
             </h3>
-            <p className="text-sm text-gray-600">Filtrado en tiempo real </p>
+            <p className="text-sm text-gray-600">Seleccione los filtros y presione "Aplicar Filtros"</p>
           </div>
           
           <div className="flex items-center space-x-2">
+            
+
             <Button
-              onClick={handleRefresh}
-              variant="secondary"
+              onClick={aplicarFiltros}
+              variant="primary"
               size="small"
-              icon={RefreshCw}
-              isLoading={isLoading}
+              icon={Filter}
             >
-              Actualizar
+              Aplicar Filtros
             </Button>
 
             <Button
@@ -369,10 +408,19 @@ const MonitoreoClientes = () => {
             >
               Limpiar Filtros
             </Button>
+            <Button
+              onClick={handleRefresh}
+              variant="secondary"
+              size="small"
+              icon={RefreshCw}
+              isLoading={isLoading}
+            >
+              Recargar data
+            </Button>
           </div>
         </div>
 
-        {/* Filtros en tiempo real */}
+        {/* Filtros */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Cliente */}
           <div>
@@ -387,7 +435,7 @@ const MonitoreoClientes = () => {
                 value={filters.cliente}
                 onChange={(e) => handleFilterChange('cliente', e.target.value)}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                placeholder="Ej: SONEPAR, OECHSLE"
+                placeholder="Ej: ALICORP, GLORIA"
                 list="clientes-sugerencias"
               />
               <datalist id="clientes-sugerencias">
@@ -405,7 +453,7 @@ const MonitoreoClientes = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Fecha Inicio Servicio
+              Fecha Emision (Desde)
             </label>
             <div className="flex gap-2">
               <input
@@ -413,7 +461,7 @@ const MonitoreoClientes = () => {
                 value={filters.fecha_inicio}
                 onChange={(e) => handleFilterChange('fecha_inicio', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                max={filters.fecha_fin || new Date().toISOString().split('T')[0]}
+                // max={filters.fecha_fin || new Date().toISOString().split('T')[0]}
               />
               <button
                 onClick={() => handleSelectToday('fecha_inicio')}
@@ -432,7 +480,7 @@ const MonitoreoClientes = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Fecha Fin Servicio
+              Fecha Emision (Hasta)
             </label>
             <div className="flex gap-2">
               <input
@@ -441,7 +489,7 @@ const MonitoreoClientes = () => {
                 onChange={(e) => handleFilterChange('fecha_fin', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                 min={filters.fecha_inicio}
-                max={new Date().toISOString().split('T')[0]}
+                // max={new Date().toISOString().split('T')[0]}
               />
               <button
                 onClick={() => handleSelectToday('fecha_fin')}
@@ -469,7 +517,7 @@ const MonitoreoClientes = () => {
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="text-sm text-gray-600 flex items-center justify-between">
               <span>
-                Filtros activos: 
+                Filtros configurados: 
                 <span className="font-medium text-blue-600 ml-2">
                   {Object.values(filters).filter(f => f && f.trim() !== '').length}
                 </span>
@@ -486,7 +534,7 @@ const MonitoreoClientes = () => {
       </div>
 
       {/* Tabla de Detalle por Cliente */}
-      <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
+      <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm border-collapse">
             <thead>
@@ -495,17 +543,35 @@ const MonitoreoClientes = () => {
                   CLIENTE
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  RAZÓN SOCIAL / RUC
+                  FACTURAS
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  TOTAL DE SERVICIOS
+                  FACTURADO
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  TOTAL VENDIDO
+                  DETRACCIÓN
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  PENDIENTE COBRAR
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  COBRADO
                 </th>
                 {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  TICKET PROMEDIO
+                  PENDIENTE
                 </th> */}
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  VENCIDO
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  POR VENCER
+                </th>
+                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  MOROSIDAD
+                </th> */}
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  ACCIONES
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -521,51 +587,99 @@ const MonitoreoClientes = () => {
                     </div>
                   </td>
 
-                  {/* Razón Social / RUC */}
-                  <td className="px-4 py-3">
-                    <div className="text-gray-700">
-                      <div className="font-medium">{item.razon_social || item.cliente || '-'}</div>
-                      {item.ruc ? (
-                        <div className="text-xs text-gray-500 mt-1">RUC: {item.ruc}</div>
-                      ) : (
-                        <div className="text-xs text-gray-400 mt-1">Sin RUC</div>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Total de Servicios */}
+                  {/* Número de Facturas */}
                   <td className="px-4 py-3">
                     <div className="flex items-center">
                       <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold mr-2">
-                        {item.total_servicios}
-                      </span>
-                      <span className="text-gray-900 font-medium">
-                        servicio{item.total_servicios !== 1 ? 's' : ''}
+                        {item.nro_facturas}
                       </span>
                     </div>
                   </td>
 
-                  {/* Total Vendido */}
+                  {/* Facturado */}
                   <td className="px-4 py-3">
-                    <div className="font-bold text-green-700">
-                      {formatMoneda(item.total_vendido)}
+                    <div className="font-bold text-gray-900">
+                      {formatMoneda(item.facturado)}
                     </div>
                   </td>
 
-                  {/* Ticket Promedio */}
+                  {/* Detracción */}
+                  <td className="px-4 py-3">
+                    <div className="text-gray-700">
+                      {formatMoneda(item.detraccion)}
+                    </div>
+                  </td>
+
+                  {/* Neto Total */}
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-purple-700">
+                      {formatMoneda(item.neto_total)}
+                    </div>
+                  </td>
+
+                  {/* Neto Pagado */}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-green-700">
+                        {formatMoneda(item.neto_pagado)}
+                      </span>
+                      {/* {item.neto_total > 0 && (
+                        <span className="text-xs text-gray-500 mt-1">
+                          {calcularPorcentaje(item.neto_pagado, item.neto_total)}%
+                        </span>
+                      )} */}
+                    </div>
+                  </td>
+
+                  {/* Neto Pendiente */}
                   {/* <td className="px-4 py-3">
-                    <div className="flex items-center">
-                      <Target className="h-5 w-5 text-amber-500 mr-2" />
+                    <div className="flex flex-col">
                       <span className="font-bold text-amber-700">
-                        {formatMoneda(item.ticket_promedio)}
+                        {formatMoneda(item.neto_pendiente)}
+                      </span>
+                      {item.neto_total > 0 && (
+                        <span className="text-xs text-gray-500 mt-1">
+                          {calcularPorcentaje(item.neto_pendiente, item.neto_total)}%
+                        </span>
+                      )}
+                    </div>
+                  </td> */}
+
+                  {/* Neto Vencido */}
+                  <td className="px-4 py-3">
+                    <div className={item.neto_vencido > 0 ? "text-red-700 font-bold" : "text-gray-500"}>
+                      {formatMoneda(item.neto_vencido)}
+                    </div>
+                  </td>
+
+                  {/* Neto por Vencer */}
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-gray-900">
+                      {formatMoneda(item.neto_por_vencer)}
+                    </div>
+                  </td>
+
+                  {/* Porcentaje de Morosidad */}
+                  {/* <td className="px-4 py-3">
+                    <div className={`flex items-center ${item.porcentaje_morosidad > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <Percent className="h-4 w-4 mr-1" />
+                      <span className="font-bold">
+                        {item.porcentaje_morosidad}%
                       </span>
                     </div>
-                    {item.total_servicios > 0 && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {item.total_servicios} servicio{item.total_servicios !== 1 ? 's' : ''}
-                      </div>
-                    )}
                   </td> */}
+
+                  {/* Acciones - Botón Ver Facturas */}
+                  <td className="px-4 py-3">
+                    <Button
+                      onClick={() => abrirModalFacturas(item)}
+                      variant="outline"
+                      size="small"
+                      icon={Eye}
+                    >
+                      Ver Facturas
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -591,9 +705,11 @@ const MonitoreoClientes = () => {
         )}
       </div>
 
+      
+
       {/* Paginación y registros por página */}
       {data.detalle_por_cliente.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <span className="text-sm text-gray-600">Mostrar</span>
             <select
@@ -624,6 +740,80 @@ const MonitoreoClientes = () => {
               pagination.totalItems
             )}
           />
+        </div>
+      )}
+
+      {/* Modal para ver facturas */}
+      {showFacturasModal && clienteSeleccionado && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Header del modal */}
+            <div className="bg-gray-100 px-6 py-4 border-b border-gray-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      Facturas del Cliente
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      {clienteSeleccionado.cliente}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={cerrarModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido del modal */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              <div className="mb-6">
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Total Facturas</p>
+                    <p className="text-xl font-bold text-blue-700">
+                      {clienteSeleccionado.nro_facturas}
+                    </p>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Facturado Total</p>
+                    <p className="text-xl font-bold text-green-700">
+                      {formatMoneda(clienteSeleccionado.facturado)}
+                    </p>
+                  </div>
+                  <div className="bg-amber-50 p-3 rounded-lg">
+                    <p className="text-sm text-gray-500">Pendiente</p>
+                    <p className="text-xl font-bold text-amber-700">
+                      {formatMoneda(clienteSeleccionado.neto_pendiente)}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-center text-gray-500 py-8">
+                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <span className="block font-medium">Próximamente</span>
+                  <span className="text-sm">Aquí se mostrará el listado detallado de facturas para este cliente.</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Footer del modal */}
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-300">
+              <div className="flex justify-end">
+                <Button
+                  onClick={cerrarModal}
+                  variant="secondary"
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

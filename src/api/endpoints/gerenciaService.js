@@ -398,37 +398,11 @@ getResumenPorCliente: async (filters = {}) => {
   if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
   if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
 
-  const response = await axiosInstance.get(`/gerencia/resumen-por-cliente?${params.toString()}`);
+  const response = await axiosInstance.get(`/gerencia/resumen-financiero-por-cliente?${params.toString()}`);
   
   console.log('Resumen por Cliente Response:', response.data);
-  
-  // Extraemos los datos del response
-  const resumenGeneral = response.data.resumen_general || {};
-  const detalleClientes = response.data.detalle_por_cliente || [];
-  
-  // Formatear la respuesta para mantener consistencia con tus componentes de tabla
-  return {
-    resumen: {
-      total_clientes: resumenGeneral.cantidad_clientes || 0,
-      total_servicios: resumenGeneral.total_servicios || 0,
-      total_vendido: resumenGeneral.total_vendido_acumulado || 0
-    },
-    filtros_aplicados: response.data.filtros_aplicados || {
-      cliente: filters.cliente || null,
-      fecha_inicio: filters.fecha_inicio || null,
-      fecha_fin: filters.fecha_fin || null
-    },
-    detalle_por_cliente: detalleClientes,
-    items: detalleClientes, // Mapeo para componentes que consumen "items"
-    pagination: {
-      total: detalleClientes.length,
-      page: 1,
-      pageSize: detalleClientes.length,
-      totalPages: 1,
-      hasNext: false,
-      hasPrev: false
-    }
-  };
+
+  return response.data
 },
 // ==========================================
 // Sugerencias de Proveedores (autocompletado)

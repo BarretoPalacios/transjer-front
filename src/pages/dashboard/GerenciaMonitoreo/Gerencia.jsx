@@ -1311,7 +1311,7 @@ const handleExport = useCallback(async () => {
                   <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[120px]">
                     <div className="flex items-center">
                       <DollarSign className="h-4 w-4 mr-2" />
-                      Total
+                      Facturado Bruto
                     </div>
                   </th>
                   <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[120px]">
@@ -1323,25 +1323,25 @@ const handleExport = useCallback(async () => {
                   <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[120px]">
                     <div className="flex items-center">
                       <CreditCard className="h-4 w-4 mr-2" />
-                      Neto
+                      Monto Cobrar
                     </div>
                   </th>
                   <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[120px]">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Pagado
+                      Cobrado
                     </div>
                   </th>
                   <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[120px]">
                     <div className="flex items-center">
                       <AlertTriangle className="h-4 w-4 mr-2" />
-                      Saldo
+                      Pendiente por Cobrar
                     </div>
                   </th>
                   <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[100px]">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Estado
+                      Estado de Pago
                     </div>
                   </th>
                   <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300 min-w-[80px]">
@@ -1389,17 +1389,17 @@ const handleExport = useCallback(async () => {
                           <div className="font-medium text-gray-900">
                             {servicio.nombre_cliente || "N/A"}
                           </div>
-                          <div className="text-gray-500 text-xs truncate">
-                            {servicio.nombre_cuenta || ""}
-                          </div>
+                          {/* <div className="text-gray-500 text-xs truncate">
+                            {servicio.nombre_cuenta || ""}  
+                          </div> */}
                         </td>
                         <td className="py-3 px-4 border-r border-gray-200">
                           <div className="font-medium text-gray-900 font-mono">
-                            {invoice.codigo_factura}
-                          </div>
-                          <div className="text-gray-500 text-xs truncate">
                             {datosCompletos.numero_factura}
                           </div>
+                          {/* <div className="text-gray-500 text-xs truncate">
+                            {datosCompletos.numero_factura}
+                          </div> */}
                         </td>
                         <td className="py-3 px-4 border-r border-gray-200">
                           {formatDate(datosCompletos.fecha_emision)}
@@ -1407,7 +1407,7 @@ const handleExport = useCallback(async () => {
                         <td className="py-3 px-4 border-r border-gray-200">
                           <div className="flex flex-col">
                             <span>{formatDate(datosCompletos.fecha_vencimiento)}</span>
-                            {daysUntilDue !== null && daysUntilDue < 30 && (
+                            {/* {daysUntilDue !== null && daysUntilDue < 30 && (
                               <span
                                 className={`text-xs font-medium px-1 rounded ${daysUntilDue < 0 ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}
                               >
@@ -1415,7 +1415,7 @@ const handleExport = useCallback(async () => {
                                   ? `Vencido ${Math.abs(daysUntilDue)}d`
                                   : `Vence en ${daysUntilDue}d`}
                               </span>
-                            )}
+                            )} */}
                           </div>
                         </td>
                         <td className="py-3 px-4 border-r border-gray-200 font-semibold text-gray-900">
