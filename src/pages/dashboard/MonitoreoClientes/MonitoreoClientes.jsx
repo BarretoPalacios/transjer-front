@@ -324,7 +324,7 @@ const MonitoreoClientes = () => {
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500 mb-1">Total Facturado</p>
+            <p className="text-sm text-gray-500 mb-1">Total Facturado Bruto</p>
             <p className="text-xl font-bold text-gray-900">
               {formatMoneda(data.resumen_general.gran_total_facturado)}
             </p>
@@ -336,13 +336,13 @@ const MonitoreoClientes = () => {
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500 mb-1">Neto Total</p>
+            <p className="text-sm text-gray-500 mb-1">Pendiente Cobrar</p>
             <p className="text-xl font-bold text-purple-700">
               {formatMoneda(data.resumen_general.gran_total_neto)}
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500 mb-1">Neto Pagado</p>
+            <p className="text-sm text-gray-500 mb-1">Total Cobrado</p>
             <p className="text-xl font-bold text-green-700">
               {formatMoneda(data.resumen_general.gran_total_neto_pagado)}
             </p>
@@ -352,7 +352,7 @@ const MonitoreoClientes = () => {
               </p>
             )}
           </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
+          {/* <div className="bg-white p-4 rounded-lg border border-gray-200">
             <p className="text-sm text-gray-500 mb-1">Neto Pendiente</p>
             <p className="text-xl font-bold text-amber-700">
               {formatMoneda(data.resumen_general.gran_total_neto_pendiente)}
@@ -362,15 +362,15 @@ const MonitoreoClientes = () => {
                 {calcularPorcentaje(data.resumen_general.gran_total_neto_pendiente, data.resumen_general.gran_total_neto)}% del total
               </p>
             )}
-          </div>
+          </div> */}
           <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500 mb-1">Neto Vencido</p>
+            <p className="text-sm text-gray-500 mb-1">Total Vencido</p>
             <p className={`text-xl font-bold ${data.resumen_general.gran_total_neto_vencido > 0 ? 'text-red-700' : 'text-gray-700'}`}>
               {formatMoneda(data.resumen_general.gran_total_neto_vencido)}
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-500 mb-1">Neto por Vencer</p>
+            <p className="text-sm text-gray-500 mb-1">Total por Vencer</p>
             <p className="text-xl font-bold text-gray-900">
               {formatMoneda(data.resumen_general.gran_total_neto_por_vencer)}
             </p>
