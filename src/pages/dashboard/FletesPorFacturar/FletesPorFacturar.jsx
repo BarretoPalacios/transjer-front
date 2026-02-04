@@ -32,7 +32,8 @@ import {
   MapPin,
   Package,
   Users,
-  Tag
+  Tag,
+   Trash,
 } from "lucide-react";
 
 // Componentes comunes
@@ -55,6 +56,10 @@ const FletesPorFacturar = () => {
 
   const [gastosFleteData, setGastosFleteData] = useState(null);
   const [loadingGastos, setLoadingGastos] = useState(false);
+
+  const [showDeleteFleteModal, setShowDeleteFleteModal] = useState(false);
+const [fleteToDelete, setFleteToDelete] = useState(null);
+const [isDeletingFlete, setIsDeletingFlete] = useState(false);
 
   // Estados de paginación
   const [pagination, setPagination] = useState({
@@ -360,6 +365,51 @@ const [gastoForm, setGastoForm] = useState({
       });
     }
   }, [showFacturaModal, selectedFletes, fletes]);
+
+
+  const handleDeleteFleteClick = useCallback((flete, e) => {
+  if (e) e.stopPropagation();
+  setFleteToDelete(flete);
+  setShowDeleteFleteModal(true);
+}, []);
+
+// Función para cancelar la eliminación
+const handleCancelDeleteFlete = useCallback(() => {
+  setFleteToDelete(null);
+  setShowDeleteFleteModal(false);
+}, []);
+
+// Función para confirmar la eliminación
+const handleConfirmDeleteFlete = useCallback(async () => {
+  if (!fleteToDelete) return;
+
+  setIsDeletingFlete(true);
+  setError(null);
+
+  try {
+    // Llamar a la API para eliminar el flete
+    await fletesAPI.deleteFlete(fleteToDelete.id);
+    
+    setSuccessMessage(`Flete ${fleteToDelete.codigo_flete} eliminado exitosamente. El servicio asociado ha sido cambiado a estado CANCELADO.`);
+    
+    // Cerrar modal y limpiar estado
+    setShowDeleteFleteModal(false);
+    setFleteToDelete(null);
+    
+    // Si el flete estaba seleccionado, quitarlo de la selección
+    if (selectedFletes.includes(fleteToDelete.id)) {
+      setSelectedFletes(selectedFletes.filter(id => id !== fleteToDelete.id));
+    }
+    
+    // Refrescar la lista de fletes
+    fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
+    
+  } catch (err) {
+    setError('Error al eliminar el flete: ' + (err.message || 'Error desconocido'));
+  } finally {
+    setIsDeletingFlete(false);
+  }
+}, [fleteToDelete, selectedFletes, fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   // Handlers
   const handleView = useCallback((flete) => {
@@ -1308,6 +1358,16 @@ const formatHora = (fecha) => {
                               >
                                 Agregar Gasto
                               </button>
+                               <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDeleteFleteClick(flete, e);
+      }}
+      className="p-1 rounded text-red-600 hover:text-red-800 hover:bg-red-100"
+      title="Eliminar flete"
+    >
+      Eliminar Flete
+    </button>
                             </>
                           )}
                         </div>
@@ -2294,6 +2354,137 @@ const formatHora = (fecha) => {
           </div>
         </div>
       </Modal>
+
+
+      {/* Modal de confirmación para eliminar flete */}
+<Modal
+  isOpen={showDeleteFleteModal}
+  onClose={handleCancelDeleteFlete}
+  title="Confirmar Eliminación de Flete"
+  size="medium"
+>
+  {fleteToDelete && (
+    <div className="space-y-6">
+      {/* Advertencia */}
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="flex items-start">
+          <AlertCircle className="h-5 w-5 text-red-600 mr-3 mt-0.5 flex-shrink-0" />
+          <div>
+            <h4 className="font-semibold text-red-800">¡Advertencia importante!</h4>
+            <p className="text-sm text-red-700 mt-1">
+              Esta acción eliminará permanentemente el flete <span className="font-bold">{fleteToDelete.codigo_flete}</span>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Impacto en el servicio */}
+      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex items-start">
+          <Info className="h-5 w-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
+          <div>
+            <h4 className="font-semibold text-yellow-800">Impacto en el servicio asociado</h4>
+            <p className="text-sm text-yellow-700 mt-1">
+              Al eliminar este flete, el servicio <span className="font-bold">{fleteToDelete.codigo_servicio}</span> será cambiado automáticamente a estado <span className="font-bold">CANCELADO</span>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Detalles del flete */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <h5 className="text-sm font-medium text-gray-700 mb-3">Detalles del flete a eliminar:</h5>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Código:</span>
+              <span className="font-medium">{fleteToDelete.codigo_flete}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Cliente:</span>
+              <span className="font-medium">{fleteToDelete.servicio?.cliente?.nombre || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Monto:</span>
+              <span className="font-medium">S/. {parseFloat(fleteToDelete.monto_flete || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Estado actual:</span>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getEstadoBadgeClass(fleteToDelete.estado_flete)}`}>
+                {fleteToDelete.estado_flete}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <h5 className="text-sm font-medium text-gray-700 mb-3">Servicio asociado:</h5>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Código:</span>
+              <span className="font-medium">{fleteToDelete.codigo_servicio}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Origen:</span>
+              <span className="font-medium">{fleteToDelete.servicio?.origen || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Destino:</span>
+              <span className="font-medium">{fleteToDelete.servicio?.destino || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Estado actual:</span>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getEstadoServicioClass(fleteToDelete.servicio?.estado)}`}>
+                {fleteToDelete.servicio?.estado || 'N/A'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Nuevo estado:</span>
+              <span className="font-bold text-red-600">CANCELADO</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Gastos asociados */}
+      {fleteToDelete.servicio?.gastos_count > 0 && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+            <div>
+              <h5 className="font-semibold text-blue-800">Gastos asociados</h5>
+              <p className="text-sm text-blue-700 mt-1">
+                Este flete tiene {fleteToDelete.servicio.gastos_count} gasto(s) registrado(s). 
+                Todos los gastos asociados también serán eliminados permanentemente.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Botones de acción */}
+      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+        <Button
+          onClick={handleCancelDeleteFlete}
+          variant="secondary"
+          size="small"
+          disabled={isDeletingFlete}
+        >
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleConfirmDeleteFlete}
+          variant="danger"
+          size="small"
+          isLoading={isDeletingFlete}
+          icon={Trash}
+        >
+          Sí, eliminar flete
+        </Button>
+      </div>
+    </div>
+  )}
+</Modal>
     </div>
   );
 };
