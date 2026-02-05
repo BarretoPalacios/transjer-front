@@ -437,6 +437,20 @@ const handleConfirmDeleteFlete = useCallback(async () => {
     fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
   }, [fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
 
+
+    const handledownload = useCallback(async () => {
+      try {
+  
+        const blob = await fletesAPI.exportAllFletesExcel({"estado":"VALORIZADO", "pertenece_a_factura": false});
+        fletesAPI.downloadExcel(
+          blob,
+          `fletes_${new Date().toISOString().split("T")[0]}.xlsx`
+        );
+      } catch (err) {
+        setError("Error al exportar: " + err.message);
+      }
+    }, []);
+
   // Función para manejar clic en fila
   const handleRowClick = useCallback((flete) => {
     setFleteSeleccionado(flete);
@@ -999,6 +1013,15 @@ const formatHora = (fecha) => {
 
             <Button onClick={clearFilters} variant="secondary" size="small">
               Limpiar
+            </Button>
+            <Button
+              onClick={handledownload}
+              variant="secondary"
+              size="small"
+              icon={Download}
+              isLoading={isLoading}
+            >
+              Descargar Data
             </Button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // 1. Configuración de la URL base
-const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace('http://', 'https://');   
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '') //.replace('http://', 'https://');   
 
 // 2. Creación de la instancia
 const axiosInstance = axios.create({

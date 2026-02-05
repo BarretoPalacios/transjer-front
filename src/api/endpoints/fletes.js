@@ -271,10 +271,18 @@ export const fletesAPI = {
     }
   },
 
-  // Método alternativo si tu backend tiene exportación nativa
-  exportAllFletesExcel: async (filters = {}) => {
-    return await fletesAPI.exportFletesExcel(filters);
-  },
+    exportAllFletesExcel: async (filters = {}) => {
+      const params = new URLSearchParams();
+  
+      if (filters.estado) params.append('estado', filters.estado);
+      if (filters.pertenece_a_factura !== undefined) params.append('pertenece_a_factura', filters.pertenece_a_factura);
+  
+      const response = await axiosInstance.get(
+        `/fletes/export/excel?${params.toString()}`,
+        { responseType: 'blob' }
+      );
+      return response.data;
+    },
 
   // Función para descargar archivos Excel
   downloadExcel: (blob, filename = 'fletes.xlsx') => {
