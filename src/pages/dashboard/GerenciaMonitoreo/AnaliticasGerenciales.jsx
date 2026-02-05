@@ -30,6 +30,7 @@ const AnaliticasGerenciales = () => {
     total_detracciones: 0,
     cnt_detracciones: 0,
     pendiente_por_cobrar: 0,
+    facturacion_bruta_con_detraccion: 0,
     total_cobrado: 0,
     cnt_cobrado: 0,
     total_por_vencer: 0,
@@ -61,6 +62,7 @@ const AnaliticasGerenciales = () => {
         total_detracciones: response.total_detracciones || 0,
         cnt_detracciones: response.cnt_detracciones || 0,
         pendiente_por_cobrar: response.pendiente_por_cobrar || 0,
+        facturacion_bruta_con_detraccion: response.facturacion_bruta_con_detraccion || 0,
         total_cobrado: response.total_cobrado || 0,
         cnt_cobrado: response.cnt_cobrado || 0,
         total_por_vencer: response.total_por_vencer || 0,
@@ -79,32 +81,7 @@ const AnaliticasGerenciales = () => {
       console.error('Error al obtener KPIs financieros:', err);
       setError('No se pudieron cargar los datos financieros. Por favor, intente nuevamente.');
       
-      // Datos de ejemplo en caso de error (para desarrollo)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Usando datos de ejemplo para desarrollo');
-        setDashboardData({
-          total_vendido_neto: 2500,
-          total_vendido_bruto: 2950,
-          facturacion_bruta: 1770,
-          cnt_facturas_bruta: 3,
-          facturacion_bruta_pendiente: 1180,
-          total_detracciones: 70.8,
-          cnt_detracciones: 3,
-          pendiente_por_cobrar: 1699.2,
-          total_cobrado: 566.4,
-          cnt_cobrado: 1,
-          total_por_vencer: 1132.8,
-          total_vencido: 0,
-          cnt_vencido: 0,
-          fletes: {
-            total_fletes: 6,
-            fletes_pendientes: 1,
-            fletes_valorizados: 2,
-            fletes_con_factura: 3
-          }
-        });
-        setLastUpdated(new Date());
-      }
+      
     } finally {
       setLoading(false);
     }
