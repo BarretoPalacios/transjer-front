@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -33,7 +31,7 @@ import {
   Package,
   Users,
   Tag,
-   Trash,
+  Trash,
 } from "lucide-react";
 
 // Componentes comunes
@@ -45,6 +43,7 @@ import Pagination from "../../../components/common/Pagination/Pagination";
 import { fletesAPI } from "../../../api/endpoints/fletes";
 import { facturasAPI } from "../../../api/endpoints/facturas";
 import { serviciosPrincipalesAPI } from "../../../api/endpoints/servicioPrincipal";
+import utilsAPI from "../../../api/endpoints/utils";
 
 const FletesPorFacturar = () => {
   const navigate = useNavigate();
@@ -58,8 +57,8 @@ const FletesPorFacturar = () => {
   const [loadingGastos, setLoadingGastos] = useState(false);
 
   const [showDeleteFleteModal, setShowDeleteFleteModal] = useState(false);
-const [fleteToDelete, setFleteToDelete] = useState(null);
-const [isDeletingFlete, setIsDeletingFlete] = useState(false);
+  const [fleteToDelete, setFleteToDelete] = useState(null);
+  const [isDeletingFlete, setIsDeletingFlete] = useState(false);
 
   // Estados de paginación
   const [pagination, setPagination] = useState({
@@ -74,8 +73,11 @@ const [isDeletingFlete, setIsDeletingFlete] = useState(false);
   // Estados para filtros
   const [filters, setFilters] = useState({
     codigo_flete: "",
-    cliente: ""
+    cliente: "",
   });
+
+  const [clientesList, setClientesList] = useState([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
 
   // Estados para modales y selección
   const [showDetalleModal, setShowDetalleModal] = useState(false);
@@ -96,18 +98,18 @@ const [isDeletingFlete, setIsDeletingFlete] = useState(false);
   // Estados para gastos adicionales
   const [showGastoModal, setShowGastoModal] = useState(false);
   const [gastosFlete, setGastosFlete] = useState([]);
-// En los estados del componente, dentro de la sección de estados para gastos adicionales:
-const [gastoForm, setGastoForm] = useState({
-  fecha: '',
-  tipo_gasto: '',
-  valor: '',
-  se_factura: false,
-  estado_facturacion: 'N/A',
-  n_factura: '',
-  estado_aprobacion: 'PENDIENTE',
-  observaciones: '',
-  tipo_gasto_personalizado: '' // ← AGREGAR ESTA LÍNEA
-});
+  // En los estados del componente, dentro de la sección de estados para gastos adicionales:
+  const [gastoForm, setGastoForm] = useState({
+    fecha: "",
+    tipo_gasto: "",
+    valor: "",
+    se_factura: false,
+    estado_facturacion: "N/A",
+    n_factura: "",
+    estado_aprobacion: "PENDIENTE",
+    observaciones: "",
+    tipo_gasto_personalizado: "", // ← AGREGAR ESTA LÍNEA
+  });
 
   // Estado para el formulario de factura
   const [facturaForm, setFacturaForm] = useState({
@@ -120,7 +122,7 @@ const [gastoForm, setGastoForm] = useState({
   });
 
   const [formErrors, setFormErrors] = useState({});
-  
+
   // Estados para eliminación de gastos
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [gastoToDelete, setGastoToDelete] = useState(null);
@@ -131,21 +133,25 @@ const [gastoForm, setGastoForm] = useState({
 
   // Opciones para tipo de gasto
   const tipoGastoOptions = [
-    'Estadía',
-    'Reparación',
-    'Peaje Extra',
-    'Maniobras',
-    'Multa',
-    'Combustible Extra',
-    'Alimentación',
-    'Hospedaje',
-    'Gastos Extraordinarios',
-    'Otros'
+    "Estadía",
+    "Reparación",
+    "Peaje Extra",
+    "Maniobras",
+    "Multa",
+    "Combustible Extra",
+    "Alimentación",
+    "Hospedaje",
+    "Gastos Extraordinarios",
+    "Otros",
   ];
 
   // Función principal para cargar fletes
   const fetchFletes = useCallback(
-    async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
+    async (
+      page = 1,
+      itemsPerPage = pagination.itemsPerPage,
+      filtersToUse = filters,
+    ) => {
       setIsLoading(true);
       setError(null);
       setSuccessMessage(null);
@@ -165,11 +171,11 @@ const [gastoForm, setGastoForm] = useState({
         filtersForAPI.page = page;
         filtersForAPI.page_size = itemsPerPage;
 
-        console.log('Fetching fletes with params:', filtersForAPI);
+        console.log("Fetching fletes with params:", filtersForAPI);
 
         // Usar la API
         const response = await fletesAPI.getAdvancedFletes(filtersForAPI);
-        console.log('API Response:', response);
+        console.log("API Response:", response);
 
         // Procesar respuesta
         if (response && response.items) {
@@ -206,9 +212,10 @@ const [gastoForm, setGastoForm] = useState({
             hasPrev: false,
           });
         }
-
       } catch (err) {
-        setError("Error al cargar los fletes: " + (err.message || "Error desconocido"));
+        setError(
+          "Error al cargar los fletes: " + (err.message || "Error desconocido"),
+        );
         console.error("Error fetching fletes:", err);
         setFletes([]);
         setPagination({
@@ -223,7 +230,7 @@ const [gastoForm, setGastoForm] = useState({
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   // Función para cargar gastos de un flete
@@ -240,7 +247,6 @@ const [gastoForm, setGastoForm] = useState({
       setGastosFleteData(response);
       // También guardamos los gastos en el array para la vista de tabla
       setGastosFlete(response.gastos || []);
-
     } catch (err) {
       console.error(err);
       setError("Error al cargar los gastos del flete");
@@ -254,26 +260,42 @@ const [gastoForm, setGastoForm] = useState({
     async (flete) => {
       setFleteSeleccionado(flete);
       await fetchGastosFlete(flete.id);
-      setModalMode('gastos');
+      setModalMode("gastos");
       setShowDetalleModal(true);
     },
-    [fetchGastosFlete]
+    [fetchGastosFlete],
   );
 
   // Función para manejar gastos adicionales
   const handleGastosAdicionales = useCallback((flete) => {
     setFleteSeleccionado(flete);
     setGastoForm({
-      fecha: new Date().toISOString().split('T')[0], // Fecha actual
-      tipo_gasto: '',
-      valor: '',
+      fecha: new Date().toISOString().split("T")[0], // Fecha actual
+      tipo_gasto: "",
+      valor: "",
       se_factura: false,
-      estado_facturacion: 'N/A',
-      n_factura: '',
-      estado_aprobacion: 'PENDIENTE',
-      observaciones: ''
+      estado_facturacion: "N/A",
+      n_factura: "",
+      estado_aprobacion: "PENDIENTE",
+      observaciones: "",
     });
     setShowGastoModal(true);
+  }, []);
+
+  // Función para cargar clientes desde el endpoint
+  const cargarClientes = useCallback(async () => {
+    setLoadingClientes(true);
+    try {
+      // Aquí debes hacer la llamada a tu API
+      // Ejemplo: const response = await api.get('/utils/clientes-list');
+      const response = await utilsAPI.getClientesList();
+      setClientesList(response || []);
+    } catch (err) {
+      console.error("Error cargando clientes:", err);
+      setClientesList([]);
+    } finally {
+      setLoadingClientes(false);
+    }
   }, []);
 
   // Efecto para búsqueda en tiempo real con debounce
@@ -290,9 +312,9 @@ const [gastoForm, setGastoForm] = useState({
     // Crear nuevo timeout
     const timeout = setTimeout(() => {
       // Resetear a página 1 cuando cambian los filtros
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
-        currentPage: 1
+        currentPage: 1,
       }));
 
       // Llamar a fetchFletes con página 1
@@ -320,6 +342,7 @@ const [gastoForm, setGastoForm] = useState({
       fetchFletes(1, pagination.itemsPerPage, filters);
       isInitialMount.current = false;
     }
+    cargarClientes();
   }, []);
 
   // Efecto para inicializar el formulario cuando se abre el modal de factura
@@ -334,14 +357,18 @@ const [gastoForm, setGastoForm] = useState({
       // Generar secuencia para número de factura
       const fecha = new Date();
       const year = fecha.getFullYear();
-      const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
-      const numeroSugerido = `F-${year}${month}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      const month = (fecha.getMonth() + 1).toString().padStart(2, "0");
+      const numeroSugerido = `F-${year}${month}${Math.floor(
+        Math.random() * 1000,
+      )
+        .toString()
+        .padStart(3, "0")}`;
 
       // Configurar fechas
       const formatLocalDate = (date) => {
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
       };
 
@@ -359,57 +386,69 @@ const [gastoForm, setGastoForm] = useState({
         fecha_vencimiento: fechaVencimiento,
         monto_total: montoTotal.toFixed(2),
         moneda: "PEN",
-        descripcion: selectedFletes.length === 1
-          ? `Factura por flete: ${fletes.find(f => f.id === selectedFletes[0])?.codigo_flete || ""}`
-          : `Factura por ${selectedFletes.length} fletes`,
+        descripcion:
+          selectedFletes.length === 1
+            ? `Factura por flete: ${fletes.find((f) => f.id === selectedFletes[0])?.codigo_flete || ""}`
+            : `Factura por ${selectedFletes.length} fletes`,
       });
     }
   }, [showFacturaModal, selectedFletes, fletes]);
 
-
   const handleDeleteFleteClick = useCallback((flete, e) => {
-  if (e) e.stopPropagation();
-  setFleteToDelete(flete);
-  setShowDeleteFleteModal(true);
-}, []);
+    if (e) e.stopPropagation();
+    setFleteToDelete(flete);
+    setShowDeleteFleteModal(true);
+  }, []);
 
-// Función para cancelar la eliminación
-const handleCancelDeleteFlete = useCallback(() => {
-  setFleteToDelete(null);
-  setShowDeleteFleteModal(false);
-}, []);
-
-// Función para confirmar la eliminación
-const handleConfirmDeleteFlete = useCallback(async () => {
-  if (!fleteToDelete) return;
-
-  setIsDeletingFlete(true);
-  setError(null);
-
-  try {
-    // Llamar a la API para eliminar el flete
-    await fletesAPI.deleteFlete(fleteToDelete.id);
-    
-    setSuccessMessage(`Flete ${fleteToDelete.codigo_flete} eliminado exitosamente. El servicio asociado ha sido cambiado a estado CANCELADO.`);
-    
-    // Cerrar modal y limpiar estado
-    setShowDeleteFleteModal(false);
+  // Función para cancelar la eliminación
+  const handleCancelDeleteFlete = useCallback(() => {
     setFleteToDelete(null);
-    
-    // Si el flete estaba seleccionado, quitarlo de la selección
-    if (selectedFletes.includes(fleteToDelete.id)) {
-      setSelectedFletes(selectedFletes.filter(id => id !== fleteToDelete.id));
+    setShowDeleteFleteModal(false);
+  }, []);
+
+  // Función para confirmar la eliminación
+  const handleConfirmDeleteFlete = useCallback(async () => {
+    if (!fleteToDelete) return;
+
+    setIsDeletingFlete(true);
+    setError(null);
+
+    try {
+      // Llamar a la API para eliminar el flete
+      await fletesAPI.deleteFlete(fleteToDelete.id);
+
+      setSuccessMessage(
+        `Flete ${fleteToDelete.codigo_flete} eliminado exitosamente. El servicio asociado ha sido cambiado a estado CANCELADO.`,
+      );
+
+      // Cerrar modal y limpiar estado
+      setShowDeleteFleteModal(false);
+      setFleteToDelete(null);
+
+      // Si el flete estaba seleccionado, quitarlo de la selección
+      if (selectedFletes.includes(fleteToDelete.id)) {
+        setSelectedFletes(
+          selectedFletes.filter((id) => id !== fleteToDelete.id),
+        );
+      }
+
+      // Refrescar la lista de fletes
+      fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
+    } catch (err) {
+      setError(
+        "Error al eliminar el flete: " + (err.message || "Error desconocido"),
+      );
+    } finally {
+      setIsDeletingFlete(false);
     }
-    
-    // Refrescar la lista de fletes
-    fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
-    
-  } catch (err) {
-    setError('Error al eliminar el flete: ' + (err.message || 'Error desconocido'));
-  } finally {
-    setIsDeletingFlete(false);
-  }
-}, [fleteToDelete, selectedFletes, fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
+  }, [
+    fleteToDelete,
+    selectedFletes,
+    fetchFletes,
+    pagination.currentPage,
+    pagination.itemsPerPage,
+    filters,
+  ]);
 
   // Handlers
   const handleView = useCallback((flete) => {
@@ -420,16 +459,16 @@ const handleConfirmDeleteFlete = useCallback(async () => {
 
   // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   }, []);
 
   const clearFilters = useCallback(() => {
     setFilters({
       codigo_flete: "",
-      cliente: ""
+      cliente: "",
     });
   }, []);
 
@@ -437,19 +476,20 @@ const handleConfirmDeleteFlete = useCallback(async () => {
     fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
   }, [fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
 
-
-    const handledownload = useCallback(async () => {
-      try {
-  
-        const blob = await fletesAPI.exportAllFletesExcel({"estado":"VALORIZADO", "pertenece_a_factura": false});
-        fletesAPI.downloadExcel(
-          blob,
-          `fletes_${new Date().toISOString().split("T")[0]}.xlsx`
-        );
-      } catch (err) {
-        setError("Error al exportar: " + err.message);
-      }
-    }, []);
+  const handledownload = useCallback(async () => {
+    try {
+      const blob = await fletesAPI.exportAllFletesExcel({
+        estado: "VALORIZADO",
+        pertenece_a_factura: false,
+      });
+      fletesAPI.downloadExcel(
+        blob,
+        `fletes_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
+    } catch (err) {
+      setError("Error al exportar: " + err.message);
+    }
+  }, []);
 
   // Función para manejar clic en fila
   const handleRowClick = useCallback((flete) => {
@@ -468,7 +508,7 @@ const handleConfirmDeleteFlete = useCallback(async () => {
         setSelectedFletes([...selectedFletes, id]);
       }
     },
-    [selectedFletes]
+    [selectedFletes],
   );
 
   // Manejar selección todos
@@ -513,132 +553,147 @@ const handleConfirmDeleteFlete = useCallback(async () => {
   }, []);
 
   // Cerrar modal de gasto
-const handleCloseGastoModal = useCallback(() => {
-  setShowGastoModal(false);
-  setGastoForm({
-    fecha: '',
-    tipo_gasto: '',
-    valor: '',
-    se_factura: false,
-    estado_facturacion: 'N/A',
-    n_factura: '',
-    estado_aprobacion: 'PENDIENTE',
-    observaciones: '',
-    tipo_gasto_personalizado: '' // ← AGREGAR ESTA LÍNEA
-  });
-}, []);
+  const handleCloseGastoModal = useCallback(() => {
+    setShowGastoModal(false);
+    setGastoForm({
+      fecha: "",
+      tipo_gasto: "",
+      valor: "",
+      se_factura: false,
+      estado_facturacion: "N/A",
+      n_factura: "",
+      estado_aprobacion: "PENDIENTE",
+      observaciones: "",
+      tipo_gasto_personalizado: "", // ← AGREGAR ESTA LÍNEA
+    });
+  }, []);
 
   // Handler para cambios en el formulario de factura
-  const handleFacturaFormChange = useCallback((field, value) => {
-    setFacturaForm(prev => ({ ...prev, [field]: value }));
+  const handleFacturaFormChange = useCallback(
+    (field, value) => {
+      setFacturaForm((prev) => ({ ...prev, [field]: value }));
 
-    // Limpiar error del campo
-    if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  }, [formErrors]);
-
-// Handler para cambio en formulario de gasto (NUEVO)
-const handleGastoFormChange = useCallback((field, value) => {
-  setGastoForm(prev => {
-    const newForm = { ...prev, [field]: value };
-
-    // Convertir valores string a boolean para se_factura
-    if (field === 'se_factura') {
-      // Si viene como string 'true' o 'false', convertirlo
-      if (value === 'true' || value === true) {
-        newForm.se_factura = true;
-        newForm.estado_facturacion = 'Pendiente';
-        newForm.n_factura = '';
-      } else if (value === 'false' || value === false) {
-        newForm.se_factura = false;
-        newForm.estado_facturacion = 'N/A';
-        newForm.n_factura = '---';
+      // Limpiar error del campo
+      if (formErrors[field]) {
+        setFormErrors((prev) => ({ ...prev, [field]: "" }));
       }
-    }
+    },
+    [formErrors],
+  );
 
-    // Si cambia el tipo de gasto y no es "Otros", limpiar el campo personalizado
-    if (field === 'tipo_gasto' && value !== 'Otros') {
-      newForm.tipo_gasto_personalizado = ''; // ← AGREGAR ESTA LÍNEA
-    }
+  // Handler para cambio en formulario de gasto (NUEVO)
+  const handleGastoFormChange = useCallback((field, value) => {
+    setGastoForm((prev) => {
+      const newForm = { ...prev, [field]: value };
 
-    return newForm;
-  });
-}, []);
+      // Convertir valores string a boolean para se_factura
+      if (field === "se_factura") {
+        // Si viene como string 'true' o 'false', convertirlo
+        if (value === "true" || value === true) {
+          newForm.se_factura = true;
+          newForm.estado_facturacion = "Pendiente";
+          newForm.n_factura = "";
+        } else if (value === "false" || value === false) {
+          newForm.se_factura = false;
+          newForm.estado_facturacion = "N/A";
+          newForm.n_factura = "---";
+        }
+      }
+
+      // Si cambia el tipo de gasto y no es "Otros", limpiar el campo personalizado
+      if (field === "tipo_gasto" && value !== "Otros") {
+        newForm.tipo_gasto_personalizado = ""; // ← AGREGAR ESTA LÍNEA
+      }
+
+      return newForm;
+    });
+  }, []);
 
   // Handler para guardar gasto
-const handleSaveGasto = useCallback(async () => {
-  if (!fleteSeleccionado) return;
+  const handleSaveGasto = useCallback(async () => {
+    if (!fleteSeleccionado) return;
 
-  try {
-    // Validaciones básicas
-    if (!gastoForm.tipo_gasto) {
-      throw new Error('El tipo de gasto es requerido');
+    try {
+      // Validaciones básicas
+      if (!gastoForm.tipo_gasto) {
+        throw new Error("El tipo de gasto es requerido");
+      }
+
+      // Validación específica para "Otros"
+      if (
+        gastoForm.tipo_gasto === "Otros" &&
+        !gastoForm.tipo_gasto_personalizado.trim()
+      ) {
+        throw new Error("Debe especificar el tipo de gasto personalizado");
+      }
+
+      if (!gastoForm.valor || parseFloat(gastoForm.valor) <= 0) {
+        throw new Error("El valor debe ser mayor a 0");
+      }
+
+      // Determinar el tipo de gasto final
+      const tipoGastoFinal =
+        gastoForm.tipo_gasto === "Otros"
+          ? gastoForm.tipo_gasto_personalizado
+          : gastoForm.tipo_gasto;
+
+      // Preparar datos para enviar al backend
+      const gastoData = {
+        id_flete: fleteSeleccionado.id,
+        fecha_gasto: gastoForm.fecha,
+        tipo_gasto: tipoGastoFinal, // ← USAR EL TIPO CORRECTO
+        valor: parseFloat(gastoForm.valor),
+        se_factura_cliente: gastoForm.se_factura,
+        descripcion:
+          gastoForm.observaciones === ""
+            ? "GASTO AGREGADO"
+            : gastoForm.observaciones,
+        usuario_registro: "Sistema",
+      };
+
+      console.log("Datos listos para enviar al backend:", gastoData);
+
+      // Llamada al backend
+      await fletesAPI.createGasto(gastoData);
+
+      // Mensaje de éxito
+      setSuccessMessage("Gasto adicional registrado exitosamente");
+      handleCloseGastoModal();
+
+      // Recargar gastos si estamos en la vista de gastos
+      if (modalMode === "gastos") {
+        fetchGastosFlete(fleteSeleccionado.id);
+      }
+    } catch (err) {
+      setError("Error al registrar el gasto: " + err.message);
     }
-
-    // Validación específica para "Otros"
-    if (gastoForm.tipo_gasto === 'Otros' && !gastoForm.tipo_gasto_personalizado.trim()) {
-      throw new Error('Debe especificar el tipo de gasto personalizado');
-    }
-
-    if (!gastoForm.valor || parseFloat(gastoForm.valor) <= 0) {
-      throw new Error('El valor debe ser mayor a 0');
-    }
-
-    // Determinar el tipo de gasto final
-    const tipoGastoFinal = gastoForm.tipo_gasto === 'Otros' 
-      ? gastoForm.tipo_gasto_personalizado 
-      : gastoForm.tipo_gasto;
-
-    // Preparar datos para enviar al backend
-    const gastoData = {
-      id_flete: fleteSeleccionado.id,
-      fecha_gasto: gastoForm.fecha,
-      tipo_gasto: tipoGastoFinal, // ← USAR EL TIPO CORRECTO
-      valor: parseFloat(gastoForm.valor),
-      se_factura_cliente: gastoForm.se_factura,
-      descripcion: gastoForm.observaciones === "" ? "GASTO AGREGADO" : gastoForm.observaciones,
-      usuario_registro: 'Sistema'
-    };
-
-    console.log('Datos listos para enviar al backend:', gastoData);
-
-    // Llamada al backend
-    await fletesAPI.createGasto(gastoData);
-
-    // Mensaje de éxito
-    setSuccessMessage('Gasto adicional registrado exitosamente');
-    handleCloseGastoModal();
-
-    // Recargar gastos si estamos en la vista de gastos
-    if (modalMode === 'gastos') {
-      fetchGastosFlete(fleteSeleccionado.id);
-    }
-
-  } catch (err) {
-    setError('Error al registrar el gasto: ' + err.message);
-  }
-}, [fleteSeleccionado, gastoForm, modalMode, fetchGastosFlete, handleCloseGastoModal]);
+  }, [
+    fleteSeleccionado,
+    gastoForm,
+    modalMode,
+    fetchGastosFlete,
+    handleCloseGastoModal,
+  ]);
 
   // Validar formulario de factura
   const validateFacturaForm = () => {
     const errors = {};
 
     if (!facturaForm.numero_factura.trim()) {
-      errors.numero_factura = 'El número de factura es requerido';
+      errors.numero_factura = "El número de factura es requerido";
     }
 
     if (!facturaForm.fecha_emision) {
-      errors.fecha_emision = 'La fecha de emisión es requerida';
+      errors.fecha_emision = "La fecha de emisión es requerida";
     }
 
     if (!facturaForm.fecha_vencimiento) {
-      errors.fecha_vencimiento = 'La fecha de vencimiento es requerida';
+      errors.fecha_vencimiento = "La fecha de vencimiento es requerida";
     }
 
     const montoNum = parseFloat(facturaForm.monto_total || 0);
     if (!facturaForm.monto_total || montoNum <= 0) {
-      errors.monto_total = 'El monto total debe ser mayor a 0';
+      errors.monto_total = "El monto total debe ser mayor a 0";
     }
 
     // Validar que fecha de vencimiento sea mayor o igual a fecha de emisión
@@ -647,7 +702,8 @@ const handleSaveGasto = useCallback(async () => {
       const vencimiento = new Date(facturaForm.fecha_vencimiento);
 
       if (vencimiento < emision) {
-        errors.fecha_vencimiento = 'La fecha de vencimiento no puede ser anterior a la fecha de emisión';
+        errors.fecha_vencimiento =
+          "La fecha de vencimiento no puede ser anterior a la fecha de emisión";
       }
     }
 
@@ -683,7 +739,7 @@ const handleSaveGasto = useCallback(async () => {
       await facturasAPI.createFactura(facturaData);
 
       setSuccessMessage(
-        `Factura ${facturaForm.numero_factura} creada exitosamente para ${selectedFletes.length} flete(s)`
+        `Factura ${facturaForm.numero_factura} creada exitosamente para ${selectedFletes.length} flete(s)`,
       );
 
       handleCloseFacturaModal();
@@ -694,7 +750,15 @@ const handleSaveGasto = useCallback(async () => {
     } finally {
       setIsCreatingInvoice(false);
     }
-  }, [facturaForm, selectedFletes, fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters, handleCloseFacturaModal]);
+  }, [
+    facturaForm,
+    selectedFletes,
+    fetchFletes,
+    pagination.currentPage,
+    pagination.itemsPerPage,
+    filters,
+    handleCloseFacturaModal,
+  ]);
 
   // Editar flete
   const handleEdit = useCallback((flete, e) => {
@@ -733,7 +797,13 @@ const handleSaveGasto = useCallback(async () => {
         setIsLoading(false);
       }
     },
-    [editForm, fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]
+    [
+      editForm,
+      fetchFletes,
+      pagination.currentPage,
+      pagination.itemsPerPage,
+      filters,
+    ],
   );
 
   const handleCancelEdit = useCallback(() => {
@@ -749,14 +819,14 @@ const handleSaveGasto = useCallback(async () => {
     (newPage) => {
       fetchFletes(newPage, pagination.itemsPerPage, filters);
     },
-    [fetchFletes, pagination.itemsPerPage, filters]
+    [fetchFletes, pagination.itemsPerPage, filters],
   );
 
   const handleItemsPerPageChange = useCallback(
     (newItemsPerPage) => {
       fetchFletes(1, newItemsPerPage, filters);
     },
-    [fetchFletes, filters]
+    [fetchFletes, filters],
   );
 
   // Función para obtener clase de estado
@@ -780,45 +850,45 @@ const handleSaveGasto = useCallback(async () => {
   // Función para obtener clase de estado del servicio
   const getEstadoServicioClass = (estado) => {
     switch (estado?.toUpperCase()) {
-      case 'COMPLETADO':
-        return 'bg-green-100 text-green-800 border border-green-300';
-      case 'CANCELADO':
-        return 'bg-red-100 text-red-800 border border-red-300';
-      case 'EN PROCESO':
-      case 'EN CURSO':
-        return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
-      case 'PROGRAMADO':
-        return 'bg-blue-100 text-blue-800 border border-blue-300';
+      case "COMPLETADO":
+        return "bg-green-100 text-green-800 border border-green-300";
+      case "CANCELADO":
+        return "bg-red-100 text-red-800 border border-red-300";
+      case "EN PROCESO":
+      case "EN CURSO":
+        return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+      case "PROGRAMADO":
+        return "bg-blue-100 text-blue-800 border border-blue-300";
       default:
-        return 'bg-gray-100 text-gray-800 border border-gray-300';
+        return "bg-gray-100 text-gray-800 border border-gray-300";
     }
   };
 
   // Función para obtener clase de estado de aprobación
   const getEstadoAprobacionClass = (estado) => {
     switch (estado?.toUpperCase()) {
-      case 'APROBADO':
-        return 'bg-green-100 text-green-800 border border-green-300';
-      case 'RECHAZADO':
-        return 'bg-red-100 text-red-800 border border-red-300';
-      case 'PENDIENTE':
-        return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+      case "APROBADO":
+        return "bg-green-100 text-green-800 border border-green-300";
+      case "RECHAZADO":
+        return "bg-red-100 text-red-800 border border-red-300";
+      case "PENDIENTE":
+        return "bg-yellow-100 text-yellow-800 border border-yellow-300";
       default:
-        return 'bg-gray-100 text-gray-800 border border-gray-300';
+        return "bg-gray-100 text-gray-800 border border-gray-300";
     }
   };
 
   // Función para obtener clase de estado de facturación
   const getEstadoFacturacionClass = (estado) => {
     switch (estado?.toUpperCase()) {
-      case 'FACTURADO':
-        return 'bg-blue-100 text-blue-800 border border-blue-300';
-      case 'PENDIENTE':
-        return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
-      case 'N/A':
-        return 'bg-gray-100 text-gray-800 border border-gray-300';
+      case "FACTURADO":
+        return "bg-blue-100 text-blue-800 border border-blue-300";
+      case "PENDIENTE":
+        return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+      case "N/A":
+        return "bg-gray-100 text-gray-800 border border-gray-300";
       default:
-        return 'bg-gray-100 text-gray-800 border border-gray-300';
+        return "bg-gray-100 text-gray-800 border border-gray-300";
     }
   };
 
@@ -829,7 +899,7 @@ const handleSaveGasto = useCallback(async () => {
       return new Date(fecha).toLocaleDateString("es-ES", {
         year: "numeric",
         month: "long",
-        day: "numeric"
+        day: "numeric",
       });
     } catch (e) {
       return fecha;
@@ -838,36 +908,36 @@ const handleSaveGasto = useCallback(async () => {
 
   // Formatear fecha y hora
   const formatFechaHora = (fecha) => {
-    if (!fecha) return 'N/A';
+    if (!fecha) return "N/A";
     try {
-      return new Date(fecha).toLocaleString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return new Date(fecha).toLocaleString("es-ES", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     } catch (e) {
       return fecha;
     }
   };
 
-const formatHora = (fecha) => {
-  if (!fecha) return 'N/A';
-  try {
-    return new Date(fecha).toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false // Cambia a true si prefieres formato AM/PM
-    });
-  } catch (e) {   
-    return fecha;
-  }
-};
+  const formatHora = (fecha) => {
+    if (!fecha) return "N/A";
+    try {
+      return new Date(fecha).toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false, // Cambia a true si prefieres formato AM/PM
+      });
+    } catch (e) {
+      return fecha;
+    }
+  };
 
   // Formatear valor monetario
   const formatMoneda = (valor) => {
-    if (!valor) return 'S/ 0.00';
+    if (!valor) return "S/ 0.00";
     return `S/ ${parseFloat(valor).toFixed(2)}`;
   };
 
@@ -893,18 +963,22 @@ const formatHora = (fecha) => {
     try {
       // Llamada a API para eliminar gasto
       await fletesAPI.deleteGasto(gastoToDelete.id);
-      
-      setSuccessMessage(`Gasto ${gastoToDelete.codigo_gasto} eliminado exitosamente`);
-      
+
+      setSuccessMessage(
+        `Gasto ${gastoToDelete.codigo_gasto} eliminado exitosamente`,
+      );
+
       // Recargar los gastos del flete
       if (fleteSeleccionado) {
         await fetchGastosFlete(fleteSeleccionado.id);
       }
-      
+
       setShowDeleteConfirm(false);
       setGastoToDelete(null);
     } catch (err) {
-      setError(`Error al eliminar el gasto: ${err.message || 'Error desconocido'}`);
+      setError(
+        `Error al eliminar el gasto: ${err.message || "Error desconocido"}`,
+      );
     } finally {
       setIsDeletingGasto(false);
     }
@@ -1027,20 +1101,31 @@ const formatHora = (fecha) => {
         </div>
 
         {/* Filtros en tiempo real */}
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Hash className="h-4 w-4" />
-              Cliente
-            </label>
-            <input
-              type="text"
-              value={filters.cliente}
-              onChange={(e) => handleFilterChange('cliente', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-              placeholder="Ej: SONEPAR"
-            />
-          </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Cliente
+          </label>
+          <select
+            value={filters.cliente}
+            onChange={(e) => handleFilterChange("cliente", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            disabled={loadingClientes}
+          >
+            <option value="">Todos los clientes</option>
+            {loadingClientes ? (
+              <option value="" disabled>
+                Cargando clientes...
+              </option>
+            ) : (
+              clientesList.map((cliente, index) => (
+                <option key={index} value={cliente}>
+                  {cliente}
+                </option>
+              ))
+            )}
+          </select>
         </div>
 
         {Object.values(filters).some((f) => f.trim() !== "") && (
@@ -1113,7 +1198,7 @@ const formatHora = (fecha) => {
                       }
                     >
                       {selectedFletes.length === fletes.length &&
-                        fletes.length > 0 ? (
+                      fletes.length > 0 ? (
                         <CheckSquare className="h-4 w-4 text-blue-600" />
                       ) : (
                         <Square className="h-4 w-4 text-gray-400" />
@@ -1139,12 +1224,12 @@ const formatHora = (fecha) => {
                     Placa
                   </div>
                 </th>
-                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    Tipo Servicio
-                                  </div>
-                                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Tipo Servicio
+                  </div>
+                </th>
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
@@ -1155,7 +1240,7 @@ const formatHora = (fecha) => {
                   <div className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
                     Destino
-                  </div>  
+                  </div>
                 </th>
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
                   <div className="flex items-center gap-1">
@@ -1196,8 +1281,9 @@ const formatHora = (fecha) => {
                   return (
                     <tr
                       key={flete.id}
-                      className={`border-b border-gray-200 hover:bg-blue-50 cursor-pointer ${isSelected ? "bg-blue-50" : ""
-                        }`}
+                      className={`border-b border-gray-200 hover:bg-blue-50 cursor-pointer ${
+                        isSelected ? "bg-blue-50" : ""
+                      }`}
                       onClick={() => handleRowClick(flete)}
                     >
                       <td
@@ -1218,7 +1304,8 @@ const formatHora = (fecha) => {
                       <td className="px-3 py-2 border-r border-gray-200">
                         <div className="font-medium text-gray-900">
                           C. Flete: <p class="text-xs">{flete.codigo_flete}</p>
-                          C. Servicio: <p class="text-xs"> {flete.codigo_servicio}</p>
+                          C. Servicio:{" "}
+                          <p class="text-xs"> {flete.codigo_servicio}</p>
                         </div>
                       </td>
 
@@ -1229,30 +1316,37 @@ const formatHora = (fecha) => {
                       </td>
                       <td className="px-3 py-2 border-r border-gray-200">
                         <div className="font-medium text-gray-900">
-                          {flete?.servicio?.flota?.placa} 
+                          {flete?.servicio?.flota?.placa}
                         </div>
                       </td>
                       <td className="px-3 py-2 border-r border-gray-200">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}>
-                        {flete?.servicio?.tipo_servicio || flete?.servicio?.modalidad_servicio }
-                      </span>
-                    </td> 
-                        <td className="px-3 py-2 border-r border-gray-200">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}>
-                        {flete?.servicio?.origen }
-                      </span> 
-                    </td>
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}>
-                        {flete?.servicio?.destino }
-                      </span>
-                    </td>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}
+                        >
+                          {flete?.servicio?.tipo_servicio ||
+                            flete?.servicio?.modalidad_servicio}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}
+                        >
+                          {flete?.servicio?.origen}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 border-r border-gray-200">
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium`}
+                        >
+                          {flete?.servicio?.destino}
+                        </span>
+                      </td>
                       {/* Fecha Servicio */}
-                     <td className="px-3  border-r border-gray-200 whitespace-nowrap">
-                      <div className="text-gray-900">
-                        {formatFecha(flete?.servicio?.fecha_servicio)}
-                      </div>
-                    </td>  
+                      <td className="px-3  border-r border-gray-200 whitespace-nowrap">
+                        <div className="text-gray-900">
+                          {formatFecha(flete?.servicio?.fecha_servicio)}
+                        </div>
+                      </td>
 
                       <td className="px-3 py-2 border-r border-gray-200">
                         {isEditing ? (
@@ -1261,7 +1355,12 @@ const formatHora = (fecha) => {
                             <input
                               type="number"
                               value={editForm.monto_flete}
-                              onChange={(e) => setEditForm({ ...editForm, monto_flete: e.target.value })}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  monto_flete: e.target.value,
+                                })
+                              }
                               onClick={(e) => e.stopPropagation()}
                               onMouseDown={(e) => e.stopPropagation()}
                               className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
@@ -1280,7 +1379,7 @@ const formatHora = (fecha) => {
                       <td className="px-3 py-2 border-r border-gray-200">
                         <span
                           className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getEstadoBadgeClass(
-                            flete.estado_flete
+                            flete.estado_flete,
                           )}`}
                         >
                           {flete.estado_flete || "N/A"}
@@ -1381,16 +1480,16 @@ const formatHora = (fecha) => {
                               >
                                 Agregar Gasto
                               </button>
-                               <button
-      onClick={(e) => {
-        e.stopPropagation();
-        handleDeleteFleteClick(flete, e);
-      }}
-      className="p-1 rounded text-red-600 hover:text-red-800 hover:bg-red-100"
-      title="Eliminar flete"
-    >
-      Eliminar Flete
-    </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteFleteClick(flete, e);
+                                }}
+                                className="p-1 rounded text-red-600 hover:text-red-800 hover:bg-red-100"
+                                title="Eliminar flete"
+                              >
+                                Eliminar Flete
+                              </button>
                             </>
                           )}
                         </div>
@@ -1417,12 +1516,12 @@ const formatHora = (fecha) => {
                             : "No hay fletes valorizados pendientes de facturación"}
                         </p>
                         {Object.values(filters).some(
-                          (f) => f.trim() !== ""
+                          (f) => f.trim() !== "",
                         ) && (
-                            <Button onClick={clearFilters} size="small">
-                              Limpiar filtros
-                            </Button>
-                          )}
+                          <Button onClick={clearFilters} size="small">
+                            Limpiar filtros
+                          </Button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -1463,7 +1562,7 @@ const formatHora = (fecha) => {
             }
             endIndex={Math.min(
               pagination.currentPage * pagination.itemsPerPage,
-              pagination.totalItems
+              pagination.totalItems,
             )}
           />
         </div>
@@ -1478,7 +1577,7 @@ const formatHora = (fecha) => {
             ? `Detalles del Flete - ${fleteSeleccionado?.codigo_flete || ""}`
             : `Gastos del Flete - ${fleteSeleccionado?.codigo_flete || ""}`
         }
-        size={modalMode === 'gastos' ? 'large' : 'extra-large'}
+        size={modalMode === "gastos" ? "large" : "extra-large"}
       >
         {modalMode === "flete" && fleteSeleccionado ? (
           // Vista de detalles del flete con la estructura del otro componente
@@ -1519,14 +1618,18 @@ const formatHora = (fecha) => {
                       <Hash className="h-4 w-4" />
                       Código Flete
                     </label>
-                    <p className="text-sm font-semibold text-gray-900">{fleteSeleccionado.codigo_flete}</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {fleteSeleccionado.codigo_flete}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500 mb-1 flex items-center gap-2">
                       <Tag className="h-4 w-4" />
                       Estado del Flete
                     </label>
-                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getEstadoBadgeClass(fleteSeleccionado.estado_flete)}`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getEstadoBadgeClass(fleteSeleccionado.estado_flete)}`}
+                    >
                       {fleteSeleccionado.estado_flete}
                     </span>
                   </div>
@@ -1536,7 +1639,10 @@ const formatHora = (fecha) => {
                       Monto Flete
                     </label>
                     <p className="text-sm font-semibold text-gray-900">
-                      S/. {parseFloat(fleteSeleccionado.monto_flete || 0).toFixed(2)}
+                      S/.{" "}
+                      {parseFloat(fleteSeleccionado.monto_flete || 0).toFixed(
+                        2,
+                      )}
                     </p>
                   </div>
                   <div>
@@ -1544,14 +1650,18 @@ const formatHora = (fecha) => {
                       <Calendar className="h-4 w-4" />
                       Fecha Creación
                     </label>
-                    <p className="text-sm text-gray-900">{formatFechaHora(fleteSeleccionado.fecha_creacion)}</p>
+                    <p className="text-sm text-gray-900">
+                      {formatFechaHora(fleteSeleccionado.fecha_creacion)}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500 mb-1 flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       Fecha Actualización
                     </label>
-                    <p className="text-sm text-gray-900">{formatFechaHora(fleteSeleccionado.fecha_actualizacion)}</p>
+                    <p className="text-sm text-gray-900">
+                      {formatFechaHora(fleteSeleccionado.fecha_actualizacion)}
+                    </p>
                   </div>
                   {fleteSeleccionado.fecha_pago && (
                     <div>
@@ -1559,13 +1669,19 @@ const formatHora = (fecha) => {
                         <Calendar className="h-4 w-4" />
                         Fecha Pago
                       </label>
-                      <p className="text-sm text-gray-900">{formatFecha(fleteSeleccionado.fecha_pago)}</p>
+                      <p className="text-sm text-gray-900">
+                        {formatFecha(fleteSeleccionado.fecha_pago)}
+                      </p>
                     </div>
                   )}
                   {fleteSeleccionado.codigo_factura && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">Factura Asociada</label>
-                      <p className="text-sm font-semibold text-gray-900">{fleteSeleccionado.codigo_factura}</p>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">
+                        Factura Asociada
+                      </label>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {fleteSeleccionado.codigo_factura}
+                      </p>
                     </div>
                   )}
                   <div className="md:col-span-3">
@@ -1575,7 +1691,7 @@ const formatHora = (fecha) => {
                     </label>
                     <div className="mt-1 p-2 bg-gray-50 rounded border border-gray-200">
                       <p className="text-sm text-gray-900 whitespace-pre-wrap">
-                        {fleteSeleccionado.observaciones || 'Sin observaciones'}
+                        {fleteSeleccionado.observaciones || "Sin observaciones"}
                       </p>
                     </div>
                   </div>
@@ -1596,7 +1712,9 @@ const formatHora = (fecha) => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div className="bg-gray-50 p-3 rounded">
                       <p className="text-gray-500">Cantidad de Gastos</p>
-                      <p className="font-semibold">{gastosFleteData.cantidad_gastos || 0}</p>
+                      <p className="font-semibold">
+                        {gastosFleteData.cantidad_gastos || 0}
+                      </p>
                     </div>
 
                     <div className="bg-gray-50 p-3 rounded">
@@ -1609,14 +1727,20 @@ const formatHora = (fecha) => {
                     <div className="bg-green-50 p-3 rounded">
                       <p className="text-gray-500">Recuperable Cliente</p>
                       <p className="font-semibold text-green-700">
-                        S/ {(gastosFleteData.total_recuperable_cliente || 0).toFixed(2)}
+                        S/{" "}
+                        {(
+                          gastosFleteData.total_recuperable_cliente || 0
+                        ).toFixed(2)}
                       </p>
                     </div>
 
                     <div className="bg-red-50 p-3 rounded">
                       <p className="text-gray-500">Costo Operativo</p>
                       <p className="font-semibold text-red-700">
-                        S/ {(gastosFleteData.total_costo_operativo || 0).toFixed(2)}
+                        S/{" "}
+                        {(gastosFleteData.total_costo_operativo || 0).toFixed(
+                          2,
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1636,62 +1760,116 @@ const formatHora = (fecha) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Información Básica del Servicio */}
                   <div className="space-y-4">
-                    <h4 className="text-md font-semibold text-gray-900 border-b pb-2">Información Básica</h4>
+                    <h4 className="text-md font-semibold text-gray-900 border-b pb-2">
+                      Información Básica
+                    </h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Código Servicio</label>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Código Servicio
+                        </label>
                         <p className="text-sm font-semibold text-gray-900">
-                          {fleteSeleccionado.servicio?.codigo_servicio_principal || fleteSeleccionado.codigo_servicio || 'N/A'}
+                          {fleteSeleccionado.servicio
+                            ?.codigo_servicio_principal ||
+                            fleteSeleccionado.codigo_servicio ||
+                            "N/A"}
                         </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Estado Servicio</label>
-                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getEstadoServicioClass(fleteSeleccionado.servicio?.estado)}`}>
-                          {fleteSeleccionado.servicio?.estado || 'N/A'}
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Estado Servicio
+                        </label>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getEstadoServicioClass(fleteSeleccionado.servicio?.estado)}`}
+                        >
+                          {fleteSeleccionado.servicio?.estado || "N/A"}
                         </span>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Tipo Servicio</label>
-                        <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.tipo_servicio || 'N/A'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Tipo Servicio
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {fleteSeleccionado.servicio?.tipo_servicio || "N/A"}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Modalidad</label>
-                        <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.modalidad_servicio || 'N/A'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Modalidad
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {fleteSeleccionado.servicio?.modalidad_servicio ||
+                            "N/A"}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Zona</label>
-                        <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.zona || 'N/A'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Zona
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {fleteSeleccionado.servicio?.zona || "N/A"}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Fecha Servicio</label>
-                        <p className="text-sm text-gray-900">{formatFecha(fleteSeleccionado.servicio?.fecha_servicio)}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Fecha Servicio
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {formatFecha(
+                            fleteSeleccionado.servicio?.fecha_servicio,
+                          )}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Fecha Salida</label>
-                        <p className="text-sm text-gray-900">{formatFecha(fleteSeleccionado.servicio?.fecha_salida)}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Fecha Salida
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {formatFecha(
+                            fleteSeleccionado.servicio?.fecha_salida,
+                          )}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Hora de Cita</label>
-                        <p className="text-sm text-gray-900">{formatHora(fleteSeleccionado.servicio?.hora_cita)}</p> 
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Hora de Cita
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {formatHora(fleteSeleccionado.servicio?.hora_cita)}
+                        </p>
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Descripción</label>
-                        <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.descripcion || 'N/A'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Descripción
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {fleteSeleccionado.servicio?.descripcion || "N/A"}
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   {/* Detalles de Carga y Ruta */}
                   <div className="space-y-4">
-                    <h4 className="text-md font-semibold text-gray-900 border-b pb-2">Carga y Ruta</h4>
+                    <h4 className="text-md font-semibold text-gray-900 border-b pb-2">
+                      Carga y Ruta
+                    </h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Metros Cúbicos (m³)</label>
-                        <p className="text-sm font-semibold text-gray-900">{fleteSeleccionado.servicio?.m3 || '0'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Metros Cúbicos (m³)
+                        </label>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {fleteSeleccionado.servicio?.m3 || "0"}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Toneladas (TN)</label>
-                        <p className="text-sm font-semibold text-gray-900">{fleteSeleccionado.servicio?.tn || '0'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Toneladas (TN)
+                        </label>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {fleteSeleccionado.servicio?.tn || "0"}
+                        </p>
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
@@ -1699,7 +1877,9 @@ const formatHora = (fecha) => {
                           Origen
                         </label>
                         <div className="mt-1 p-2 bg-gray-50 rounded border border-gray-200">
-                          <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.origen || 'N/A'}</p>
+                          <p className="text-sm text-gray-900">
+                            {fleteSeleccionado.servicio?.origen || "N/A"}
+                          </p>
                         </div>
                       </div>
                       <div className="col-span-2">
@@ -1708,7 +1888,9 @@ const formatHora = (fecha) => {
                           Destino
                         </label>
                         <div className="mt-1 p-2 bg-gray-50 rounded border border-gray-200">
-                          <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.destino || 'N/A'}</p>
+                          <p className="text-sm text-gray-900">
+                            {fleteSeleccionado.servicio?.destino || "N/A"}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1716,45 +1898,81 @@ const formatHora = (fecha) => {
 
                   {/* Información del Cliente */}
                   <div className="space-y-4">
-                    <h4 className="text-md font-semibold text-gray-900 border-b pb-2">Cliente</h4>
+                    <h4 className="text-md font-semibold text-gray-900 border-b pb-2">
+                      Cliente
+                    </h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
                           <User className="h-4 w-4" />
                           Nombre
                         </label>
-                        <p className="text-sm font-semibold text-gray-900">{fleteSeleccionado.servicio?.cliente?.nombre || 'N/A'}</p>
-                        <p className="text-sm text-gray-900">Cuenta: {fleteSeleccionado.servicio?.cuenta?.nombre || 'N/A'}</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {fleteSeleccionado.servicio?.cliente?.nombre || "N/A"}
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          Cuenta:{" "}
+                          {fleteSeleccionado.servicio?.cuenta?.nombre || "N/A"}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Razón Social</label>
-                        <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.cliente?.razon_social || 'N/A'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Razón Social
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {fleteSeleccionado.servicio?.cliente?.razon_social ||
+                            "N/A"}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">RUC</label>
-                        <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.cliente?.ruc || 'N/A'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          RUC
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {fleteSeleccionado.servicio?.cliente?.ruc || "N/A"}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Documento</label>
-                        <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.cliente?.numero_documento || 'N/A'}</p>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Documento
+                        </label>
+                        <p className="text-sm text-gray-900">
+                          {fleteSeleccionado.servicio?.cliente
+                            ?.numero_documento || "N/A"}
+                        </p>
                       </div>
                     </div>
-                    
+
                     {/* Información de la Cuenta */}
                     {fleteSeleccionado.servicio?.cuenta && (
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Dirección Origen</label>
-                            <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.cuenta?.direccion_origen || 'N/A'}</p>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                              Dirección Origen
+                            </label>
+                            <p className="text-sm text-gray-900">
+                              {fleteSeleccionado.servicio?.cuenta
+                                ?.direccion_origen || "N/A"}
+                            </p>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Tipo Pago</label>
-                            <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.cuenta?.tipo_pago || 'N/A'}</p>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                              Tipo Pago
+                            </label>
+                            <p className="text-sm text-gray-900">
+                              {fleteSeleccionado.servicio?.cuenta?.tipo_pago ||
+                                "N/A"}
+                            </p>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Nombre Conductor</label>
-                            <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.cuenta?.nombre_conductor || 'N/A'}</p>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                              Nombre Conductor
+                            </label>
+                            <p className="text-sm text-gray-900">
+                              {fleteSeleccionado.servicio?.cuenta
+                                ?.nombre_conductor || "N/A"}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1763,82 +1981,137 @@ const formatHora = (fecha) => {
 
                   {/* Información del Vehículo y Personal */}
                   <div className="space-y-4">
-                    <h4 className="text-md font-semibold text-gray-900 border-b pb-2">Vehículo y Personal</h4>
-                    
+                    <h4 className="text-md font-semibold text-gray-900 border-b pb-2">
+                      Vehículo y Personal
+                    </h4>
+
                     {/* Información del Vehículo */}
                     <div className="mb-4">
-                      <h5 className="text-sm font-semibold text-gray-900 mb-2">Vehículo</h5>
+                      <h5 className="text-sm font-semibold text-gray-900 mb-2">
+                        Vehículo
+                      </h5>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Placa</label>
-                          <p className="text-sm font-semibold text-gray-900">{fleteSeleccionado.servicio?.flota?.placa || 'N/A'}</p>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            Placa
+                          </label>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {fleteSeleccionado.servicio?.flota?.placa || "N/A"}
+                          </p>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Tipo Vehículo</label>
-                          <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.flota?.tipo_vehiculo || 'N/A'}</p>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            Tipo Vehículo
+                          </label>
+                          <p className="text-sm text-gray-900">
+                            {fleteSeleccionado.servicio?.flota?.tipo_vehiculo ||
+                              "N/A"}
+                          </p>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Capacidad (m³)</label>
-                          <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.flota?.capacidad_m3 || '0'}</p>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            Capacidad (m³)
+                          </label>
+                          <p className="text-sm text-gray-900">
+                            {fleteSeleccionado.servicio?.flota?.capacidad_m3 ||
+                              "0"}
+                          </p>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Conductor Asignado</label>
-                          <p className="text-sm text-gray-900">{fleteSeleccionado.servicio?.flota?.nombre_conductor || 'N/A'}</p>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            Conductor Asignado
+                          </label>
+                          <p className="text-sm text-gray-900">
+                            {fleteSeleccionado.servicio?.flota
+                              ?.nombre_conductor || "N/A"}
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     {/* Conductores */}
-                    {fleteSeleccionado.servicio?.conductor && fleteSeleccionado.servicio.conductor.length > 0 && (
-                      <div className="mb-4">
-                        <h5 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1">
-                          <User className="h-4 w-4" />
-                          Conductor(es)
-                        </h5>
-                        <div className="space-y-2">
-                          {fleteSeleccionado.servicio.conductor.map((cond, index) => (
-                            <div key={index} className="p-2 bg-gray-50 rounded border border-gray-200">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-500">Nombre</label>
-                                  <p className="text-sm text-gray-900">{cond.nombres_completos || cond.nombre || 'N/A'}</p>
+                    {fleteSeleccionado.servicio?.conductor &&
+                      fleteSeleccionado.servicio.conductor.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1">
+                            <User className="h-4 w-4" />
+                            Conductor(es)
+                          </h5>
+                          <div className="space-y-2">
+                            {fleteSeleccionado.servicio.conductor.map(
+                              (cond, index) => (
+                                <div
+                                  key={index}
+                                  className="p-2 bg-gray-50 rounded border border-gray-200"
+                                >
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-500">
+                                        Nombre
+                                      </label>
+                                      <p className="text-sm text-gray-900">
+                                        {cond.nombres_completos ||
+                                          cond.nombre ||
+                                          "N/A"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-500">
+                                        Tipo
+                                      </label>
+                                      <p className="text-sm text-gray-900">
+                                        {cond.tipo || "N/A"}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-500">Tipo</label>
-                                  <p className="text-sm text-gray-900">{cond.tipo || 'N/A'}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                              ),
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Auxiliares */}
-                    {fleteSeleccionado.servicio?.auxiliar && fleteSeleccionado.servicio.auxiliar.length > 0 && (
-                      <div>
-                        <h5 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          Auxiliar(es)
-                        </h5>
-                        <div className="space-y-2">
-                          {fleteSeleccionado.servicio.auxiliar.map((aux, index) => (
-                            <div key={index} className="p-2 bg-gray-50 rounded border border-gray-200">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-500">Nombre</label>
-                                  <p className="text-sm text-gray-900">{aux.nombres_completos || aux.nombre || 'N/A'}</p>
+                    {fleteSeleccionado.servicio?.auxiliar &&
+                      fleteSeleccionado.servicio.auxiliar.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            Auxiliar(es)
+                          </h5>
+                          <div className="space-y-2">
+                            {fleteSeleccionado.servicio.auxiliar.map(
+                              (aux, index) => (
+                                <div
+                                  key={index}
+                                  className="p-2 bg-gray-50 rounded border border-gray-200"
+                                >
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-500">
+                                        Nombre
+                                      </label>
+                                      <p className="text-sm text-gray-900">
+                                        {aux.nombres_completos ||
+                                          aux.nombre ||
+                                          "N/A"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-medium text-gray-500">
+                                        Tipo
+                                      </label>
+                                      <p className="text-sm text-gray-900">
+                                        {aux.tipo || "N/A"}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-500">Tipo</label>
-                                  <p className="text-sm text-gray-900">{aux.tipo || 'N/A'}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                              ),
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 </div>
               </div>
@@ -1861,7 +2134,7 @@ const formatHora = (fecha) => {
             {/* Botón para volver al flete */}
             <div className="flex justify-between items-center mb-4">
               <Button
-                onClick={() => setModalMode('flete')}
+                onClick={() => setModalMode("flete")}
                 variant="secondary"
                 size="small"
                 icon={ArrowLeft}
@@ -1886,15 +2159,33 @@ const formatHora = (fecha) => {
                 <table className="min-w-full text-xs">
                   <thead>
                     <tr className="bg-gray-100 border-b border-gray-300">
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">ID</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">Tipo de Gasto</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">Valor</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">¿Se Factura?</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado Facturación</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado Aprobación</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">Observaciones</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">Acciones</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        ID
+                      </th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        Fecha
+                      </th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        Tipo de Gasto
+                      </th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        Valor
+                      </th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        ¿Se Factura?
+                      </th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        Estado Facturación
+                      </th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        Estado Aprobación
+                      </th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        Observaciones
+                      </th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                        Acciones
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1908,34 +2199,52 @@ const formatHora = (fecha) => {
                       </tr>
                     ) : gastosFlete.length === 0 ? (
                       <tr>
-                        <td colSpan="9" className="py-8 text-center text-gray-500">
+                        <td
+                          colSpan="9"
+                          className="py-8 text-center text-gray-500"
+                        >
                           <Receipt className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           <p>No hay gastos registrados para este flete</p>
                         </td>
                       </tr>
                     ) : (
                       gastosFlete.map((gasto) => (
-                        <tr key={gasto.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <tr
+                          key={gasto.id}
+                          className="border-b border-gray-200 hover:bg-gray-50"
+                        >
                           <td className="py-2 px-3">{gasto.codigo_gasto}</td>
-                          <td className="py-2 px-3">{formatFecha(gasto.fecha_gasto)}</td>
-                          <td className="py-2 px-3 font-medium">{gasto.tipo_gasto}</td>
-                          <td className="py-2 px-3 font-semibold">{formatMoneda(gasto.valor)}</td>
                           <td className="py-2 px-3">
-                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${
-                              gasto.se_factura_cliente 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {gasto.se_factura_cliente ? 'SÍ' : 'NO'}
+                            {formatFecha(gasto.fecha_gasto)}
+                          </td>
+                          <td className="py-2 px-3 font-medium">
+                            {gasto.tipo_gasto}
+                          </td>
+                          <td className="py-2 px-3 font-semibold">
+                            {formatMoneda(gasto.valor)}
+                          </td>
+                          <td className="py-2 px-3">
+                            <span
+                              className={`inline-flex items-center px-2 py-1 rounded text-xs ${
+                                gasto.se_factura_cliente
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {gasto.se_factura_cliente ? "SÍ" : "NO"}
                             </span>
                           </td>
                           <td className="py-2 px-3">
-                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${getEstadoFacturacionClass(gasto.estado_facturacion)}`}>
+                            <span
+                              className={`inline-flex items-center px-2 py-1 rounded text-xs ${getEstadoFacturacionClass(gasto.estado_facturacion)}`}
+                            >
                               {gasto.estado_facturacion}
                             </span>
                           </td>
                           <td className="py-2 px-3">
-                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs ${getEstadoAprobacionClass(gasto.estado_aprobacion)}`}>
+                            <span
+                              className={`inline-flex items-center px-2 py-1 rounded text-xs ${getEstadoAprobacionClass(gasto.estado_aprobacion)}`}
+                            >
                               {gasto.estado_aprobacion}
                             </span>
                           </td>
@@ -1943,7 +2252,9 @@ const formatHora = (fecha) => {
                           <td className="py-2 px-3">
                             <div className="flex space-x-1">
                               <button
-                                onClick={(e) => handleDeleteGastoClick(gasto, e)}
+                                onClick={(e) =>
+                                  handleDeleteGastoClick(gasto, e)
+                                }
                                 className="p-1 rounded text-red-600 hover:text-red-800 hover:bg-red-100"
                                 title="Eliminar gasto"
                                 disabled={isDeletingGasto}
@@ -1965,13 +2276,23 @@ const formatHora = (fecha) => {
               <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h4 className="font-semibold text-gray-900">Resumen de Gastos</h4>
-                    <p className="text-sm text-gray-600">{gastosFlete.length} gasto(s) registrado(s)</p>
+                    <h4 className="font-semibold text-gray-900">
+                      Resumen de Gastos
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {gastosFlete.length} gasto(s) registrado(s)
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-600">Total de Gastos</p>
                     <p className="text-xl font-bold text-gray-900">
-                      S/ {gastosFlete.reduce((sum, gasto) => sum + parseFloat(gasto.valor || 0), 0).toFixed(2)}
+                      S/{" "}
+                      {gastosFlete
+                        .reduce(
+                          (sum, gasto) => sum + parseFloat(gasto.valor || 0),
+                          0,
+                        )
+                        .toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -2054,13 +2375,20 @@ const formatHora = (fecha) => {
               <input
                 type="text"
                 value={facturaForm.numero_factura}
-                onChange={(e) => handleFacturaFormChange('numero_factura', e.target.value)}
-                className={`w-full px-3 py-2 border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.numero_factura ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                onChange={(e) =>
+                  handleFacturaFormChange("numero_factura", e.target.value)
+                }
+                className={`w-full px-3 py-2 border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                  formErrors.numero_factura
+                    ? "border-red-300"
+                    : "border-gray-300"
+                }`}
                 placeholder="Ej: F-20240001"
               />
               {formErrors.numero_factura && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.numero_factura}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {formErrors.numero_factura}
+                </p>
               )}
             </div>
 
@@ -2074,13 +2402,20 @@ const formatHora = (fecha) => {
                   <input
                     type="date"
                     value={facturaForm.fecha_emision}
-                    onChange={(e) => handleFacturaFormChange('fecha_emision', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.fecha_emision ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                    onChange={(e) =>
+                      handleFacturaFormChange("fecha_emision", e.target.value)
+                    }
+                    className={`w-full px-3 py-2 border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                      formErrors.fecha_emision
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
                   />
                 </div>
                 {formErrors.fecha_emision && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.fecha_emision}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {formErrors.fecha_emision}
+                  </p>
                 )}
               </div>
 
@@ -2093,13 +2428,23 @@ const formatHora = (fecha) => {
                   <input
                     type="date"
                     value={facturaForm.fecha_vencimiento}
-                    onChange={(e) => handleFacturaFormChange('fecha_vencimiento', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.fecha_vencimiento ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                    onChange={(e) =>
+                      handleFacturaFormChange(
+                        "fecha_vencimiento",
+                        e.target.value,
+                      )
+                    }
+                    className={`w-full px-3 py-2 border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                      formErrors.fecha_vencimiento
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
                   />
                 </div>
                 {formErrors.fecha_vencimiento && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.fecha_vencimiento}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {formErrors.fecha_vencimiento}
+                  </p>
                 )}
               </div>
             </div>
@@ -2110,7 +2455,9 @@ const formatHora = (fecha) => {
               </label>
               <select
                 value={facturaForm.moneda}
-                onChange={(e) => handleFacturaFormChange('moneda', e.target.value)}
+                onChange={(e) =>
+                  handleFacturaFormChange("moneda", e.target.value)
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
                 <option value="PEN">Soles (PEN)</option>
@@ -2123,24 +2470,32 @@ const formatHora = (fecha) => {
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2 text-gray-500">
-                  {facturaForm.moneda === 'PEN' ? 'S/' : '$'}
+                  {facturaForm.moneda === "PEN" ? "S/" : "$"}
                 </span>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   value={facturaForm.monto_total}
-                  onChange={(e) => handleFacturaFormChange('monto_total', e.target.value)}
-                  className={`w-full pl-10 pr-3 py-2 border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.monto_total ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                  onChange={(e) =>
+                    handleFacturaFormChange("monto_total", e.target.value)
+                  }
+                  className={`w-full pl-10 pr-3 py-2 border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                    formErrors.monto_total
+                      ? "border-red-300"
+                      : "border-gray-300"
+                  }`}
                   placeholder="0.00"
                 />
               </div>
               {formErrors.monto_total && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.monto_total}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {formErrors.monto_total}
+                </p>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                Suma automática de fletes: {totalMontoSeleccionado.toFixed(2)} {facturaForm.moneda === 'PEN' ? 'S/' : '$'}
+                Suma automática de fletes: {totalMontoSeleccionado.toFixed(2)}{" "}
+                {facturaForm.moneda === "PEN" ? "S/" : "$"}
               </p>
             </div>
 
@@ -2150,7 +2505,9 @@ const formatHora = (fecha) => {
               </label>
               <textarea
                 value={facturaForm.descripcion}
-                onChange={(e) => handleFacturaFormChange('descripcion', e.target.value)}
+                onChange={(e) =>
+                  handleFacturaFormChange("descripcion", e.target.value)
+                }
                 rows="3"
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder="Descripción de la factura..."
@@ -2168,10 +2525,7 @@ const formatHora = (fecha) => {
             >
               Cancelar
             </Button>
-            <Button
-              onClick={handleCreateFactura}
-              isLoading={isCreatingInvoice}
-            >
+            <Button onClick={handleCreateFactura} isLoading={isCreatingInvoice}>
               Crear Factura
             </Button>
           </div>
@@ -2180,156 +2534,181 @@ const formatHora = (fecha) => {
 
       {/* Modal para agregar gasto adicional */}
       <Modal
-  isOpen={showGastoModal}
-  onClose={handleCloseGastoModal}
-  title={`Agregar Gasto Adicional - ${fleteSeleccionado?.codigo_flete || ''}`}
-  size="medium"
->
-  <div className="space-y-4">
-    <p className="text-sm text-gray-600 mb-4">
-      Complete el formulario para registrar un gasto adicional al flete
-    </p>
+        isOpen={showGastoModal}
+        onClose={handleCloseGastoModal}
+        title={`Agregar Gasto Adicional - ${fleteSeleccionado?.codigo_flete || ""}`}
+        size="medium"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 mb-4">
+            Complete el formulario para registrar un gasto adicional al flete
+          </p>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Fecha */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          Fecha *
-        </label>
-        <input
-          type="date"
-          value={gastoForm.fecha}
-          onChange={(e) => handleGastoFormChange('fecha', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-          required
-        />
-        <p className="text-xs text-gray-500 mt-1">La fecha se establece automáticamente</p>
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Fecha */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Fecha *
+              </label>
+              <input
+                type="date"
+                value={gastoForm.fecha}
+                onChange={(e) => handleGastoFormChange("fecha", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                La fecha se establece automáticamente
+              </p>
+            </div>
 
-      {/* Tipo de Gasto */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tipo de Gasto *
-        </label>
-        <select
-          value={gastoForm.tipo_gasto}
-          onChange={(e) => handleGastoFormChange('tipo_gasto', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-          required
-        >
-          <option value="">Seleccione un tipo</option>
-          {tipoGastoOptions.map((tipo) => (
-            <option key={tipo} value={tipo}>
-              {tipo}
-            </option>
-          ))}
-        </select>
-        
-        {/* ↓ AGREGAR ESTE CAMPO DINÁMICO ↓ */}
-        {gastoForm.tipo_gasto === 'Otros' && (
-          <div className="mt-2">
+            {/* Tipo de Gasto */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Gasto *
+              </label>
+              <select
+                value={gastoForm.tipo_gasto}
+                onChange={(e) =>
+                  handleGastoFormChange("tipo_gasto", e.target.value)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                required
+              >
+                <option value="">Seleccione un tipo</option>
+                {tipoGastoOptions.map((tipo) => (
+                  <option key={tipo} value={tipo}>
+                    {tipo}
+                  </option>
+                ))}
+              </select>
+
+              {/* ↓ AGREGAR ESTE CAMPO DINÁMICO ↓ */}
+              {gastoForm.tipo_gasto === "Otros" && (
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Especifique el tipo de gasto *
+                  </label>
+                  <input
+                    type="text"
+                    value={gastoForm.tipo_gasto_personalizado}
+                    onChange={(e) =>
+                      handleGastoFormChange(
+                        "tipo_gasto_personalizado",
+                        e.target.value,
+                      )
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                    placeholder="Escriba el tipo de gasto personalizado"
+                    required={gastoForm.tipo_gasto === "Otros"}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Valor */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                Valor *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  S/
+                </span>
+                <input
+                  type="number"
+                  value={gastoForm.valor}
+                  onChange={(e) =>
+                    handleGastoFormChange("valor", e.target.value)
+                  }
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* ¿Se Factura? */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ¿Se Factura al Cliente? *
+              </label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="se_factura"
+                    value={true}
+                    checked={gastoForm.se_factura === true}
+                    onChange={(e) =>
+                      handleGastoFormChange(
+                        "se_factura",
+                        e.target.value === "true" ? true : e.target.value,
+                      )
+                    }
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm">SÍ</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="se_factura"
+                    value={false}
+                    checked={gastoForm.se_factura === false}
+                    onChange={(e) =>
+                      handleGastoFormChange(
+                        "se_factura",
+                        e.target.value === "false" ? false : e.target.value,
+                      )
+                    }
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm">NO</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Observaciones */}
+          <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Especifique el tipo de gasto *
+              Observaciones
             </label>
-            <input
-              type="text"
-              value={gastoForm.tipo_gasto_personalizado}
-              onChange={(e) => handleGastoFormChange('tipo_gasto_personalizado', e.target.value)}
+            <textarea
+              value={gastoForm.observaciones}
+              onChange={(e) =>
+                handleGastoFormChange("observaciones", e.target.value)
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-              placeholder="Escriba el tipo de gasto personalizado"
-              required={gastoForm.tipo_gasto === 'Otros'}
+              placeholder="Observaciones adicionales..."
+              rows="3"
             />
           </div>
-        )}
-      </div>
 
-      {/* Valor */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-          Valor *
-        </label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">S/</span>
-          <input
-            type="number"
-            value={gastoForm.valor}
-            onChange={(e) => handleGastoFormChange('valor', e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-            required
-          />
+          {/* Botones */}
+          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+            <Button
+              onClick={handleCloseGastoModal}
+              variant="secondary"
+              size="small"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveGasto}
+              variant="primary"
+              size="small"
+              icon={Save}
+            >
+              Guardar Gasto
+            </Button>
+          </div>
         </div>
-      </div>
-
-      {/* ¿Se Factura? */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          ¿Se Factura al Cliente? *
-        </label>
-        <div className="flex space-x-4">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="se_factura"
-              value={true}
-              checked={gastoForm.se_factura === true}
-              onChange={(e) => handleGastoFormChange('se_factura', e.target.value === 'true' ? true : e.target.value)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="ml-2 text-sm">SÍ</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="se_factura"
-              value={false}
-              checked={gastoForm.se_factura === false}
-              onChange={(e) => handleGastoFormChange('se_factura', e.target.value === 'false' ? false : e.target.value)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="ml-2 text-sm">NO</span>
-          </label>
-        </div>
-      </div>
-    </div>
-
-    {/* Observaciones */}
-    <div className="col-span-1 md:col-span-2">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Observaciones
-      </label>
-      <textarea
-        value={gastoForm.observaciones}
-        onChange={(e) => handleGastoFormChange('observaciones', e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-        placeholder="Observaciones adicionales..."
-        rows="3"
-      />
-    </div>
-
-    {/* Botones */}
-    <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-      <Button
-        onClick={handleCloseGastoModal}
-        variant="secondary"
-        size="small"
-      >
-        Cancelar
-      </Button>
-      <Button
-        onClick={handleSaveGasto}
-        variant="primary"
-        size="small"
-        icon={Save}
-      >
-        Guardar Gasto
-      </Button>
-    </div>
-  </div>
-</Modal>
+      </Modal>
 
       {/* Modal de confirmación para eliminar gasto */}
       <Modal
@@ -2341,24 +2720,31 @@ const formatHora = (fecha) => {
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-red-600">
             <AlertCircle className="h-6 w-6" />
-            <p className="font-semibold">¿Está seguro de eliminar este gasto?</p>
+            <p className="font-semibold">
+              ¿Está seguro de eliminar este gasto?
+            </p>
           </div>
-          
+
           {gastoToDelete && (
             <div className="bg-gray-50 p-3 rounded border border-gray-200">
-              <p className="text-sm font-medium">Código: {gastoToDelete.codigo_gasto}</p>
+              <p className="text-sm font-medium">
+                Código: {gastoToDelete.codigo_gasto}
+              </p>
               <p className="text-sm">Tipo: {gastoToDelete.tipo_gasto}</p>
-              <p className="text-sm">Valor: {formatMoneda(gastoToDelete.valor)}</p>
+              <p className="text-sm">
+                Valor: {formatMoneda(gastoToDelete.valor)}
+              </p>
               <p className="text-sm text-gray-600 mt-1">
                 Fecha: {formatFecha(gastoToDelete.fecha_gasto)}
               </p>
             </div>
           )}
-          
+
           <p className="text-sm text-gray-600">
-            Esta acción no se puede deshacer. El gasto será eliminado permanentemente.
+            Esta acción no se puede deshacer. El gasto será eliminado
+            permanentemente.
           </p>
-          
+
           <div className="flex justify-end space-x-3 pt-4">
             <Button
               onClick={handleCancelDeleteGasto}
@@ -2378,136 +2764,172 @@ const formatHora = (fecha) => {
         </div>
       </Modal>
 
-
       {/* Modal de confirmación para eliminar flete */}
-<Modal
-  isOpen={showDeleteFleteModal}
-  onClose={handleCancelDeleteFlete}
-  title="Confirmar Eliminación de Flete"
-  size="medium"
->
-  {fleteToDelete && (
-    <div className="space-y-6">
-      {/* Advertencia */}
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <div className="flex items-start">
-          <AlertCircle className="h-5 w-5 text-red-600 mr-3 mt-0.5 flex-shrink-0" />
-          <div>
-            <h4 className="font-semibold text-red-800">¡Advertencia importante!</h4>
-            <p className="text-sm text-red-700 mt-1">
-              Esta acción eliminará permanentemente el flete <span className="font-bold">{fleteToDelete.codigo_flete}</span>.
-            </p>
-          </div>
-        </div>
-      </div>
+      <Modal
+        isOpen={showDeleteFleteModal}
+        onClose={handleCancelDeleteFlete}
+        title="Confirmar Eliminación de Flete"
+        size="medium"
+      >
+        {fleteToDelete && (
+          <div className="space-y-6">
+            {/* Advertencia */}
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-red-600 mr-3 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-red-800">
+                    ¡Advertencia importante!
+                  </h4>
+                  <p className="text-sm text-red-700 mt-1">
+                    Esta acción eliminará permanentemente el flete{" "}
+                    <span className="font-bold">
+                      {fleteToDelete.codigo_flete}
+                    </span>
+                    .
+                  </p>
+                </div>
+              </div>
+            </div>
 
-      {/* Impacto en el servicio */}
-      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <div className="flex items-start">
-          <Info className="h-5 w-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
-          <div>
-            <h4 className="font-semibold text-yellow-800">Impacto en el servicio asociado</h4>
-            <p className="text-sm text-yellow-700 mt-1">
-              Al eliminar este flete, el servicio <span className="font-bold">{fleteToDelete.codigo_servicio}</span> será cambiado automáticamente a estado <span className="font-bold">CANCELADO</span>.
-            </p>
-          </div>
-        </div>
-      </div>
+            {/* Impacto en el servicio */}
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start">
+                <Info className="h-5 w-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-yellow-800">
+                    Impacto en el servicio asociado
+                  </h4>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Al eliminar este flete, el servicio{" "}
+                    <span className="font-bold">
+                      {fleteToDelete.codigo_servicio}
+                    </span>{" "}
+                    será cambiado automáticamente a estado{" "}
+                    <span className="font-bold">CANCELADO</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-      {/* Detalles del flete */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Detalles del flete a eliminar:</h5>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Código:</span>
-              <span className="font-medium">{fleteToDelete.codigo_flete}</span>
+            {/* Detalles del flete */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h5 className="text-sm font-medium text-gray-700 mb-3">
+                  Detalles del flete a eliminar:
+                </h5>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Código:</span>
+                    <span className="font-medium">
+                      {fleteToDelete.codigo_flete}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cliente:</span>
+                    <span className="font-medium">
+                      {fleteToDelete.servicio?.cliente?.nombre || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Monto:</span>
+                    <span className="font-medium">
+                      S/.{" "}
+                      {parseFloat(fleteToDelete.monto_flete || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estado actual:</span>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getEstadoBadgeClass(fleteToDelete.estado_flete)}`}
+                    >
+                      {fleteToDelete.estado_flete}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h5 className="text-sm font-medium text-gray-700 mb-3">
+                  Servicio asociado:
+                </h5>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Código:</span>
+                    <span className="font-medium">
+                      {fleteToDelete.codigo_servicio}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Origen:</span>
+                    <span className="font-medium">
+                      {fleteToDelete.servicio?.origen || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Destino:</span>
+                    <span className="font-medium">
+                      {fleteToDelete.servicio?.destino || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estado actual:</span>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getEstadoServicioClass(fleteToDelete.servicio?.estado)}`}
+                    >
+                      {fleteToDelete.servicio?.estado || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Nuevo estado:</span>
+                    <span className="font-bold text-red-600">CANCELADO</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Cliente:</span>
-              <span className="font-medium">{fleteToDelete.servicio?.cliente?.nombre || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Monto:</span>
-              <span className="font-medium">S/. {parseFloat(fleteToDelete.monto_flete || 0).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Estado actual:</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getEstadoBadgeClass(fleteToDelete.estado_flete)}`}>
-                {fleteToDelete.estado_flete}
-              </span>
+
+            {/* Gastos asociados */}
+            {fleteToDelete.servicio?.gastos_count > 0 && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h5 className="font-semibold text-blue-800">
+                      Gastos asociados
+                    </h5>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Este flete tiene {fleteToDelete.servicio.gastos_count}{" "}
+                      gasto(s) registrado(s). Todos los gastos asociados también
+                      serán eliminados permanentemente.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Botones de acción */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <Button
+                onClick={handleCancelDeleteFlete}
+                variant="secondary"
+                size="small"
+                disabled={isDeletingFlete}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmDeleteFlete}
+                variant="danger"
+                size="small"
+                isLoading={isDeletingFlete}
+                icon={Trash}
+              >
+                Sí, eliminar flete
+              </Button>
             </div>
           </div>
-        </div>
-
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <h5 className="text-sm font-medium text-gray-700 mb-3">Servicio asociado:</h5>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Código:</span>
-              <span className="font-medium">{fleteToDelete.codigo_servicio}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Origen:</span>
-              <span className="font-medium">{fleteToDelete.servicio?.origen || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Destino:</span>
-              <span className="font-medium">{fleteToDelete.servicio?.destino || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Estado actual:</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getEstadoServicioClass(fleteToDelete.servicio?.estado)}`}>
-                {fleteToDelete.servicio?.estado || 'N/A'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Nuevo estado:</span>
-              <span className="font-bold text-red-600">CANCELADO</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Gastos asociados */}
-      {fleteToDelete.servicio?.gastos_count > 0 && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
-            <div>
-              <h5 className="font-semibold text-blue-800">Gastos asociados</h5>
-              <p className="text-sm text-blue-700 mt-1">
-                Este flete tiene {fleteToDelete.servicio.gastos_count} gasto(s) registrado(s). 
-                Todos los gastos asociados también serán eliminados permanentemente.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Botones de acción */}
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-        <Button
-          onClick={handleCancelDeleteFlete}
-          variant="secondary"
-          size="small"
-          disabled={isDeletingFlete}
-        >
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleConfirmDeleteFlete}
-          variant="danger"
-          size="small"
-          isLoading={isDeletingFlete}
-          icon={Trash}
-        >
-          Sí, eliminar flete
-        </Button>
-      </div>
-    </div>
-  )}
-</Modal>
+        )}
+      </Modal>
     </div>
   );
 };
