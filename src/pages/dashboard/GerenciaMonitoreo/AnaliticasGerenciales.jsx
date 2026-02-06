@@ -237,6 +237,9 @@ const AnaliticasGerenciales = () => {
                 <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.facturacion_bruta)}
                 </p>
+                <p className="text-black text-xs font-semibold">
+                  Con Detracion: {formatCurrency(dashboardData.facturacion_bruta_con_detraccion)}
+                </p>
               </div> 
               <div className="p-2 bg-purple-100 text-purple-600 rounded-md">
                 <FileText className="h-4 w-4" />
