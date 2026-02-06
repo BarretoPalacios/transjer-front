@@ -35,12 +35,20 @@ import Modal from '../../../components/common/Modal/Modal';
 
 // API 
 import { serviciosPrincipalesAPI } from '../../../api/endpoints/servicioPrincipal';
+import {utilsAPI} from '../../../api/endpoints/utils';
+ 
 
 const Servicios = () => {
   const navigate = useNavigate();
   const [serviciosData, setServiciosData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState(null);
+
+  // Estados para las listas de clientes y proveedores
+const [clientesList, setClientesList] = useState([]);
+const [proveedoresList, setProveedoresList] = useState([]);
+const [loadingClientes, setLoadingClientes] = useState(false);
+const [loadingProveedores, setLoadingProveedores] = useState(false);
   
   // Estados de paginación (igual que en FletesPendientes)
   const [pagination, setPagination] = useState({
@@ -178,7 +186,41 @@ const Servicios = () => {
   // Cargar datos iniciales
   React.useEffect(() => {
     fetchServicios();
+      cargarClientes();
+  cargarProveedores();
   }, []);
+
+  // Función para cargar clientes desde el endpoint
+const cargarClientes = useCallback(async () => {
+  setLoadingClientes(true);
+  try {
+    // Aquí debes hacer la llamada a tu API
+    // Ejemplo: const response = await api.get('/utils/clientes-list');
+    const response = await utilsAPI.getClientesList();
+    setClientesList(response || []);
+  } catch (err) {
+    console.error('Error cargando clientes:', err);
+    setClientesList([]);
+  } finally {
+    setLoadingClientes(false);
+  }
+}, []);
+
+// Función para cargar proveedores desde el endpoint
+const cargarProveedores = useCallback(async () => {
+  setLoadingProveedores(true);
+  try {
+    // Aquí debes hacer la llamada a tu API
+    // Ejemplo: const response = await api.get('/utils/proveedores-list');
+    const response = await utilsAPI.getProveedoresList();
+    setProveedoresList(response || []);
+  } catch (err) {
+    console.error('Error cargando proveedores:', err);
+    setProveedoresList([]);
+  } finally {
+    setLoadingProveedores(false);
+  }
+}, []);
 
   // Handlers optimizados
   const handleCreate = useCallback(() => {
@@ -496,20 +538,30 @@ const Servicios = () => {
 
         {/* Filtros en tiempo real */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Cliente */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Cliente
-            </label>
-            <input
-              type="text"
-              value={filters.cliente_nombre}
-              onChange={(e) => handleFilterChange('cliente_nombre', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-              placeholder="Buscar por cliente..."
-            />
-          </div>
+{/* Cliente - Cambiado de input a select */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+    <User className="h-4 w-4" />
+    Cliente
+  </label>
+  <select
+    value={filters.cliente_nombre}
+    onChange={(e) => handleFilterChange('cliente_nombre', e.target.value)}
+    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+    disabled={loadingClientes}
+  >
+    <option value="">Todos los clientes</option>
+    {loadingClientes ? (
+      <option value="" disabled>Cargando clientes...</option>
+    ) : (
+      clientesList.map((cliente, index) => (
+        <option key={index} value={cliente}>
+          {cliente}
+        </option>
+      ))
+    )}
+  </select>
+</div>
 
           {/* Placa */}
           <div>
@@ -596,19 +648,30 @@ const Servicios = () => {
             />
           </div>
 
-          {/* Proveedor */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Proveedor
-            </label>
-            <input
-              type="text"
-              value={filters.proveedor_nombre}
-              onChange={(e) => handleFilterChange('proveedor_nombre', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-              placeholder="Nombre del proveedor"
-            />
-          </div>
+{/* Proveedor - Cambiado de input a select */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+    <User className="h-4 w-4" />
+    Proveedor
+  </label>
+  <select
+    value={filters.proveedor_nombre}
+    onChange={(e) => handleFilterChange('proveedor_nombre', e.target.value)}
+    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+    disabled={loadingProveedores}
+  >
+    <option value="">Todos los proveedores</option>
+    {loadingProveedores ? (
+      <option value="" disabled>Cargando proveedores...</option>
+    ) : (
+      proveedoresList.map((proveedor, index) => (
+        <option key={index} value={proveedor}>
+          {proveedor}
+        </option>
+      ))
+    )}
+  </select>
+</div>
 
           {/* Cuenta */}
           {/* <div>
