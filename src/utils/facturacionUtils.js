@@ -89,7 +89,13 @@ export const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-
+export const formatearFecha = (fechaString) => {
+  // Dividimos la cadena por el guion para evitar problemas de zona horaria
+  const [year, month, day] = fechaString.split('-');
+  
+  // Retornamos el formato deseado
+  return `${day}/${month}/${year}`;
+}
 
 const normalizarFecha = (fechaStr) => {
   const fecha = new Date(fechaStr);

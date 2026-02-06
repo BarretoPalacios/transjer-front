@@ -481,6 +481,7 @@ const FletesPorFacturar = () => {
       const blob = await fletesAPI.exportAllFletesExcel({
         estado: "VALORIZADO",
         pertenece_a_factura: false,
+        cliente_nombre: filters.cliente,
       });
       fletesAPI.downloadExcel(
         blob,
@@ -489,7 +490,7 @@ const FletesPorFacturar = () => {
     } catch (err) {
       setError("Error al exportar: " + err.message);
     }
-  }, []);
+  }, [filters]);
 
   // Función para manejar clic en fila
   const handleRowClick = useCallback((flete) => {

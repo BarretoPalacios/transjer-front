@@ -276,6 +276,7 @@ export const fletesAPI = {
   
       if (filters.estado) params.append('estado', filters.estado);
       if (filters.pertenece_a_factura !== undefined) params.append('pertenece_a_factura', filters.pertenece_a_factura);
+      if (filters.cliente_nombre) params.append('cliente_nombre', filters.cliente_nombre);
   
       const response = await axiosInstance.get(
         `/fletes/export/excel?${params.toString()}`,
