@@ -349,7 +349,7 @@ const MonitoreoClientes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
@@ -525,7 +525,8 @@ const MonitoreoClientes = () => {
             <thead className="bg-gray-100">
               <tr>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase">Cliente</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase text-right">Monto Neto</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase">Numero de Facturas</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase ">Total Facturado Con Detracción</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase text-center">Acciones</th>
               </tr>
             </thead>
@@ -535,7 +536,10 @@ const MonitoreoClientes = () => {
                   <td className="px-6 py-4 text-sm font-medium text-gray-800">
                     {item.cliente || "CLIENTE SIN NOMBRE"}
                   </td>
-                  <td className="px-6 py-4 text-sm text-right text-gray-700 font-mono">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-800">
+                    {item.nro_facturas || 0} Facturas
+                  </td>
+                  <td className="px-6 py-4 text-sm text-center text-gray-700 font-mono">
                     {formatMoneda(item.neto_total)}
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -573,7 +577,8 @@ const MonitoreoClientes = () => {
             <tfoot className="bg-gray-50 border-t border-gray-200">
               <tr>
                 <td className="px-6 py-4 text-sm font-bold text-gray-800">TOTAL PERIODO</td>
-                <td className="px-6 py-4 text-sm text-right text-blue-700 font-mono font-bold">
+                <td></td>
+                <td className="px-6 py-4 text-sm text-center text-blue-700 font-mono font-bold">
                   {formatMoneda(data.resumen_general.gran_total_neto)}
                 </td>
                 <td></td>
