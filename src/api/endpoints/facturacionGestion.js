@@ -164,9 +164,13 @@ getResumenPorPlaca: async (filters = {}) => {
     };
   },
 
-  getKpisFinancierosEspecificos: async () => {
+  getKpisFinancierosEspecificos: async (filters = {}) => {
   try {
-    const response = await axiosInstance.get('/gerencia/get_kpis_financieros_especificos');
+    const params = new URLSearchParams();
+    Object.keys(filters).forEach(key => {
+      if (filters[key]) params.append(key, filters[key]);
+    });
+    const response = await axiosInstance.get(`/gerencia/get_kpis_financieros_especificos?${params.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching financial KPIs:', error);
