@@ -397,6 +397,8 @@ getResumenPorCliente: async (filters = {}) => {
   if (filters.cliente) params.append('nombre_cliente', filters.cliente);
   if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
   if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+  if (filters.mes) params.append('mes', filters.mes);
+  if (filters.anio) params.append('anio', filters.anio);
 
   const response = await axiosInstance.get(`/gerencia/resumen-financiero-por-cliente?${params.toString()}`);
   
