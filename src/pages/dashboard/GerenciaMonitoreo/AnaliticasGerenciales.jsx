@@ -1262,7 +1262,7 @@ const AnaliticasGerenciales = () => {
                 <Clock className="h-4 w-4" />
               </div>
             </div>
-            <p className="text-gray-500 text-xs">Por valorizar o facturar</p>
+            <p className="text-gray-500 text-xs">Fletes Pendientes por Valorizar</p>
           </div>
           
           {/* Fletes Valorizados */}
@@ -1278,7 +1278,7 @@ const AnaliticasGerenciales = () => {
                 <CheckCircle className="h-4 w-4" />
               </div>
             </div>
-            <p className="text-gray-500 text-xs">Valorizados sin factura</p>
+            <p className="text-gray-500 text-xs">Fletes Valorizados por Factura</p>
           </div>
           
           {/* Fletes con Factura */}

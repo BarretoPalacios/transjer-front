@@ -32,6 +32,7 @@ import MonitoreoPlacas from "../pages/dashboard/MonitoreoPlacas/MonitoreoPlacas"
 import MonitoreoProveedores from "../pages/dashboard/MonitoreoProveedores/MonitoreoProveedores";
 import Usuarios from "../pages/dashboard/Usuarios/Usuarios";
 import MonitoreoClientes from "../pages/dashboard/MonitoreoClientes/MonitoreoClientes";
+import DetalleGestion from "../pages/dashboard/GerenciaMonitoreo/DetalleGestion";
 
 const AppRouter = () => {
   return (
@@ -223,6 +224,12 @@ const AppRouter = () => {
           <Route path="gerencia/monitoreo-clientes" element={
             <ProtectedRoute requirePermission={['gerencia', 'view']}>
               <MonitoreoClientes />
+            </ProtectedRoute>
+          } />
+
+          <Route path="gerencia/detalles" element={
+            <ProtectedRoute requirePermission={['gerencia', 'view']}>
+              <DetalleGestion />
             </ProtectedRoute>
           } />
 

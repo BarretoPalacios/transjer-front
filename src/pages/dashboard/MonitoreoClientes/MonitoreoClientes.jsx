@@ -297,7 +297,7 @@ const MonitoreoClientes = () => {
     }
     
     // Navegar a la ruta de detalles con todos los parámetros
-    navigate(`/dashboard/facturacion/detalles?${queryParams.toString()}`);
+    navigate(`/gerencia/detalles?${queryParams.toString()}`);
   }, [navigate, filters, obtenerNumeroMes]);
 
   // Función para exportar a Excel
