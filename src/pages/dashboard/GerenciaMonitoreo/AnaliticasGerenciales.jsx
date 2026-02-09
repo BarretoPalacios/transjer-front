@@ -697,16 +697,18 @@ const AnaliticasGerenciales = () => {
   });
 
   // Función para obtener datos del backend con filtros
-  const fetchData = async () => {
+  const fetchData = async (semostrarTodo = false) => {
     try {
       setLoading(true);
       setError(null);
       
       // Aquí debes modificar tu API para aceptar los parámetros de mes y año
-      const response = await facturacionGestionAPI.getKpisFinancierosEspecificos({
+      const response = await facturacionGestionAPI.getKpisFinancierosEspecificos(
+        semostrarTodo ? undefined : {
         mes,
         anio
-      });
+      },
+      );
       
       // Mapear los datos de la API al formato esperado
       setDashboardData({
@@ -785,6 +787,10 @@ const AnaliticasGerenciales = () => {
   // Aplicar filtros
   const aplicarFiltros = () => {
     fetchData();
+  };
+
+    const verTodoHistorico = () => {
+    fetchData(true);
   };
 
   // Restablecer filtros al mes y año actual
@@ -885,7 +891,7 @@ const AnaliticasGerenciales = () => {
             </div>
             
             {/* Filtros de mes y año */}
-            <div className="flex flex-col md:flex-row md:items-center gap-3 p-3 bg-white rounded-lg shadow-sm border">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 p-3 bg-white rounded-lg shadow-sm ">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">Filtrar por:</span>
@@ -935,6 +941,13 @@ const AnaliticasGerenciales = () => {
                     className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 whitespace-nowrap"
                   >
                     Hoy
+                  </button>
+                  
+                  <button
+                    onClick={verTodoHistorico}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 whitespace-nowrap"
+                  >
+                    Mostrar Todos Los Periodos
                   </button>
                 </div>
               </div>
