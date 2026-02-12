@@ -9,6 +9,18 @@ import Pagination from '../../../components/common/Pagination/Pagination';
 // API
 import { gerenciaServiceAPI } from '../../../api/endpoints/gerenciaService';
 
+  // Obtener mes actual
+  const obtenerMesActual = () => {
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    return meses[new Date().getMonth()];
+  };
+
+  // Obtener año actual
+  const obtenerAñoActual = () => new Date().getFullYear().toString();
+
 const MonitoreoClientes = () => {
   const navigate = useNavigate();
   const [data, setData] = useState({
@@ -39,8 +51,8 @@ const MonitoreoClientes = () => {
   
   // Estados para filtros
   const [filters, setFilters] = useState({
-    mes: '',
-    año: '',
+    mes: obtenerMesActual(),
+    año: obtenerAñoActual(),
     fecha_inicio: '',
     fecha_fin: ''
   });
@@ -73,17 +85,7 @@ const MonitoreoClientes = () => {
     'Diciembre': 12
   };
 
-  // Obtener mes actual
-  const obtenerMesActual = () => {
-    const meses = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    return meses[new Date().getMonth()];
-  };
 
-  // Obtener año actual
-  const obtenerAñoActual = () => new Date().getFullYear().toString();
 
   // Inicializar filtros con mes y año actual
   useEffect(() => {
@@ -245,6 +247,27 @@ const MonitoreoClientes = () => {
     fetchResumen(1, pagination.itemsPerPage, {
       mes: obtenerMesActual(),
       año: obtenerAñoActual(),
+      fecha_inicio: '',
+      fecha_fin: ''
+    });
+  }, []);
+
+
+    const todoElPerido = useCallback(() => {
+    setFilters({
+      mes: '',
+      año: '',
+      fecha_inicio: '',
+      fecha_fin: ''
+    });
+    setErrors({
+      fecha_inicio: '',
+      fecha_fin: '',
+      rango_fechas: ''
+    });
+    fetchResumen(1, pagination.itemsPerPage, {
+      mes: '',
+      año: '',
       fecha_inicio: '',
       fecha_fin: ''
     });
@@ -469,6 +492,12 @@ const MonitoreoClientes = () => {
               <Download className="h-4 w-4" />
               Exportar a Excel
             </button>
+            <button 
+                onClick={todoElPerido}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg text-sm font-bold transition"
+              >
+                <span className="font-bold">Ver Periodo Completo</span>
+              </button>
 
             {/* Botones de filtros */}
             <div className="flex gap-3">
