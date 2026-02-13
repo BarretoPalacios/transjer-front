@@ -221,10 +221,12 @@ export const gerenciaServiceAPI = {
     return response.data;
   },
 
-  exportServiciosExcel: async (filters = {}) => {
+  exportResumenExcel: async (filters = {}) => {
     const params = new URLSearchParams();
     // Parámetros de filtro
     if (filters.nombre_cliente) params.append('nombre_cliente', filters.nombre_cliente);
+    if (filters.mes) params.append('mes', filters.mes);
+    if (filters.año) params.append('anio', filters.año);
     if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
     if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
 

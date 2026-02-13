@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, RefreshCw, X, CheckCircle, Eye, Download, SplinePointer } from 'lucide-react';
+import { Calendar, RefreshCw, X, CheckCircle, Eye, Download, SplinePointer, Loader } from 'lucide-react';
 
 // Componentes comunes
 import Button from '../../../components/common/Button/Button';
@@ -352,8 +352,15 @@ const todoElPerido = useCallback(() => {
             filtersForAPI[key] = value.trim();
           }
         });
+
+        if (filtersForAPI.mes) {
+          const mesNumero = obtenerNumeroMes(filtersForAPI.mes);
+          if (mesNumero) {
+            filtersForAPI.mes = mesNumero; // Convertir mes a número para la API
+          }
+        }
         
-        const blob = await gerenciaServiceAPI.exportServiciosExcel(filtersForAPI);
+        const blob = await gerenciaServiceAPI.exportResumenExcel(filtersForAPI);
         
         // Crear un enlace para descargar el archivo
         const url = window.URL.createObjectURL(new Blob([blob]));
@@ -507,7 +514,7 @@ const todoElPerido = useCallback(() => {
             >
               {loadingDownload ? (
                 <span className="flex items-center">
-                  <SplinePointer className="h-4 w-4 mr-2" />
+                  <Loader className="h-4 w-4 mr-2" />
                   Exportando...
                 </span>
               ) : (
