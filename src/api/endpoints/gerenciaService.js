@@ -221,6 +221,21 @@ export const gerenciaServiceAPI = {
     return response.data;
   },
 
+  exportServiciosExcel: async (filters = {}) => {
+    const params = new URLSearchParams();
+    // Parámetros de filtro
+    if (filters.nombre_cliente) params.append('nombre_cliente', filters.nombre_cliente);
+    if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+    if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+
+    const response = await axiosInstance.get(
+      `/gerencia/export/resumen-financiero-excel?${params.toString()}`,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
+
+
   exportResumenPlacaExcel: async (filters = {}) => {
     const params = new URLSearchParams();
 

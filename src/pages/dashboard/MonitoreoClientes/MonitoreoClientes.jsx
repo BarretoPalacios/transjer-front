@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, RefreshCw, X, CheckCircle, Eye, Download } from 'lucide-react';
+import { Calendar, RefreshCw, X, CheckCircle, Eye, Download, SplinePointer } from 'lucide-react';
 
 // Componentes comunes
 import Button from '../../../components/common/Button/Button';
@@ -337,39 +337,40 @@ const todoElPerido = useCallback(() => {
     navigate(`/gerencia/detalles?${queryParams.toString()}`);
   }, [navigate, filters, obtenerNumeroMes]);
 
+
+  const [loadingDownload, setloadingDownload] = useState(false);
+
   // Función para exportar a Excel
-  const handleExportarExcel = useCallback(() => {
-    // Construir parámetros para exportación
-    const params = {};
-    
-    if (filters.fecha_inicio && filters.fecha_fin) {
-      params.fecha_inicio = filters.fecha_inicio;
-      params.fecha_fin = filters.fecha_fin;
-    } else if (filters.mes && filters.año) {
-      const mesNumero = obtenerNumeroMes(filters.mes);
-      if (mesNumero) {
-        params.mes = mesNumero;  // Enviar como número
-        params.año = parseInt(filters.año, 10);  // Enviar como número
+  const handleExportarExcel = useCallback(async () => {
+      try {
+        setloadingDownload(true)
+        const filtersForAPI = {};
+        
+        // Solo enviar filtros que tengan valor
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value && value.trim() !== '') {
+            filtersForAPI[key] = value.trim();
+          }
+        });
+        
+        const blob = await gerenciaServiceAPI.exportServiciosExcel(filtersForAPI);
+        
+        // Crear un enlace para descargar el archivo
+        const url = window.URL.createObjectURL(new Blob([blob]));
+        const link = document.createElement('a');
+        link
+          .setAttribute('href', url);
+        link.setAttribute('download', `resumen_clientes_${Date.now()}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+
+        setloadingDownload(false)
+      } catch (err) {
+        setError('Error al exportar: ' + err.message);
+        console.error('Error exporting servicios:', err);
       }
-    }
-    
-    // Aquí iría la lógica para exportar a Excel con los parámetros
-    console.log('Exportando con parámetros:', params);
-    
-    // Simular exportación a Excel
-    const confirmExport = window.confirm(
-      `¿Exportar datos a Excel?\n` +
-      `Filtros aplicados:\n` +
-      `${filters.fecha_inicio && filters.fecha_fin 
-        ? `Rango: ${filters.fecha_inicio} a ${filters.fecha_fin}` 
-        : `Mes/Año: ${filters.mes} ${filters.año}`}`
-    );
-    
-    if (confirmExport) {
-      // Aquí llamarías a la API de exportación
-      alert('Exportación iniciada. Los datos se están procesando.');
-    }
-  }, [filters, obtenerNumeroMes]);
+    }, [filters]);
 
   // Mostrar loading solo en carga inicial
   if (isLoading && data.detalle_por_cliente.length === 0) {
@@ -501,10 +502,20 @@ const todoElPerido = useCallback(() => {
             {/* Botón Exportar a Excel */}
             <button 
               onClick={handleExportarExcel}
+              disabled={loadingDownload}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2"
             >
-              <Download className="h-4 w-4" />
-              Exportar a Excel
+              {loadingDownload ? (
+                <span className="flex items-center">
+                  <SplinePointer className="h-4 w-4 mr-2" />
+                  Exportando...
+                </span>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Exportar a Excel
+                </>
+              )}
             </button>
             <button 
                 onClick={todoElPerido}
