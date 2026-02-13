@@ -206,6 +206,11 @@ export const fletesAPI = {
     return response.data;
   },
 
+  getPendientesFacturacion: async () => {
+    const response = await axiosInstance.get('/fletes/stats/pendientes-facturacion');
+    return response.data;
+  },
+
   // Método específico para exportar fletes (si tu backend lo soporta)
   exportFletesExcel: async (filters = {}) => {
     try {

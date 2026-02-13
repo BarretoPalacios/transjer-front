@@ -128,6 +128,9 @@ const FletesPorFacturar = () => {
   const [gastoToDelete, setGastoToDelete] = useState(null);
   const [isDeletingGasto, setIsDeletingGasto] = useState(false);
 
+  const [reportePendientes, setReportePendientes] = useState([]);
+const [loadingReporte, setLoadingReporte] = useState(false);
+
   const itemsPerPageOptions = [10, 15, 20, 30, 50];
   const isInitialMount = useRef(true);
 
@@ -298,6 +301,20 @@ const FletesPorFacturar = () => {
     }
   }, []);
 
+  const cargarReportePendientes = useCallback(async () => {
+  setLoadingReporte(true);
+  try {
+    // Asumiendo que fletesAPI es donde registraste la ruta '/stats/pendientes-facturacion'
+    const response = await fletesAPI.getPendientesFacturacion(); 
+    setReportePendientes(response || []);
+  } catch (err) {
+    console.error("Error cargando reporte de pendientes:", err);
+    setReportePendientes([]);
+  } finally {
+    setLoadingReporte(false);
+  }
+}, []);
+
   // Efecto para búsqueda en tiempo real con debounce
   useEffect(() => {
     if (isInitialMount.current) {
@@ -343,6 +360,7 @@ const FletesPorFacturar = () => {
       isInitialMount.current = false;
     }
     cargarClientes();
+    cargarReportePendientes();
   }, []);
 
   // Efecto para inicializar el formulario cuando se abre el modal de factura
@@ -1065,6 +1083,8 @@ const FletesPorFacturar = () => {
         </div>
       )}
 
+
+
       {/* Filtros */}
       <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
@@ -1568,6 +1588,75 @@ const FletesPorFacturar = () => {
           />
         </div>
       )}
+
+      {/* estadisticas de cada cliente */}
+<div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-8">
+  <div className="overflow-x-auto">
+    <table className="min-w-full divide-y divide-gray-200">
+      <thead className="bg-gray-50">
+        <tr>
+          <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Cliente
+          </th>
+          <th scope="col" className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Fletes
+          </th>
+          <th scope="col" className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Monto Pendiente
+          </th>
+        </tr>
+      </thead>
+      <tbody className="bg-white divide-y divide-gray-100">
+        {loadingReporte ? (
+          <tr>
+            <td colSpan="3" className="px-4 py-8 text-center text-sm text-gray-500">
+              Cargando reporte financiero...
+            </td>
+          </tr>
+        ) : reportePendientes.length > 0 ? (
+          reportePendientes.map((item) => (
+            <tr key={item._id} className="hover:bg-orange-50/50 transition-colors">
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-gray-800">{item.nombre_cliente}</span>
+                  <span className="text-[10px] text-gray-400 font-mono">RUC: {item.ruc}</span>
+                </div>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-center">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                  {item.cantidad_fletes}
+                </span>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-bold text-gray-900">
+                S/ {item.monto_total_pendiente.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+              </td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colSpan="3" className="px-4 py-8 text-center text-sm text-gray-400 italic">
+              No hay fletes pendientes de facturación.
+            </td>
+          </tr>
+        )}
+      </tbody>
+      {/* Fila de Totales opcional */}
+      {reportePendientes.length > 0 && (
+        <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+          <tr>
+            <td className="px-4 py-2 text-xs font-bold text-gray-500 uppercase">Total Cartera</td>
+            <td className="px-4 py-2 text-center text-xs font-bold text-gray-600">
+               {reportePendientes.reduce((acc, i) => acc + i.cantidad_fletes, 0)}
+            </td>
+            <td className="px-4 py-2 text-right text-sm font-black text-orange-600">
+              S/ {reportePendientes.reduce((acc, i) => acc + i.monto_total_pendiente, 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+            </td>
+          </tr>
+        </tfoot>
+      )}
+    </table>
+  </div>
+</div>
 
       {/* Modal de detalles del flete/servicio/gastos */}
       <Modal
