@@ -253,25 +253,39 @@ const MonitoreoClientes = () => {
   }, []);
 
 
-    const todoElPerido = useCallback(() => {
-    // setFilters({
-    //   mes: '',
-    //   año: '',
-    //   fecha_inicio: '',
-    //   fecha_fin: ''
-    // });
-    setErrors({
-      fecha_inicio: '',
-      fecha_fin: '',
-      rango_fechas: ''
-    });
-    fetchResumen(1, pagination.itemsPerPage, {
-      mes: '',
-      año: '',
-      fecha_inicio: '',
-      fecha_fin: ''
-    });
-  }, []);
+const todoElPerido = useCallback(() => {
+  // Obtener fecha actual
+  const hoy = new Date();
+  const añoActual = hoy.getFullYear();
+  
+  // Formatear fecha actual como YYYY-MM-DD
+  const fechaHoy = hoy.toISOString().split('T')[0];
+  
+  // Crear fecha de inicio (1 de enero del año actual)
+  const fechaInicio = `${añoActual}-01-01`;
+  
+  // Actualizar los filtros con el rango completo del año
+  setFilters({
+    mes: '', // Limpiar mes ya que usaremos rango de fechas
+    año: '', // Limpiar año ya que usaremos rango de fechas
+    fecha_inicio: fechaInicio,
+    fecha_fin: fechaHoy
+  });
+  
+  setErrors({
+    fecha_inicio: '',
+    fecha_fin: '',
+    rango_fechas: ''
+  });
+  
+  // Llamar a fetchResumen con el nuevo rango de fechas
+  fetchResumen(1, pagination.itemsPerPage, {
+    mes: '',
+    año: '',
+    fecha_inicio: fechaInicio,
+    fecha_fin: fechaHoy
+  });
+}, [fetchResumen, pagination.itemsPerPage]);
 
   const handleRefresh = useCallback(() => {
     fetchResumen(pagination.currentPage, pagination.itemsPerPage, filters);
