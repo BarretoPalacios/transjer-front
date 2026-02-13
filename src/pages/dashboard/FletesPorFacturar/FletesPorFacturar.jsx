@@ -1619,7 +1619,7 @@ const [loadingReporte, setLoadingReporte] = useState(false);
               <td className="px-4 py-3 whitespace-nowrap">
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-gray-800">{item.nombre_cliente}</span>
-                  <span className="text-[10px] text-gray-400 font-mono">RUC: {item.ruc}</span>
+                  {/* <span className="text-[10px] text-gray-400 font-mono">RUC: {item.ruc}</span> */}
                 </div>
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-center">
