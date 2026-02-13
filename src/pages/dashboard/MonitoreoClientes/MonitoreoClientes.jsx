@@ -254,12 +254,12 @@ const MonitoreoClientes = () => {
 
 
     const todoElPerido = useCallback(() => {
-    setFilters({
-      mes: '',
-      año: '',
-      fecha_inicio: '',
-      fecha_fin: ''
-    });
+    // setFilters({
+    //   mes: '',
+    //   año: '',
+    //   fecha_inicio: '',
+    //   fecha_fin: ''
+    // });
     setErrors({
       fecha_inicio: '',
       fecha_fin: '',

@@ -325,6 +325,13 @@ const Sidebar = ({
             show: shouldShowSubItem({ id: "monitoreo-facturas" }),
           },
           {
+            id: "monitoreo-clientes",
+            label: "Resumen de clientes",
+            icon: MonitorCheck,
+            path: "/gerencia/monitoreo-clientes",
+            show: shouldShowSubItem({ id: "monitoreo-clientes" }),
+          },
+          {
             id: "monitoreo-placas",
             label: "Resumen de Placas",
             icon: MonitorCheck,
@@ -338,13 +345,7 @@ const Sidebar = ({
             path: "/gerencia/monitoreo-proveedores",
             show: shouldShowSubItem({ id: "monitoreo-proveedores" }),
           },
-          {
-            id: "monitoreo-clientes",
-            label: "Resumen de clientes",
-            icon: MonitorCheck,
-            path: "/gerencia/monitoreo-clientes",
-            show: shouldShowSubItem({ id: "monitoreo-clientes" }),
-          },
+          
           
           {
             id: "historial",
