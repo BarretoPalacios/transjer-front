@@ -26,54 +26,7 @@ const AnaliticasGerenciales = () => {
   const [anio, setAnio] = useState(new Date().getFullYear()); // Año actual
   
   // Datos iniciales del dashboard
-  const [dashboardData, setDashboardData] = useState({
-    total_vendido_neto: 0,
-    total_vendido_bruto: 0,
-    facturacion_bruta: 0,
-    cnt_facturas_bruta: 0,
-    facturacion_bruta_pendiente: 0,
-    total_detracciones: 0,
-    cnt_detracciones: 0,
-    pendiente_por_cobrar: 0,
-    facturacion_bruta_con_detraccion: 0,
-    total_cobrado: 0,
-    cnt_cobrado: 0,
-    total_por_vencer: 0,
-    total_vencido: 0,
-    cnt_vencido: 0,
-    fletes: {
-      total_fletes: 0,
-      fletes_pendientes: 0,
-      fletes_valorizados: 0,
-      fletes_con_factura: 0
-    }
-  });
-
-  // Función para mapear la respuesta de la API al formato del dashboard
-  const mapApiResponseToDashboard = (response) => {
-    return {
-      total_vendido_neto: response.operacion_fletes?.total_venta_valorizada || 0,
-      total_vendido_bruto: response.operacion_fletes?.total_venta_valorizada || 0,
-      facturacion_bruta: response.cobranza_facturas?.monto_neto_cartera || 0,
-      cnt_facturas_bruta: response.cobranza_facturas?.total_documentos || 0,
-      facturacion_bruta_pendiente: response.cobranza_facturas?.deuda_total_facturada || 0,
-      total_detracciones: 0,
-      cnt_detracciones: 0,
-      pendiente_por_cobrar: response.cobranza_facturas?.deuda_total_facturada || 0,
-      facturacion_bruta_con_detraccion: response.cobranza_facturas?.monto_neto_cartera || 0,
-      total_cobrado: response.cobranza_facturas?.pagado?.monto || 0,
-      cnt_cobrado: response.cobranza_facturas?.pagado?.cantidad || 0,
-      total_por_vencer: response.cobranza_facturas?.por_vencer_pendiente?.monto || 0,
-      total_vencido: response.cobranza_facturas?.vencido_por_estado?.monto || 0,
-      cnt_vencido: response.cobranza_facturas?.vencido_por_estado?.cantidad || 0,
-      fletes: {
-        total_fletes: response.operacion_fletes?.conteo_total_fletes || 0,
-        fletes_pendientes: response.operacion_fletes?.pendientes_valorizar?.cantidad || 0,
-        fletes_valorizados: response.operacion_fletes?.valorizados_sin_facturar?.cantidad || 0,
-        fletes_con_factura: response.operacion_fletes?.valorizados_en_factura?.cantidad || 0
-      }
-    };
-  };
+  const [dashboardData, setDashboardData] = useState(null);
 
   // Función para obtener datos del backend
   const fetchData = async (mostrarTodo = false) => {
@@ -91,8 +44,8 @@ const AnaliticasGerenciales = () => {
       );
       
       // Mapear los datos de la API al formato esperado
-      const mappedData = mapApiResponseToDashboard(response);
-      setDashboardData(mappedData);
+      
+      setDashboardData(response);
       
       setLastUpdated(new Date());
     } catch (err) {
@@ -154,39 +107,7 @@ const AnaliticasGerenciales = () => {
     fetchData(true);
   };
 
-  // Calcular porcentajes
-  const calcularPorcentajes = () => {
-    const {
-      facturacion_bruta,
-      facturacion_bruta_pendiente,
-      total_cobrado,
-      pendiente_por_cobrar,
-      total_vendido_bruto,
-      total_detracciones,
-      fletes
-    } = dashboardData;
-
-    const facturacionTotal = facturacion_bruta + facturacion_bruta_pendiente;
-    const porcentajeFacturado = facturacionTotal > 0 ? (facturacion_bruta / facturacionTotal * 100) : 0;
-    const porcentajeCobrado = facturacion_bruta > 0 ? (total_cobrado / facturacion_bruta * 100) : 0;
-    const porcentajeDetracciones = total_vendido_bruto > 0 ? (total_detracciones / total_vendido_bruto * 100) : 0;
-    const porcentajePorVencer = pendiente_por_cobrar > 0 ? (dashboardData.total_por_vencer / pendiente_por_cobrar * 100) : 0;
-    const porcentajeFletesCompletados = fletes.total_fletes > 0 ? ((fletes.total_fletes - fletes.fletes_pendientes) / fletes.total_fletes * 100) : 0;
-    const porcentajeFletesFacturados = fletes.total_fletes > 0 ? (fletes.fletes_con_factura / fletes.total_fletes * 100) : 0;
-
-    return {
-      porcentajeFacturado: porcentajeFacturado.toFixed(0),
-      porcentajeFacturacionPendiente: (100 - porcentajeFacturado).toFixed(0),
-      porcentajeCobrado: porcentajeCobrado.toFixed(0),
-      porcentajeDetracciones: porcentajeDetracciones.toFixed(1),
-      porcentajePorVencer: porcentajePorVencer.toFixed(0),
-      porcentajeFletesCompletados: porcentajeFletesCompletados.toFixed(0),
-      porcentajeFletesFacturados: porcentajeFletesFacturados.toFixed(0),
-      facturacionTotal: facturacionTotal
-    };
-  };
-
-  const porcentajes = calcularPorcentajes();
+const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
 
   useEffect(() => {
     fetchData();
@@ -331,7 +252,7 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Vendido Neto</h3>
                 <p className="text-black text-lg font-semibold">
-                  {formatCurrency(dashboardData.total_vendido_neto)}
+                  {formatCurrency(dashboardData.fletes.venta_total_valorizada)}
                 </p>
               </div>
               <div className="p-2 bg-blue-100 text-blue-600 rounded-md">
@@ -347,7 +268,7 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Vendido Bruto</h3>
                 <p className="text-black text-lg font-semibold">
-                  {formatCurrency(dashboardData.total_vendido_bruto)}
+                  {formatCurrency(vendidoBruto)}
                 </p>
               </div>
               <div className="p-2 bg-green-100 text-green-600 rounded-md">
@@ -363,10 +284,10 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Facturación Bruta</h3>
                 <p className="text-black text-lg font-semibold">
-                  {formatCurrency(dashboardData.facturacion_bruta)}
+                  {formatCurrency(dashboardData.facturas.monto_total_bruto)}
                 </p>
                 <p className="text-black text-xs font-semibold">
-                  Con Detracción: {formatCurrency(dashboardData.facturacion_bruta_con_detraccion)}
+                  Con Detracción: {formatCurrency(dashboardData.facturas.monto_neto_total)}
                 </p>
               </div> 
               <div className="p-2 bg-purple-100 text-purple-600 rounded-md">
@@ -376,7 +297,7 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-center mt-1">
               <p className="text-gray-500 text-xs">Total facturado</p>
               <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full">
-                {dashboardData.cnt_facturas_bruta} factura{dashboardData.cnt_facturas_bruta !== 1 ? 's' : ''}
+                {dashboardData.facturas.conteo_facturas} factura{dashboardData.facturas.conteo_facturas !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
@@ -387,7 +308,7 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Facturación Pendiente</h3>
                 <p className="text-black text-lg font-semibold">
-                  {formatCurrency(dashboardData.facturacion_bruta_pendiente)}
+                  {formatCurrency(vendidoBruto - dashboardData.facturas.monto_total_bruto)} 
                 </p>
               </div>
               <div className="p-2 bg-yellow-100 text-yellow-600 rounded-md">
@@ -397,12 +318,12 @@ const AnaliticasGerenciales = () => {
             <div className="mt-2">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-gray-500">Falta un </span>
-                <span className="font-medium">{porcentajes.porcentajeFacturacionPendiente}%</span>
+                {/* <span className="font-medium">{porcentajes.porcentajeFacturacionPendiente}%</span> */}
               </div>
               <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-yellow-500 transition-all duration-500"
-                  style={{ width: `${porcentajes.porcentajeFacturacionPendiente}%` }}
+                  // style={{ width: `${porcentajes.porcentajeFacturacionPendiente}%` }}
                 ></div>
               </div>
             </div>
@@ -424,7 +345,7 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Pendiente por Cobrar</h3>
                 <p className="text-black text-lg font-semibold">
-                  {formatCurrency(dashboardData.pendiente_por_cobrar)}
+                  {formatCurrency(dashboardData.facturas.monto_total_pendiente)}
                 </p>
               </div>
               <div className="p-2 bg-red-100 text-red-600 rounded-md">
@@ -437,13 +358,13 @@ const AnaliticasGerenciales = () => {
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-gray-600">Por Vencer</span>
                   <span className="font-medium">
-                    {formatCurrency(dashboardData.total_por_vencer)}
+                    {formatCurrency(dashboardData.facturas.por_vencer.monto)}
                   </span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-blue-500 transition-all duration-500"
-                    style={{ width: `${porcentajes.porcentajePorVencer}%` }}
+                    // style={{ width: `${porcentajes.porcentajePorVencer}%` }}
                   ></div>
                 </div>
               </div>
@@ -452,13 +373,13 @@ const AnaliticasGerenciales = () => {
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-gray-600">Vencido</span>
                   <span className="font-medium">
-                    {formatCurrency(dashboardData.total_vencido)}
+                    {formatCurrency(dashboardData.facturas.vencido.monto)}
                   </span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-green-500 transition-all duration-500"
-                    style={{ width: dashboardData.total_vencido > 0 ? '100%' : '0%' }}
+                    style={{ width: dashboardData.facturas.vencido.cantidad > 0 ? '100%' : '0%' }}
                   ></div>
                 </div>
               </div>
@@ -471,18 +392,18 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Total Cobrado</h3>
                 <p className="text-black text-lg font-semibold">
-                  {formatCurrency(dashboardData.total_cobrado)}
+                  {formatCurrency(dashboardData.facturas.pagado.monto)}
                 </p>
               </div>
               <div className="p-2 bg-green-100 text-green-600 rounded-md">
                 <TrendingUp className="h-4 w-4" />
               </div>
-            </div>
+            </div>  
             
             <div className="flex justify-between items-center mt-1 mb-3">
               <p className="text-gray-500 text-xs">Monto cobrado</p>
               <span className="text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded-full">
-                {dashboardData.cnt_cobrado} factura{dashboardData.cnt_cobrado !== 1 ? 's' : ''} cobrada{dashboardData.cnt_cobrado !== 1 ? 's' : ''}
+                {dashboardData.facturas.pagado.cantidad} factura{dashboardData.facturas.pagado.cantidad !== 1 ? 's' : ''} cobrada{dashboardData.facturas.pagado.cantidad !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
@@ -525,7 +446,7 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Por Vencer</h3>
                 <p className="text-black text-lg font-semibold">
-                  {formatCurrency(dashboardData.total_por_vencer)}
+                  {formatCurrency(dashboardData.facturas.por_vencer.monto)}
                 </p>
               </div>
               <div className="p-2 bg-blue-100 text-blue-600 rounded-md">
@@ -537,15 +458,15 @@ const AnaliticasGerenciales = () => {
               <div className="text-left">
                 <p className="text-gray-500 text-xs">Próximos vencimientos</p>
                 <p className="text-gray-400 text-xs">
-                  {dashboardData.cnt_vencido === 0 ? 'Sin facturas vencidas' : `${dashboardData.cnt_vencido} factura(s) vencida(s)`}
+                  {dashboardData.facturas.por_vencer.cantidad === 0 ? 'Sin facturas por vencer' : `${dashboardData.facturas.por_vencer.cantidad} factura(s) por vencer`}
                 </p>
               </div>
-              <div className="text-right">
+              {/* <div className="text-right">
                 <div className="text-xs text-gray-600">Estado</div>
                 <div className={`text-xs font-medium ${dashboardData.total_vencido === 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {dashboardData.total_vencido === 0 ? 'Al día' : 'Con mora'}
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
           
@@ -554,12 +475,12 @@ const AnaliticasGerenciales = () => {
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Vencido</h3>
-                <p className={`text-lg font-semibold ${dashboardData.total_vencido === 0 ? 'text-green-600' : 'text-black'}`}>
-                  {formatCurrency(dashboardData.total_vencido)}
+                <p className={`text-lg font-semibold ${dashboardData.facturas.vencido.monto === 0 ? 'text-green-600' : 'text-black'}`}>
+                  {formatCurrency(dashboardData.facturas.vencido.monto)}
                 </p>
               </div>
-              <div className={`p-2 rounded-md ${dashboardData.total_vencido === 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                {dashboardData.total_vencido === 0 ? (
+              <div className={`p-2 rounded-md ${dashboardData.facturas.vencido.monto === 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                {dashboardData.facturas.vencido.monto === 0 ? (
                   <CheckCircle className="h-4 w-4" />
                 ) : (
                   <AlertCircle className="h-4 w-4" />
@@ -571,13 +492,13 @@ const AnaliticasGerenciales = () => {
               <div className="text-left">
                 <p className="text-gray-500 text-xs">Documentos vencidos</p>
                 <p className="text-gray-400 text-xs">
-                  {dashboardData.total_vencido === 0 ? 'Sin mora en pagos' : 'Atención requerida'}
+                  {dashboardData.facturas.vencido.monto === 0 ? 'Sin mora en pagos' : 'Atención requerida'}
                 </p>
               </div>
               <div className="text-right">
                 <div className="text-xs text-gray-600">Cantidad</div>
                 <div className="text-xs font-medium">
-                  {dashboardData.cnt_vencido} factura{dashboardData.cnt_vencido !== 1 ? 's' : ''}
+                  {dashboardData.facturas.vencido.cantidad} factura{dashboardData.facturas.vencido.cantidad !== 1 ? 's' : ''}
                 </div>
               </div>
             </div>
@@ -599,17 +520,18 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Total Fletes</h3>
                 <p className="text-gray-800 text-lg font-semibold">
-                  {dashboardData.fletes.total_fletes}
+                  {dashboardData.fletes.conteo_total}
                 </p>
               </div>
               <div className="p-2 bg-gray-100 text-gray-600 rounded-md">
                 <Truck className="h-4 w-4" />
               </div>
             </div>
+            <p className="text-gray-500 text-xs">Total Registrado</p>
             <p className="text-gray-500 text-xs flex items-center">
-              Fletes registrados
-              <span className="ml-2 text-xs text-gray-400">
-                ({dashboardData.fletes.fletes_pendientes} pend, {dashboardData.fletes.fletes_valorizados} val, {dashboardData.fletes.fletes_con_factura} fact)
+              Valor Neto
+              <span className="ml-2 text-xs text-black font-bold">
+                {formatCurrency(dashboardData.fletes.venta_total_valorizada)}
               </span>
             </p>
           </div>
@@ -620,7 +542,7 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Fletes Pendientes</h3>
                 <p className="text-black text-lg font-semibold">
-                  {dashboardData.fletes.fletes_pendientes}
+                  {dashboardData.fletes.detalles.pendientes.cantidad}
                 </p>
               </div>
               <div className="p-2 bg-yellow-100 text-yellow-600 rounded-md">
@@ -628,6 +550,12 @@ const AnaliticasGerenciales = () => {
               </div>
             </div>
             <p className="text-gray-500 text-xs">Pendientes por Valorizar</p>
+            <p className="text-gray-500 text-xs flex items-center">
+              Valor Neto
+              <span className="ml-2 text-xs text-black font-bold">
+                {formatCurrency(dashboardData.fletes.detalles.pendientes.monto)}
+              </span>
+            </p>
           </div>
           
           {/* Fletes Valorizados */}
@@ -636,7 +564,7 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Fletes Valorizados</h3>
                 <p className="text-black text-lg font-semibold">
-                  {dashboardData.fletes.fletes_valorizados}
+                  {dashboardData.fletes.detalles.valorizados_sin_factura.cantidad}
                 </p>
               </div>
               <div className="p-2 bg-blue-100 text-blue-600 rounded-md">
@@ -644,6 +572,12 @@ const AnaliticasGerenciales = () => {
               </div>
             </div>
             <p className="text-gray-500 text-xs">Valorizados (sin facturar)</p>
+            <p className="text-gray-500 text-xs flex items-center">
+              Valor Neto
+              <span className="ml-2 text-xs text-black font-bold">
+                {formatCurrency(dashboardData.fletes.detalles.valorizados_sin_factura.monto)}
+              </span>
+            </p>
           </div>
           
           {/* Fletes con Factura */}
@@ -652,7 +586,7 @@ const AnaliticasGerenciales = () => {
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Fletes con Factura</h3>
                 <p className="text-black text-lg font-semibold">
-                  {dashboardData.fletes.fletes_con_factura}
+                  {dashboardData.fletes.detalles.valorizados_con_factura.cantidad}
                 </p>
               </div>
               <div className="p-2 bg-green-100 text-green-600 rounded-md">
@@ -660,73 +594,88 @@ const AnaliticasGerenciales = () => {
               </div>
             </div>
             <p className="text-gray-500 text-xs">Completamente procesados</p>
+            <p className="text-gray-500 text-xs flex items-center">
+              Valor Neto
+              <span className="ml-2 text-xs text-black font-bold">
+                {formatCurrency(dashboardData.fletes.detalles.valorizados_con_factura.monto)}
+              </span>
+            </p>
           </div>
         </div>
         
         {/* Gráfico de distribución de fletes */}
-        <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
-          <h3 className="text-gray-700 text-sm font-medium mb-2">Distribución de Estados</h3>
+<div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+  <h3 className="text-gray-700 text-sm font-medium mb-2">Distribución de Estados</h3>
+  <div className="flex items-center justify-between">
+    <div className="w-3/4">
+      <div className="flex items-center h-4 mb-2 rounded overflow-hidden bg-gray-100">
+        {dashboardData.fletes.conteo_total > 0 ? (
+          <>
+            <div 
+              className="h-full bg-yellow-500 transition-all duration-500" 
+              style={{ 
+                width: `${(dashboardData.fletes.detalles.pendientes.cantidad / dashboardData.fletes.conteo_total) * 100}%` 
+              }}
+              title={`Pendientes: ${dashboardData.fletes.detalles.pendientes.cantidad}`}
+            ></div>
+            <div 
+              className="h-full bg-blue-500 transition-all duration-500" 
+              style={{ 
+                width: `${(dashboardData.fletes.detalles.valorizados_sin_factura.cantidad / dashboardData.fletes.conteo_total) * 100}%` 
+              }}
+              title={`Sin Factura: ${dashboardData.fletes.detalles.valorizados_sin_factura.cantidad}`}
+            ></div>
+            <div 
+              className="h-full bg-green-500 transition-all duration-500" 
+              style={{ 
+                width: `${(dashboardData.fletes.detalles.valorizados_con_factura.cantidad / dashboardData.fletes.conteo_total) * 100}%` 
+              }}
+              title={`Con Factura: ${dashboardData.fletes.detalles.valorizados_con_factura.cantidad}`}
+            ></div>
+          </>
+        ) : (
+          <div className="h-full w-full bg-gray-200"></div>
+        )}
+      </div>
+    </div>
+    
+    <div className="w-1/4 pl-4">
+      {dashboardData.fletes.conteo_total > 0 ? (
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <div className="w-3/4">
-              <div className="flex items-center h-4 mb-2 rounded overflow-hidden">
-                {dashboardData.fletes.total_fletes > 0 && (
-                  <>
-                    <div 
-                      className="h-full bg-yellow-500" 
-                      style={{ 
-                        width: `${(dashboardData.fletes.fletes_pendientes / dashboardData.fletes.total_fletes) * 100}%` 
-                      }}
-                      title={`Pendientes: ${dashboardData.fletes.fletes_pendientes}`}
-                    ></div>
-                    <div 
-                      className="h-full bg-blue-500" 
-                      style={{ 
-                        width: `${(dashboardData.fletes.fletes_valorizados / dashboardData.fletes.total_fletes) * 100}%` 
-                      }}
-                      title={`Valorizados: ${dashboardData.fletes.fletes_valorizados}`}
-                    ></div>
-                    <div 
-                      className="h-full bg-green-500" 
-                      style={{ 
-                        width: `${(dashboardData.fletes.fletes_con_factura / dashboardData.fletes.total_fletes) * 100}%` 
-                      }}
-                      title={`Con factura: ${dashboardData.fletes.fletes_con_factura}`}
-                    ></div>
-                  </>
-                )}
-                {dashboardData.fletes.total_fletes === 0 && (
-                  <div className="h-full w-full bg-gray-200"></div>
-                )}
-              </div>
+            <div className="flex items-center">
+              <div className="w-2 h-2 rounded-full bg-yellow-500 mr-1"></div>
+              <span className="text-[10px] text-gray-500">Pendientes por Valorizar</span>
             </div>
-            <div className="w-1/4 pl-4">
-              {dashboardData.fletes.total_fletes > 0 ? (
-                <div className="space-y-1">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 rounded-full bg-yellow-500 mr-1"></div>
-                    <span className="text-xs text-gray-600">
-                      {Math.round((dashboardData.fletes.fletes_pendientes / dashboardData.fletes.total_fletes) * 100)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
-                    <span className="text-xs text-gray-600">
-                      {Math.round((dashboardData.fletes.fletes_valorizados / dashboardData.fletes.total_fletes) * 100)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
-                    <span className="text-xs text-gray-600">
-                      {Math.round((dashboardData.fletes.fletes_con_factura / dashboardData.fletes.total_fletes) * 100)}%
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-gray-400">Sin datos</div>
-              )}
+            <span className="text-xs font-semibold text-gray-700">
+              {Math.round((dashboardData.fletes.detalles.pendientes.cantidad / dashboardData.fletes.conteo_total) * 100)}%
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
+              <span className="text-[10px] text-gray-500">Valorizados sin factura</span>
             </div>
+            <span className="text-xs font-semibold text-gray-700">
+              {Math.round((dashboardData.fletes.detalles.valorizados_sin_factura.cantidad / dashboardData.fletes.conteo_total) * 100)}%
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
+              <span className="text-[10px] text-gray-500">Facturados</span>
+            </div>
+            <span className="text-xs font-semibold text-gray-700">
+              {Math.round((dashboardData.fletes.detalles.valorizados_con_factura.cantidad / dashboardData.fletes.conteo_total) * 100)}%
+            </span>
           </div>
         </div>
+      ) : (
+        <div className="text-xs text-gray-400">Sin datos</div>
+      )}
+    </div>
+  </div>
+</div>
       </div>
     </div>
   );
