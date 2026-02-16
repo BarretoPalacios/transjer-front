@@ -380,5 +380,14 @@ getResumenPorPlaca: async (filters = {}) => {
   // Alias para export
   exportToExcel: async (filters = {}) => {
     return facturacionGestionAPI.exportAllGestionesExcel(filters);
+  },
+
+
+  getResumenFinanciero: async (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.mes) params.append('mes', filters.mes);
+    if (filters.anio) params.append('anio', filters.anio);
+    const response = await axiosInstance.get(`/gerencia/obtener_resumen_financiero?${params.toString()}`);
+    return response.data;
   }
 };
