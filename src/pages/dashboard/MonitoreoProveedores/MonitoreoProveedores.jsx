@@ -3,19 +3,22 @@ import {
   Truck,
   Filter,
   Calendar,
-  DollarSign,
   RefreshCw,
   X,
   CheckCircle,
-  TrendingUp,
   Search,
   Building,
-  FileText,
   Download,
   Loader,
   MapPin,
   User,
-  CreditCard
+  Package,
+  Car,
+  FileText,
+  Clock,
+  Hash,
+  CalendarDays,
+  DollarSign
 } from 'lucide-react';
 
 // Componentes comunes
@@ -23,24 +26,18 @@ import Button from '../../../components/common/Button/Button';
 import Pagination from '../../../components/common/Pagination/Pagination';
 
 // API
-import { gerenciaServiceAPI } from '../../../api/endpoints/gerenciaService';
+import { serviciosPrincipalesAPI } from '../../../api/endpoints/servicioPrincipal';
 import utilsAPI from '../../../api/endpoints/utils';
 
 const MonitoreoProveedores = () => {
-  const [data, setData] = useState({
-    paginacion: {
-      total_registros: 0,
-      total_paginas: 0,
-      pagina_actual: 1,
-      limite_por_pagina: 10
-    },
-    resultados: []
-  });
-  
+  const [serviciosData, setServiciosData] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingDownload, setLoadingDownload] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
+  
+  // Estado para los montos por servicio
+  const [montos, setMontos] = useState({});
   
   // Estados de paginación
   const [pagination, setPagination] = useState({
@@ -54,9 +51,9 @@ const MonitoreoProveedores = () => {
   
   // Estados para filtros
   const [filters, setFilters] = useState({
-    proveedor_id: '',
     fecha_inicio: '',
-    fecha_fin: ''
+    fecha_fin: '',
+    proveedor_nombre: ''
   });
   
   // Estados para errores de validación
@@ -88,7 +85,7 @@ const MonitoreoProveedores = () => {
         currentPage: 1
       }));
       
-      fetchFletes(1, pagination.itemsPerPage, filters);
+      fetchServiciosPrincipales(1, pagination.itemsPerPage, filters);
     }, 500);
 
     setSearchTimeout(timeout);
@@ -96,12 +93,12 @@ const MonitoreoProveedores = () => {
     return () => {
       if (timeout) clearTimeout(timeout);
     };
-  }, [filters.proveedor_id, filters.fecha_inicio, filters.fecha_fin]);
+  }, [filters.fecha_inicio, filters.fecha_fin, filters.proveedor_nombre]);
 
   // Cargar proveedores
   const cargarProveedores = useCallback(async () => {
     try {
-      const response = await utilsAPI.getProveedoresList ();
+      const response = await utilsAPI.getProveedoresList();
       setProveedores(response || []);
     } catch (err) {
       console.error('Error cargando proveedores:', err);
@@ -109,8 +106,8 @@ const MonitoreoProveedores = () => {
     }
   }, []);
 
-  // Función principal para cargar fletes
-  const fetchFletes = useCallback(
+  // Función principal para cargar servicios principales
+  const fetchServiciosPrincipales = useCallback(
     async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
       setIsLoading(true);
       setError(null);
@@ -139,14 +136,11 @@ const MonitoreoProveedores = () => {
       try {
         // Preparar filtros para API
         const apiFilters = {
-          pagina: page,
-          limite: itemsPerPage
+          page: page,
+          page_size: itemsPerPage
         };
         
-        if (filtersToUse.proveedor_id) {
-          apiFilters.proveedor_id = filtersToUse.proveedor_id;
-        }
-        
+        // Solo enviar filtros que tengan valor
         if (filtersToUse.fecha_inicio) {
           apiFilters.fecha_inicio = filtersToUse.fecha_inicio;
         }
@@ -155,22 +149,26 @@ const MonitoreoProveedores = () => {
           apiFilters.fecha_fin = filtersToUse.fecha_fin;
         }
         
-        // Llamar a la API de fletes
-        const response = await gerenciaServiceAPI.getFletesProveedores(apiFilters);
+        if (filtersToUse.proveedor_nombre && filtersToUse.proveedor_nombre.trim() !== '') {
+          apiFilters.proveedor_nombre = filtersToUse.proveedor_nombre.trim();
+        }
         
-        setData(response);
+        // Llamar a la API de servicios principales
+        const response = await serviciosPrincipalesAPI.getAllServiciosPrincipales(apiFilters);
+        
+        setServiciosData(response.data || []);
         
         setPagination({
-          currentPage: response.paginacion.pagina_actual,
-          itemsPerPage: response.paginacion.limite_por_pagina,
-          totalItems: response.paginacion.total_registros,
-          totalPages: response.paginacion.total_paginas,
-          hasNext: response.paginacion.pagina_actual < response.paginacion.total_paginas,
-          hasPrev: response.paginacion.pagina_actual > 1,
+          currentPage: response.pagination.page,
+          itemsPerPage: response.pagination.page_size,
+          totalItems: response.pagination.total,
+          totalPages: response.pagination.total_pages,
+          hasNext: response.pagination.has_next,
+          hasPrev: response.pagination.has_prev,
         });
         
       } catch (err) {
-        setError('Error al cargar los fletes: ' + (err.message || 'Error desconocido'));
+        setError('Error al cargar los servicios: ' + (err.message || 'Error desconocido'));
       } finally {
         setIsLoading(false);
       }
@@ -203,9 +201,9 @@ const MonitoreoProveedores = () => {
 
   const clearFilters = useCallback(() => {
     setFilters({
-      proveedor_id: '',
       fecha_inicio: '',
-      fecha_fin: ''
+      fecha_fin: '',
+      proveedor_nombre: ''
     });
     setErrors({
       fecha_inicio: '',
@@ -215,101 +213,123 @@ const MonitoreoProveedores = () => {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
-  }, [fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
+    fetchServiciosPrincipales(pagination.currentPage, pagination.itemsPerPage, filters);
+  }, [fetchServiciosPrincipales, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   const handlePageChange = useCallback(
     (newPage) => {
-      fetchFletes(newPage, pagination.itemsPerPage, filters);
+      fetchServiciosPrincipales(newPage, pagination.itemsPerPage, filters);
     },
-    [fetchFletes, pagination.itemsPerPage, filters]
+    [fetchServiciosPrincipales, pagination.itemsPerPage, filters]
   );
 
   const handleItemsPerPageChange = useCallback(
     (newItemsPerPage) => {
-      fetchFletes(1, newItemsPerPage, filters);
+      fetchServiciosPrincipales(1, newItemsPerPage, filters);
     },
-    [fetchFletes, filters]
+    [fetchServiciosPrincipales, filters]
   );
+
+  // Handler para cambio de monto
+  const handleMontoChange = useCallback((servicioId, value) => {
+    setMontos(prev => ({
+      ...prev,
+      [servicioId]: value
+    }));
+  }, []);
+
+  // Handler para enviar monto (solo lógica, no envía a API aún)
+  const handleEnviarMonto = useCallback((servicioId, e) => {
+    e.stopPropagation();
+    const monto = montos[servicioId];
+    console.log('Enviar monto para servicio:', servicioId, 'Monto:', monto);
+    // Aquí iría la llamada a la API
+  }, [montos]);
 
   // Exportar a Excel
   const handleExportarExcel = useCallback(async () => {
     try {
       setLoadingDownload(true);
       
-      const apiFilters = {};
+      const filtersForAPI = {};
       
-      if (filters.proveedor_id) {
-        apiFilters.proveedor_id = filters.proveedor_id;
-      }
-      if (filters.fecha_inicio) {
-        apiFilters.fecha_inicio = filters.fecha_inicio;
-      }
-      if (filters.fecha_fin) {
-        apiFilters.fecha_fin = filters.fecha_fin;
-      }
+      // Solo enviar filtros que tengan valor
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && value.trim() !== '') {
+          filtersForAPI[key] = value.trim();
+        }
+      });
       
-      const blob = await gerenciaServiceAPI.exportFletesExcel(apiFilters);
+      const blob = await serviciosPrincipalesAPI.exportServiciosExcel(filtersForAPI);
       
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `fletes_${Date.now()}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
+      // Usar el método downloadExcel de la API
+      serviciosPrincipalesAPI.downloadExcel(
+        blob, 
+        `servicios_principales_${new Date().toISOString().split('T')[0]}.xlsx`
+      );
       
       setSuccessMessage('Exportación completada exitosamente');
       setTimeout(() => setSuccessMessage(null), 3000);
       
     } catch (err) {
       setError('Error al exportar: ' + err.message);
+      console.error('Error exporting servicios:', err);
     } finally {
       setLoadingDownload(false);
     }
   }, [filters]);
 
-  // Formatear moneda
-  const formatMoneda = (valor) => {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN',
-      minimumFractionDigits: 2
-    }).format(valor || 0);
-  };
-
-  // Formatear fecha
-  const formatFecha = (fechaStr) => {
-    if (!fechaStr) return '-';
-    const fecha = new Date(fechaStr);
-    return fecha.toLocaleDateString('es-PE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
-  };
-
-  // Obtener badge de estado
-  const getEstadoBadge = (estado) => {
-    const estados = {
-      'PENDIENTE': { color: 'text-yellow-800', bg: 'bg-yellow-100', icon: '⏳' },
-      'PAGADO': { color: 'text-green-800', bg: 'bg-green-100', icon: '✅' },
-      'VENCIDO': { color: 'text-red-800', bg: 'bg-red-100', icon: '⚠️' },
-      'ANULADO': { color: 'text-gray-800', bg: 'bg-gray-100', icon: '❌' }
+  // Funciones auxiliares para estados y badges
+  const getEstadoIcon = (estado) => {
+    const iconMap = {
+      'Programado': Clock,
+      'En Proceso': Truck,
+      'Completado': CheckCircle,
+      'Cancelado': X
     };
-    
-    const style = estados[estado] || { color: 'text-blue-800', bg: 'bg-blue-100', icon: '📄' };
-    
-    return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${style.bg} ${style.color}`}>
-        <span className="mr-1">{style.icon}</span>
-        {estado}
-      </span>
-    );
+    return iconMap[estado] || Clock;
   };
+
+  const getEstadoBadgeClass = (estado) => {
+    const classMap = {
+      'Programado': 'bg-yellow-100 text-yellow-800',
+      'En Proceso': 'bg-blue-100 text-blue-800',
+      'Completado': 'bg-green-100 text-green-800',
+      'Cancelado': 'bg-red-100 text-red-800'
+    };
+    return classMap[estado] || 'bg-gray-100 text-gray-800';
+  };
+
+  const puedeCambiarEstado = (servicio) => {
+    return servicio.estado === 'Programado' || servicio.estado === 'En Proceso';
+  };
+
+  // Handlers para acciones
+  const handleRowClick = (servicio) => {
+    console.log('Fila clickeada:', servicio);
+  };
+
+  const handleAbrirCambioEstado = (servicio, e) => {
+    e.stopPropagation();
+    console.log('Cambiar estado:', servicio);
+  };
+
+  const handleCreate = () => {
+    console.log('Crear nuevo servicio');
+  };
+
+  const formatearFecha = (fechaStr) => {
+  if (!fechaStr) return "N/A";
+  // Si viene como objeto de Mongo, extraemos el string
+  const date = typeof fechaStr === 'object' ? fechaStr.$date : fechaStr;
+  
+  // Dividimos "2026-02-03..." por el guion y tomamos solo los primeros 3 elementos
+  const [year, month, day] = date.split('T')[0].split('-');
+  return `${day}/${month}/${year}`;
+};
 
   // Mostrar loading solo en carga inicial
-  if (isLoading && data.resultados.length === 0) {
+  if (isLoading && serviciosData.length === 0) {
     return (
       <div className="p-4">
         <div className="animate-pulse">
@@ -328,10 +348,10 @@ const MonitoreoProveedores = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Monitoreo de Fletes
+            Monitoreo de Proveedores
           </h1>
           <p className="text-gray-600 mt-1">
-            Visualización y seguimiento de fletes por proveedor y rango de fechas
+            Visualización y seguimiento de servicios por proveedor y rango de fechas
           </p>
         </div>
         
@@ -433,13 +453,13 @@ const MonitoreoProveedores = () => {
               Proveedor
             </label>
             <select
-              value={filters.proveedor_id}
-              onChange={(e) => handleFilterChange('proveedor_id', e.target.value)}
+              value={filters.proveedor_nombre}
+              onChange={(e) => handleFilterChange('proveedor_nombre', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
             >
               <option value="">Todos los proveedores</option>
-              {proveedores.map((proveedor) => (
-                <option key={proveedor} value={proveedor}>
+              {proveedores.map((proveedor, index) => (
+                <option key={index} value={proveedor}>
                   {proveedor}
                 </option>
               ))}
@@ -533,210 +553,308 @@ const MonitoreoProveedores = () => {
         )}
       </div>
 
-      {/* Tabla de Fletes - Estilo Excel */}
+      {/* Información de registros */}
+      {serviciosData.length > 0 && (
+        <div className="m-4 text-sm text-gray-600 text-center">
+          Mostrando {serviciosData.length} de {pagination.totalItems} registros
+          {filters.proveedor_nombre && ' · Filtrado por proveedor'}
+          {(filters.fecha_inicio || filters.fecha_fin) && ' · Filtrado por rango de fechas'}
+        </div>
+      )}
+
+      {/* Tabla de Servicios */}
       <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm border-collapse">
+          <table className="min-w-full text-xs border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b border-gray-300">
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  CÓDIGO FLETE
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Hash className="h-3 w-3" />
+                    Código
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  CÓDIGO SERVICIO
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <CalendarDays className="h-3 w-3" />
+                    Fecha de Servicio
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  PROVEEDOR
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Cliente / Cuenta
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  CLIENTE
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Package className="h-3 w-3" />
+                    Tipo Servicio
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  FECHA SERVICIO
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    Origen
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  ORIGEN
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    Destino
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  DESTINO
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Car className="h-3 w-3" />
+                    Placa 
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  VEHÍCULO
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Conductor
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  CONDUCTOR
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Package className="h-3 w-3" />
+                    Capacidad
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  M³ / TN
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    GIA's
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  ESTADO
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Estado
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-right font-semibold text-gray-700 whitespace-nowrap">
-                  MONTO FLETE
-                </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  FACTURA
-                </th>
-                <th className="py-3 px-4 text-center font-semibold text-gray-700 whitespace-nowrap">
-                  ACCIONES
-                </th>
+                {/* <th className="py-2 px-3 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" />
+                    Monto
+                  </div>
+                </th> */}
               </tr>
             </thead>
             <tbody>
-              {data.resultados.map((item, index) => (
-                <tr 
-                  key={`${item.flete._id}-${index}`} 
-                  className="border-b border-gray-200 hover:bg-blue-50"
-                >
-                  {/* Código Flete */}
-                  <td className="px-4 py-3 font-mono text-xs font-medium">
-                    {item.flete.codigo_flete}
-                  </td>
-
-                  {/* Código Servicio */}
-                  <td className="px-4 py-3 font-mono text-xs">
-                    {item.servicio.codigo_servicio_principal}
-                  </td>
-
-                  {/* Proveedor */}
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">
-                      {item.servicio.proveedor.nombre}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      RUC: {item.servicio.proveedor.ruc}
-                    </div>
-                  </td>
-
-                  {/* Cliente */}
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">
-                      {item.servicio.cliente.nombre}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      RUC: {item.servicio.cliente.ruc}
-                    </div>
-                  </td>
-
-                  {/* Fecha Servicio */}
-                  <td className="px-4 py-3 text-xs">
-                    {formatFecha(item.servicio.fecha_servicio)}
-                  </td>
-
-                  {/* Origen */}
-                  <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={item.servicio.origen}>
-                    <div className="flex items-center">
-                      <MapPin className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
-                      <span className="truncate">{item.servicio.origen}</span>
-                    </div>
-                  </td>
-
-                  {/* Destino */}
-                  <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={item.servicio.destino}>
-                    <div className="flex items-center">
-                      <MapPin className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
-                      <span className="truncate">{item.servicio.destino}</span>
-                    </div>
-                  </td>
-
-                  {/* Vehículo */}
-                  <td className="px-4 py-3 text-xs">
-                    <div className="font-mono">{item.servicio.flota.placa}</div>
-                    <div className="text-gray-500 text-xs">{item.servicio.flota.marca} {item.servicio.flota.modelo}</div>
-                  </td>
-
-                  {/* Conductor */}
-                  <td className="px-4 py-3 text-xs">
-                    <div className="flex items-center">
-                      <User className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
-                      <span>
-                        {item.servicio.conductor[0]?.nombres_completos || 
-                         item.servicio.conductor[0]?.nombre || 
-                         item.servicio.flota.nombre_conductor || '-'}
-                      </span>
-                    </div>
-                    {item.servicio.conductor[0]?.dni && (
-                      <div className="text-gray-500 text-xs">DNI: {item.servicio.conductor[0].dni}</div>
-                    )}
-                  </td>
-
-                  {/* M³ / TN */}
-                  <td className="px-4 py-3 text-xs">
-                    {item.servicio.m3} m³ / {item.servicio.tn} tn
-                  </td>
-
-                  {/* Estado */}
-                  <td className="px-4 py-3">
-                    {getEstadoBadge(item.flete.estado_flete)}
-                  </td>
-
-                  {/* Monto Flete */}
-                  <td className="px-4 py-3 text-right font-mono font-medium">
-                    {formatMoneda(item.flete.monto_flete)}
-                  </td>
-
-                  {/* Factura */}
-                  <td className="px-4 py-3 text-xs">
-                    {item.flete.codigo_factura ? (
-                      <div className="flex items-center">
-                        <FileText className="h-3 w-3 text-gray-400 mr-1" />
-                        {item.flete.codigo_factura}
+              {serviciosData.map((servicio) => {
+                const EstadoIcon = getEstadoIcon(servicio.estado);
+                const puedeCambiar = puedeCambiarEstado(servicio);
+                
+                return (
+                  <tr 
+                    key={servicio.id} 
+                    className="border-b border-gray-200 hover:bg-blue-50 cursor-pointer"
+                    onClick={() => handleRowClick(servicio)}
+                  >
+                    {/* Código */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {servicio.codigo_servicio_principal || 'N/A'}
                       </div>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
+                      <div className="text-xs text-gray-500">
+                        {servicio.zona || 'Sin zona'}
+                      </div>
+                    </td>
 
-                  {/* Acciones */}
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => window.location.href = `/gerencia/fletes/${item.flete._id}`}
-                      className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                    >
-                      Ver Detalle
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    {/* Fecha */}
+                    <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">
+                       F. Servicio: {formatearFecha(servicio.fecha_servicio)}
+                      </div>
+                      <div className="font-medium text-gray-900">
+                       F. Salida: {formatearFecha(servicio.fecha_salida)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                       Mes: {servicio.mes || 'N/A'} 
+                      </div>
+                      <div className="text-xs text-gray-500">
+                       H. Cita: {servicio.hora_cita?.slice(0, 5) || 'Sin hora'}
+                      </div>
+                    </td>
 
-              {/* Fila de totales */}
-              {data.resultados.length > 0 && (
-                <tr className="bg-gray-50 border-t-2 border-gray-300 font-medium">
-                  <td colSpan="11" className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                    TOTAL GENERAL:
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-bold text-blue-700">
-                    {formatMoneda(data.resultados.reduce((sum, item) => sum + (item.flete.monto_flete || 0), 0))}
-                  </td>
-                  <td colSpan="2"></td>
-                </tr>
-              )}
+                    {/* Cliente */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {servicio.cliente?.nombre || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Cuenta: {servicio.cuenta?.nombre || servicio.cuenta?.numero || 'N/A'}
+                      </div>
+                    </td>
+
+                    {/* Tipo Servicio */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {servicio.tipo_servicio || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Modalidad: {servicio.modalidad_servicio || 'N/A'}
+                      </div>
+                    </td>
+
+                    {/* Origen/Destino */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="text-sm text-gray-900 truncate max-w-[150px]">
+                        {servicio.origen?.split(',')[0] || 'N/A'}
+                      </div>
+                      
+                    </td>
+                    <td className="px-3 py-2 border-r border-gray-200">    
+                      <div className="text-sm text-gray-900 truncate max-w-[150px]">
+                        {servicio.destino?.split(',')[0] || 'N/A'}
+                      </div>
+                    </td>
+
+                    {/* Vehículo */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {servicio.flota?.placa || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {servicio.flota?.tipo_vehiculo || 'Sin tipo'}
+                      </div>
+                    </td>
+
+                    {/* Conductor */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {Array.isArray(servicio.conductor) 
+                          ? (servicio.conductor[0]?.nombre || servicio.conductor[0]?.nombres_completos || 'N/A')
+                          : (servicio.conductor?.nombre || servicio.conductor?.nombres_completos || 'N/A')}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Aux: {Array.isArray(servicio.auxiliar) 
+                          ? (servicio.auxiliar[0]?.nombres_completos || 'Sin auxiliar')
+                          : (servicio.auxiliar?.nombres_completos || 'Sin auxiliar')}
+                      </div>
+                    </td>
+
+                    {/* Capacidad */}
+                    <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="text-center">
+                          <div className="font-medium text-gray-900">
+                            {servicio.m3 || '0'}
+                          </div>
+                          <div className="text-xs text-gray-500">m³</div>
+                        </div>
+                        <div className="text-gray-300">/</div>
+                        <div className="text-center">
+                          <div className="font-medium text-gray-900">
+                            {servicio.tn || '0'}
+                          </div>
+                          <div className="text-xs text-gray-500">TN</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* GIA's */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="text-xs">
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-500">RR:</span>
+                          <span className="font-medium">{servicio.gia_rr || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-500">RT:</span>
+                          <span className="font-medium">{servicio.gia_rt || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Estado con botón para cambiar */}
+                    <td className="px-3 py-2 border-r border-gray-200" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col items-start gap-1">
+                        {/* Badge de estado */}
+                        <div className={`flex items-center px-2 py-1 rounded ${getEstadoBadgeClass(servicio.estado)}`}>
+                          <EstadoIcon className={`h-3 w-3 mr-1 ${
+                            servicio.estado === 'Programado' ? 'text-yellow-600' :
+                            servicio.estado === 'Completado' ? 'text-green-600' :
+                            servicio.estado === 'Cancelado' ? 'text-red-600' :
+                            'text-blue-600'
+                          }`} />
+                          <span className="text-xs font-medium">{servicio.estado}</span>
+                        </div>
+                        
+                        {/* Botón para cambiar estado */}
+                        {puedeCambiar && (
+                          <button
+                            onClick={(e) => handleAbrirCambioEstado(servicio, e)}
+                            className="text-xs text-white font-medium flex items-center bg-blue-500 p-2 rounded hover:underline"
+                            title="Cambiar estado"
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            Cambiar estado
+                          </button>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Monto - Input y botón */}
+                    {/* <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1 min-w-[140px]">
+                        <div className="relative flex-1">
+                          <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500">S/</span>
+                          <input
+                            type="number"
+                            value={montos[servicio.id] || ''}
+                            onChange={(e) => handleMontoChange(servicio.id, e.target.value)}
+                            placeholder="0.00"
+                            className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                            step="0.01"
+                            min="0"
+                          />
+                        </div>
+                        <button
+                          onClick={(e) => handleEnviarMonto(servicio.id, e)}
+                          className="px-2 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition whitespace-nowrap"
+                        >
+                          Enviar
+                        </button>
+                      </div>
+                    </td> */}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         {/* Sin resultados */}
-        {data.resultados.length === 0 && !isLoading && (
+        {serviciosData.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron fletes</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron servicios</h3>
             <p className="text-gray-600 mb-6">
-              {Object.values(filters).some(f => f)
+              {Object.values(filters).some(f => f && f.trim() !== '')
                 ? 'Intenta ajustar los filtros de búsqueda'
-                : 'No hay fletes disponibles para mostrar'}
+                : 'No hay servicios registrados en el sistema'}
             </p>
-            {Object.values(filters).some(f => f) && (
+            <div className="flex justify-center space-x-3">
               <Button onClick={clearFilters} size="small">
                 Limpiar filtros
               </Button>
-            )}
+              <Button
+                onClick={handleCreate}
+                variant="secondary"
+                size="small"
+              >
+                Registrar primer servicio
+              </Button>
+            </div>
           </div>
         )}
       </div>
 
       {/* Paginación y registros por página */}
-      {data.resultados.length > 0 && (
+      {serviciosData.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <span className="text-sm text-gray-600">Mostrar</span>
@@ -771,14 +889,7 @@ const MonitoreoProveedores = () => {
         </div>
       )}
 
-      {/* Información de registros */}
-      {data.resultados.length > 0 && (
-        <div className="mt-4 text-sm text-gray-600 text-center">
-          Mostrando {data.resultados.length} de {pagination.totalItems} registros
-          {filters.proveedor_id && ' · Filtrado por proveedor específico'}
-          {(filters.fecha_inicio || filters.fecha_fin) && ' · Filtrado por rango de fechas'}
-        </div>
-      )}
+      
     </div>
   );
 };
