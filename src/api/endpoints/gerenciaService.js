@@ -2,6 +2,28 @@
 import axiosInstance from '../axiosConfig';
 
 export const gerenciaServiceAPI = {
+
+  getFletesProveedores: async (filters = {}) => {
+    const params = new URLSearchParams();
+
+    // Parámetros de filtro
+    if (filters.proveedor_id) params.append('nombre_proveedor', filters.proveedor_id);
+    if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+    if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+    if (filters.limite) params.append('limite', filters.limite);
+    if (filters.pagina) params.append('pagina', filters.pagina);
+
+    try {
+      const response = await axiosInstance.get(`/gerencia/resumen_proveedores?${params.toString()}`);
+      
+      
+      return response.data;
+    } catch (error) {
+      console.warn('Endpoint resumen_proveedores no disponible:', error.message);
+      return []
+    }
+  },
+
   // ==========================================
   // KPI's Completos
   // ==========================================

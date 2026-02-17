@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  Users,
+  Truck,
   Filter,
   Calendar,
   DollarSign,
@@ -10,7 +10,12 @@ import {
   TrendingUp,
   Search,
   Building,
-  FileText
+  FileText,
+  Download,
+  Loader,
+  MapPin,
+  User,
+  CreditCard
 } from 'lucide-react';
 
 // Componentes comunes
@@ -19,23 +24,22 @@ import Pagination from '../../../components/common/Pagination/Pagination';
 
 // API
 import { gerenciaServiceAPI } from '../../../api/endpoints/gerenciaService';
+import utilsAPI from '../../../api/endpoints/utils';
 
 const MonitoreoProveedores = () => {
   const [data, setData] = useState({
-    resumen: {
-      total_proveedores: 0,
-      total_servicios: 0,
-      total_vendido: 0
+    paginacion: {
+      total_registros: 0,
+      total_paginas: 0,
+      pagina_actual: 1,
+      limite_por_pagina: 10
     },
-    filtros_aplicados: {
-      proveedor: null,
-      fecha_inicio: null,
-      fecha_fin: null
-    },
-    detalle_por_proveedor: []
+    resultados: []
   });
   
+  const [proveedores, setProveedores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingDownload, setLoadingDownload] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
   
   // Estados de paginación
@@ -50,7 +54,7 @@ const MonitoreoProveedores = () => {
   
   // Estados para filtros
   const [filters, setFilters] = useState({
-    proveedor: '',
+    proveedor_id: '',
     fecha_inicio: '',
     fecha_fin: ''
   });
@@ -62,16 +66,51 @@ const MonitoreoProveedores = () => {
     rango_fechas: ''
   });
   
-  // Sugerencias de proveedores
-  const [proveedoresSugerencias, setProveedoresSugerencias] = useState([]);
-  
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   
-  const itemsPerPageOptions = [10, 20, 30, 50];
+  const itemsPerPageOptions = [10, 20, 30, 50, 100];
 
-  // Función principal para cargar datos
-  const fetchResumen = useCallback(
+  // Cargar proveedores al montar el componente
+  useEffect(() => {
+    cargarProveedores();
+  }, []);
+
+  // Efecto para búsqueda con debounce
+  useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      setPagination(prev => ({
+        ...prev,
+        currentPage: 1
+      }));
+      
+      fetchFletes(1, pagination.itemsPerPage, filters);
+    }, 500);
+
+    setSearchTimeout(timeout);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [filters.proveedor_id, filters.fecha_inicio, filters.fecha_fin]);
+
+  // Cargar proveedores
+  const cargarProveedores = useCallback(async () => {
+    try {
+      const response = await utilsAPI.getProveedoresList ();
+      setProveedores(response || []);
+    } catch (err) {
+      console.error('Error cargando proveedores:', err);
+      setError('Error al cargar la lista de proveedores');
+    }
+  }, []);
+
+  // Función principal para cargar fletes
+  const fetchFletes = useCallback(
     async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
       setIsLoading(true);
       setError(null);
@@ -85,17 +124,10 @@ const MonitoreoProveedores = () => {
       // Validar fechas
       const validationErrors = {};
       
-      if (filtersToUse.fecha_inicio && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_inicio)) {
-        validationErrors.fecha_inicio = 'Formato de fecha inválido. Use YYYY-MM-DD';
-      }
-      
-      if (filtersToUse.fecha_fin && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_fin)) {
-        validationErrors.fecha_fin = 'Formato de fecha inválido. Use YYYY-MM-DD';
-      }
-      
-      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin && 
-          !gerenciaServiceAPI.validarRangoFechas(filtersToUse.fecha_inicio, filtersToUse.fecha_fin)) {
-        validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
+      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin) {
+        if (filtersToUse.fecha_inicio > filtersToUse.fecha_fin) {
+          validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
+        }
       }
       
       if (Object.keys(validationErrors).length > 0) {
@@ -106,43 +138,39 @@ const MonitoreoProveedores = () => {
       
       try {
         // Preparar filtros para API
-        const cleanFilters = {};
-        Object.entries(filtersToUse).forEach(([key, value]) => {
-          if (value && value.trim() !== '') {
-            cleanFilters[key] = value.trim();
-          }
-        });
+        const apiFilters = {
+          pagina: page,
+          limite: itemsPerPage
+        };
         
-        // Llamar a la API específica para proveedores
-        const response = await gerenciaServiceAPI.getResumenPorProveedor(cleanFilters);
+        if (filtersToUse.proveedor_id) {
+          apiFilters.proveedor_id = filtersToUse.proveedor_id;
+        }
         
-        // Calcular paginación
-        const totalItems = response.detalle_por_proveedor?.length || 0;
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        if (filtersToUse.fecha_inicio) {
+          apiFilters.fecha_inicio = filtersToUse.fecha_inicio;
+        }
         
-        // Calcular índices para la página actual
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
+        if (filtersToUse.fecha_fin) {
+          apiFilters.fecha_fin = filtersToUse.fecha_fin;
+        }
         
-        // Obtener elementos de la página actual
-        const paginatedItems = response.detalle_por_proveedor?.slice(startIndex, endIndex) || [];
+        // Llamar a la API de fletes
+        const response = await gerenciaServiceAPI.getFletesProveedores(apiFilters);
         
-        setData({
-          ...response,
-          detalle_por_proveedor: paginatedItems
-        });
+        setData(response);
         
         setPagination({
-          currentPage: page,
-          itemsPerPage: itemsPerPage,
-          totalItems: totalItems,
-          totalPages: totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
+          currentPage: response.paginacion.pagina_actual,
+          itemsPerPage: response.paginacion.limite_por_pagina,
+          totalItems: response.paginacion.total_registros,
+          totalPages: response.paginacion.total_paginas,
+          hasNext: response.paginacion.pagina_actual < response.paginacion.total_paginas,
+          hasPrev: response.paginacion.pagina_actual > 1,
         });
         
       } catch (err) {
-        setError('Error al cargar el resumen: ' + (err.message || 'Error desconocido'));
+        setError('Error al cargar los fletes: ' + (err.message || 'Error desconocido'));
       } finally {
         setIsLoading(false);
       }
@@ -150,50 +178,21 @@ const MonitoreoProveedores = () => {
     []
   );
 
-  // Efecto para búsqueda en tiempo real con debounce
-  useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    const timeout = setTimeout(() => {
-      setPagination(prev => ({
-        ...prev,
-        currentPage: 1
-      }));
-      
-      fetchResumen(1, pagination.itemsPerPage, filters);
-    }, 500);
-
-    setSearchTimeout(timeout);
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [filters]);
-
-  // Cargar datos iniciales
-  useEffect(() => {
-    fetchResumen();
-    cargarProveedoresSugerencias();
-  }, []);
-
-  // Cargar sugerencias de proveedores
-  const cargarProveedoresSugerencias = useCallback(async () => {
-    try {
-      const proveedores = await gerenciaServiceAPI.getProveedoresSugerencias();
-      setProveedoresSugerencias(proveedores);
-    } catch (err) {
-      console.error('Error cargando sugerencias de proveedores:', err);
-    }
-  }, []);
-
   // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => ({
       ...prev,
       [key]: value
     }));
+    
+    // Limpiar errores específicos
+    if (key === 'fecha_inicio' || key === 'fecha_fin') {
+      setErrors(prev => ({
+        ...prev,
+        [key]: '',
+        rango_fechas: ''
+      }));
+    }
   }, []);
 
   // Handler para seleccionar fecha automáticamente
@@ -204,7 +203,7 @@ const MonitoreoProveedores = () => {
 
   const clearFilters = useCallback(() => {
     setFilters({
-      proveedor: '',
+      proveedor_id: '',
       fecha_inicio: '',
       fecha_fin: ''
     });
@@ -216,30 +215,101 @@ const MonitoreoProveedores = () => {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    fetchResumen(pagination.currentPage, pagination.itemsPerPage, filters);
-  }, [fetchResumen, pagination.currentPage, pagination.itemsPerPage, filters]);
+    fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
+  }, [fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   const handlePageChange = useCallback(
     (newPage) => {
-      fetchResumen(newPage, pagination.itemsPerPage, filters);
+      fetchFletes(newPage, pagination.itemsPerPage, filters);
     },
-    [fetchResumen, pagination.itemsPerPage, filters]
+    [fetchFletes, pagination.itemsPerPage, filters]
   );
 
   const handleItemsPerPageChange = useCallback(
     (newItemsPerPage) => {
-      fetchResumen(1, newItemsPerPage, filters);
+      fetchFletes(1, newItemsPerPage, filters);
     },
-    [fetchResumen, filters]
+    [fetchFletes, filters]
   );
+
+  // Exportar a Excel
+  const handleExportarExcel = useCallback(async () => {
+    try {
+      setLoadingDownload(true);
+      
+      const apiFilters = {};
+      
+      if (filters.proveedor_id) {
+        apiFilters.proveedor_id = filters.proveedor_id;
+      }
+      if (filters.fecha_inicio) {
+        apiFilters.fecha_inicio = filters.fecha_inicio;
+      }
+      if (filters.fecha_fin) {
+        apiFilters.fecha_fin = filters.fecha_fin;
+      }
+      
+      const blob = await gerenciaServiceAPI.exportFletesExcel(apiFilters);
+      
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `fletes_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      
+      setSuccessMessage('Exportación completada exitosamente');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (err) {
+      setError('Error al exportar: ' + err.message);
+    } finally {
+      setLoadingDownload(false);
+    }
+  }, [filters]);
 
   // Formatear moneda
   const formatMoneda = (valor) => {
-    return gerenciaServiceAPI.formatMoneda(valor);
+    return new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency: 'PEN',
+      minimumFractionDigits: 2
+    }).format(valor || 0);
+  };
+
+  // Formatear fecha
+  const formatFecha = (fechaStr) => {
+    if (!fechaStr) return '-';
+    const fecha = new Date(fechaStr);
+    return fecha.toLocaleDateString('es-PE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
+  // Obtener badge de estado
+  const getEstadoBadge = (estado) => {
+    const estados = {
+      'PENDIENTE': { color: 'text-yellow-800', bg: 'bg-yellow-100', icon: '⏳' },
+      'PAGADO': { color: 'text-green-800', bg: 'bg-green-100', icon: '✅' },
+      'VENCIDO': { color: 'text-red-800', bg: 'bg-red-100', icon: '⚠️' },
+      'ANULADO': { color: 'text-gray-800', bg: 'bg-gray-100', icon: '❌' }
+    };
+    
+    const style = estados[estado] || { color: 'text-blue-800', bg: 'bg-blue-100', icon: '📄' };
+    
+    return (
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${style.bg} ${style.color}`}>
+        <span className="mr-1">{style.icon}</span>
+        {estado}
+      </span>
+    );
   };
 
   // Mostrar loading solo en carga inicial
-  if (isLoading && data.detalle_por_proveedor.length === 0) {
+  if (isLoading && data.resultados.length === 0) {
     return (
       <div className="p-4">
         <div className="animate-pulse">
@@ -258,45 +328,31 @@ const MonitoreoProveedores = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Monitoreo de Proveedores
+            Monitoreo de Fletes
           </h1>
           <p className="text-gray-600 mt-1">
-            Análisis de servicios y ventas por proveedor
+            Visualización y seguimiento de fletes por proveedor y rango de fechas
           </p>
         </div>
-      </div>
-
-      {/* Panel de Resumen General */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-blue-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Proveedores</p>
-              <p className="text-2xl font-bold text-blue-700">{data.resumen.total_proveedores}</p>
-            </div>
-            <Users className="h-8 w-8 text-blue-500" />
-          </div>
-        </div>
         
-        <div className="bg-white rounded-lg border border-green-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Servicios</p>
-              <p className="text-2xl font-bold text-green-700">{data.resumen.total_servicios}</p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-green-500" />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-purple-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Vendido</p>
-              <p className="text-2xl font-bold text-purple-700">{formatMoneda(data.resumen.total_vendido)}</p>
-            </div>
-            <DollarSign className="h-8 w-8 text-purple-500" />
-          </div>
-        </div>
+        {/* Botón de exportación */}
+        <button
+          onClick={handleExportarExcel}
+          disabled={loadingDownload}
+          className="mt-4 lg:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2 disabled:opacity-50"
+        >
+          {loadingDownload ? (
+            <>
+              <Loader className="h-4 w-4 animate-spin" />
+              Exportando...
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4" />
+              Exportar a Excel
+            </>
+          )}
+        </button>
       </div>
 
       {/* Mensajes de éxito y error */}
@@ -344,7 +400,7 @@ const MonitoreoProveedores = () => {
               <Filter className="h-5 w-5 text-blue-600" />
               Filtros de Búsqueda
             </h3>
-            <p className="text-sm text-gray-600">Filtrado en tiempo real </p>
+            <p className="text-sm text-gray-600">Filtrado en tiempo real</p>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -368,32 +424,28 @@ const MonitoreoProveedores = () => {
           </div>
         </div>
 
-        {/* Filtros en tiempo real */}
+        {/* Filtros */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Proveedor */}
+          {/* Proveedor - Ahora es un select */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Nombre del Proveedor
+              <Building className="h-4 w-4" />
+              Proveedor
             </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={filters.proveedor}
-                onChange={(e) => handleFilterChange('proveedor', e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                placeholder="Ej: Transporte Guerrero"
-                list="proveedores-sugerencias"
-              />
-              <datalist id="proveedores-sugerencias">
-                {proveedoresSugerencias.map((proveedor, index) => (
-                  <option key={index} value={proveedor} />
-                ))}
-              </datalist>
-            </div>
+            <select
+              value={filters.proveedor_id}
+              onChange={(e) => handleFilterChange('proveedor_id', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+            >
+              <option value="">Todos los proveedores</option>
+              {proveedores.map((proveedor) => (
+                <option key={proveedor} value={proveedor}>
+                  {proveedor}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-gray-500 mt-1">
-              Deje vacío para ver todos los proveedores
+              Seleccione un proveedor para filtrar
             </p>
           </div>
 
@@ -413,7 +465,7 @@ const MonitoreoProveedores = () => {
               />
               <button
                 onClick={() => handleSelectToday('fecha_inicio')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300"
+                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300 whitespace-nowrap"
                 type="button"
               >
                 Hoy
@@ -441,7 +493,7 @@ const MonitoreoProveedores = () => {
               />
               <button
                 onClick={() => handleSelectToday('fecha_fin')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300"
+                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300 whitespace-nowrap"
                 type="button"
               >
                 Hoy
@@ -461,13 +513,13 @@ const MonitoreoProveedores = () => {
         )}
 
         {/* Contador de filtros activos */}
-        {Object.values(filters).some(f => f && f.trim() !== '') && (
+        {Object.values(filters).some(f => f) && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="text-sm text-gray-600 flex items-center justify-between">
               <span>
                 Filtros activos: 
                 <span className="font-medium text-blue-600 ml-2">
-                  {Object.values(filters).filter(f => f && f.trim() !== '').length}
+                  {Object.values(filters).filter(f => f).length}
                 </span>
               </span>
               <button
@@ -481,114 +533,200 @@ const MonitoreoProveedores = () => {
         )}
       </div>
 
-      {/* Tabla de Detalle por Proveedor */}
+      {/* Tabla de Fletes - Estilo Excel */}
       <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b border-gray-300">
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  CÓDIGO FLETE
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  CÓDIGO SERVICIO
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   PROVEEDOR
                 </th>
-                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  RAZÓN SOCIAL / RUC
-                </th> */}
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  TOTAL DE SERVICIOS
+                  CLIENTE
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  TOTAL VENDIDO
+                  FECHA SERVICIO
                 </th>
-                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  SERVICIOS DISTINTOS
-                </th> */}
-                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  CANTIDAD DE FLETES
-                </th> */}
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  ORIGEN
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  DESTINO
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  VEHÍCULO
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  CONDUCTOR
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  M³ / TN
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  ESTADO
+                </th>
+                <th className="py-3 px-4 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  MONTO FLETE
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  FACTURA
+                </th>
+                <th className="py-3 px-4 text-center font-semibold text-gray-700 whitespace-nowrap">
+                  ACCIONES
+                </th>
               </tr>
             </thead>
             <tbody>
-              {data.detalle_por_proveedor.map((item, index) => (
+              {data.resultados.map((item, index) => (
                 <tr 
-                  key={`${item.proveedor}-${index}`} 
+                  key={`${item.flete._id}-${index}`} 
                   className="border-b border-gray-200 hover:bg-blue-50"
                 >
+                  {/* Código Flete */}
+                  <td className="px-4 py-3 font-mono text-xs font-medium">
+                    {item.flete.codigo_flete}
+                  </td>
+
+                  {/* Código Servicio */}
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {item.servicio.codigo_servicio_principal}
+                  </td>
+
                   {/* Proveedor */}
                   <td className="px-4 py-3">
-                    <div className="font-bold text-gray-900">
-                      {item.proveedor ? item.proveedor: "PROVEEDOR SIN NOMBRE (CUADRILLA / ALAMACEN)"}
+                    <div className="font-medium text-gray-900">
+                      {item.servicio.proveedor.nombre}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      RUC: {item.servicio.proveedor.ruc}
                     </div>
                   </td>
 
-                  {/* Razón Social / RUC */}
-                  {/* <td className="px-4 py-3">
-                    <div className="text-gray-700">
-                      <div className="font-medium">{item.razon_social}</div>
-                      {item.ruc && (
-                        <div className="text-xs text-gray-500 mt-1">RUC: {item.ruc}</div>
-                      )}
-                    </div>
-                  </td> */}
-
-                  {/* Total de Servicios */}
+                  {/* Cliente */}
                   <td className="px-4 py-3">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full font-bold mr-2">
-                        {item.total_servicios}
-                      </span>
-                      <span className="text-gray-900 font-medium">
-                        servicio{item.total_servicios !== 1 ? 's' : ''}
-                      </span>
+                    <div className="font-medium text-gray-900">
+                      {item.servicio.cliente.nombre}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      RUC: {item.servicio.cliente.ruc}
                     </div>
                   </td>
 
-                  {/* Total Vendido */}
+                  {/* Fecha Servicio */}
+                  <td className="px-4 py-3 text-xs">
+                    {formatFecha(item.servicio.fecha_servicio)}
+                  </td>
+
+                  {/* Origen */}
+                  <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={item.servicio.origen}>
+                    <div className="flex items-center">
+                      <MapPin className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
+                      <span className="truncate">{item.servicio.origen}</span>
+                    </div>
+                  </td>
+
+                  {/* Destino */}
+                  <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={item.servicio.destino}>
+                    <div className="flex items-center">
+                      <MapPin className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
+                      <span className="truncate">{item.servicio.destino}</span>
+                    </div>
+                  </td>
+
+                  {/* Vehículo */}
+                  <td className="px-4 py-3 text-xs">
+                    <div className="font-mono">{item.servicio.flota.placa}</div>
+                    <div className="text-gray-500 text-xs">{item.servicio.flota.marca} {item.servicio.flota.modelo}</div>
+                  </td>
+
+                  {/* Conductor */}
+                  <td className="px-4 py-3 text-xs">
+                    <div className="flex items-center">
+                      <User className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
+                      <span>
+                        {item.servicio.conductor[0]?.nombres_completos || 
+                         item.servicio.conductor[0]?.nombre || 
+                         item.servicio.flota.nombre_conductor || '-'}
+                      </span>
+                    </div>
+                    {item.servicio.conductor[0]?.dni && (
+                      <div className="text-gray-500 text-xs">DNI: {item.servicio.conductor[0].dni}</div>
+                    )}
+                  </td>
+
+                  {/* M³ / TN */}
+                  <td className="px-4 py-3 text-xs">
+                    {item.servicio.m3} m³ / {item.servicio.tn} tn
+                  </td>
+
+                  {/* Estado */}
                   <td className="px-4 py-3">
-                    <div className="font-bold text-green-700">
-                      {formatMoneda(item.total_vendido)}
-                    </div>
+                    {getEstadoBadge(item.flete.estado_flete)}
                   </td>
 
-                  {/* Servicios Distintos */}
-                  {/* <td className="px-4 py-3">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 text-gray-700 rounded text-xs font-medium mr-2">
-                        {item.cantidad_servicios_distintos}
-                      </span>
-                      <span className="text-gray-700">
-                        tipo{item.cantidad_servicios_distintos !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </td> */}
+                  {/* Monto Flete */}
+                  <td className="px-4 py-3 text-right font-mono font-medium">
+                    {formatMoneda(item.flete.monto_flete)}
+                  </td>
 
-                  {/* Fletes Asociados */}
-                  {/* <td className="px-4 py-3">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center justify-center w-6 h-6 bg-orange-100 text-orange-700 rounded text-xs font-medium mr-2">
-                        {item.cantidad_fletes}
-                      </span>
-                      <span className="text-gray-700">
-                        flete{item.cantidad_fletes !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </td> */}
+                  {/* Factura */}
+                  <td className="px-4 py-3 text-xs">
+                    {item.flete.codigo_factura ? (
+                      <div className="flex items-center">
+                        <FileText className="h-3 w-3 text-gray-400 mr-1" />
+                        {item.flete.codigo_factura}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  {/* Acciones */}
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => window.location.href = `/gerencia/fletes/${item.flete._id}`}
+                      className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                    >
+                      Ver Detalle
+                    </button>
+                  </td>
                 </tr>
               ))}
+
+              {/* Fila de totales */}
+              {data.resultados.length > 0 && (
+                <tr className="bg-gray-50 border-t-2 border-gray-300 font-medium">
+                  <td colSpan="11" className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                    TOTAL GENERAL:
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono font-bold text-blue-700">
+                    {formatMoneda(data.resultados.reduce((sum, item) => sum + (item.flete.monto_flete || 0), 0))}
+                  </td>
+                  <td colSpan="2"></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Sin resultados */}
-        {data.detalle_por_proveedor.length === 0 && !isLoading && (
+        {data.resultados.length === 0 && !isLoading && (
           <div className="text-center py-12">
-            <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron resultados</h3>
+            <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron fletes</h3>
             <p className="text-gray-600 mb-6">
-              {Object.values(filters).some(f => f && f.trim() !== '')
+              {Object.values(filters).some(f => f)
                 ? 'Intenta ajustar los filtros de búsqueda'
-                : 'No hay datos disponibles para mostrar'}
+                : 'No hay fletes disponibles para mostrar'}
             </p>
-            {Object.values(filters).some(f => f && f.trim() !== '') && (
+            {Object.values(filters).some(f => f) && (
               <Button onClick={clearFilters} size="small">
                 Limpiar filtros
               </Button>
@@ -598,7 +736,7 @@ const MonitoreoProveedores = () => {
       </div>
 
       {/* Paginación y registros por página */}
-      {data.detalle_por_proveedor.length > 0 && (
+      {data.resultados.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <span className="text-sm text-gray-600">Mostrar</span>
@@ -633,25 +771,12 @@ const MonitoreoProveedores = () => {
         </div>
       )}
 
-      {/* Información de filtros aplicados */}
-      {Object.values(data.filtros_aplicados).some(f => f !== null) && (
-        <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">Filtros Aplicados:</h4>
-          <div className="text-sm text-gray-600">
-            {data.filtros_aplicados.proveedor && (
-              <p>• Proveedor: <span className="font-medium">{data.filtros_aplicados.proveedor}</span></p>
-            )}
-            {data.filtros_aplicados.fecha_inicio && (
-              <p>• Fecha Inicio: <span className="font-medium">
-                {gerenciaServiceAPI.formatFechaDisplay(data.filtros_aplicados.fecha_inicio)}
-              </span></p>
-            )}
-            {data.filtros_aplicados.fecha_fin && (
-              <p>• Fecha Fin: <span className="font-medium">
-                {gerenciaServiceAPI.formatFechaDisplay(data.filtros_aplicados.fecha_fin)}
-              </span></p>
-            )}
-          </div>
+      {/* Información de registros */}
+      {data.resultados.length > 0 && (
+        <div className="mt-4 text-sm text-gray-600 text-center">
+          Mostrando {data.resultados.length} de {pagination.totalItems} registros
+          {filters.proveedor_id && ' · Filtrado por proveedor específico'}
+          {(filters.fecha_inicio || filters.fecha_fin) && ' · Filtrado por rango de fechas'}
         </div>
       )}
     </div>
