@@ -24,6 +24,19 @@ export const gerenciaServiceAPI = {
     }
   },
 
+  exportDataMaestraExcel: async () => {
+
+  const response = await axiosInstance.get(
+    `/gerencia/export/data-maestra-completa`,
+    { 
+      responseType: 'blob',
+      timeout: 0 
+    }
+  );
+
+  return response.data;
+},
+
   // ==========================================
   // KPI's Completos
   // ==========================================

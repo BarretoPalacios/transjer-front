@@ -11,11 +11,17 @@ import {
   Calendar,
   RefreshCw,
   BarChart3,
-  Filter
+  Filter,
+  Download 
 } from 'lucide-react';
 import { facturacionGestionAPI } from "../../../api/endpoints/facturacionGestion";
+import {gerenciaServiceAPI} from '../../../api/endpoints/gerenciaService';
 
 const AnaliticasGerenciales = () => {
+
+  const [loadingExport, setLoadingExport] = useState(false);
+  const [errorExport, setErrorExport] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -66,6 +72,39 @@ const AnaliticasGerenciales = () => {
       maximumFractionDigits: 2
     }).format(numValue || 0);
   };
+
+
+  const handleDownload = async () => {
+  try {
+    setLoadingExport(true);
+    
+    // 1. Llamada al servicio
+    const blob = await gerenciaServiceAPI.exportDataMaestraExcel();
+
+    // 2. Creación del objeto URL
+    const url = window.URL.createObjectURL(new Blob([blob]));
+    const link = document.createElement('a');
+    link.href = url;
+
+    // 3. Configuración del archivo
+    const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
+    link.setAttribute('download', `DATA_MAESTRA_${timestamp}.xlsx`);
+
+    // 4. Ejecución de descarga
+    document.body.appendChild(link);
+    link.click();
+
+    // 5. Limpieza
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+  } catch (error) {
+    console.error("Error al exportar:", error);
+    // Aquí podrías disparar una alerta de error (Toast/Swal)
+  } finally {
+    setLoadingExport(false);
+  }
+};
 
   // Lista de meses
   const meses = [
@@ -170,6 +209,15 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 {loading ? 'Actualizando...' : 'Actualizar'}
+              </button>
+
+              <button
+                onClick={handleDownload}
+                disabled={loadingExport}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className={`h-4 w-4 `} />
+                {loadingExport ? 'Descargando...' : 'Descargar Data Maestra'}
               </button>
             </div>
             
