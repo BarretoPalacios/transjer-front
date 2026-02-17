@@ -219,7 +219,7 @@ export const serviciosPrincipalesAPI = {
     if (filters.cliente_nombre) params.append('cliente_nombre', filters.cliente_nombre);
     if (filters.proveedor_nombre) params.append('proveedor_nombre', filters.proveedor_nombre);
     if (filters.cuenta_nombre) params.append('cuenta_nombre', filters.cuenta_nombre);
-    if (filters.vehiculo_placa) params.append('vehiculo_placa', filters.vehiculo_placa);
+    if (filters.flota_placa) params.append('flota_placa', filters.flota_placa);
     if (filters.conductor_nombre) params.append('conductor_nombre', filters.conductor_nombre);
     
     if (filters.origen) params.append('origen', filters.origen);

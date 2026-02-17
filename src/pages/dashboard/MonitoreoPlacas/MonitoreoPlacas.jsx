@@ -3,14 +3,22 @@ import {
   Truck,
   Filter,
   Calendar,
-  DollarSign,
   RefreshCw,
   X,
   CheckCircle,
-  TrendingUp,
+  Search,
+  Building,
   Download,
-  Printer,
-  Search
+  Loader,
+  MapPin,
+  User,
+  Package,
+  Car,
+  FileText,
+  Clock,
+  Hash,
+  CalendarDays,
+  DollarSign
 } from 'lucide-react';
 
 // Componentes comunes
@@ -18,26 +26,18 @@ import Button from '../../../components/common/Button/Button';
 import Pagination from '../../../components/common/Pagination/Pagination';
 
 // API
-import { gerenciaServiceAPI } from '../../../api/endpoints/gerenciaService';
-
+import { serviciosPrincipalesAPI } from '../../../api/endpoints/servicioPrincipal';
+import utilsAPI from '../../../api/endpoints/utils';
 
 const MonitoreoPlacas = () => {
-  const [data, setData] = useState({
-    resumen: {
-      total_placas: 0,
-      total_servicios: 0,
-      total_vendido: 0
-    },
-    filtros_aplicados: {
-      placa: null,
-      fecha_inicio: null,
-      fecha_fin: null
-    },
-    detalle_por_placa: []
-  });
-  
+  const [serviciosData, setServiciosData] = useState([]);
+  const [placas, setPlacas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingDownload, setLoadingDownload] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
+  
+  // Estado para los montos por servicio
+  const [montos, setMontos] = useState({});
   
   // Estados de paginación
   const [pagination, setPagination] = useState({
@@ -49,11 +49,11 @@ const MonitoreoPlacas = () => {
     hasPrev: false,
   });
   
-  // Estados para filtros
+  // Estados para filtros - Reemplazamos proveedor_nombre por flota_placa
   const [filters, setFilters] = useState({
-    placa: '',
     fecha_inicio: '',
-    fecha_fin: ''
+    fecha_fin: '',
+    flota_placa: '' // Nuevo filtro de placa
   });
   
   // Estados para errores de validación
@@ -63,16 +63,53 @@ const MonitoreoPlacas = () => {
     rango_fechas: ''
   });
   
-  // Sugerencias de placas
-  const [placasSugerencias, setPlacasSugerencias] = useState([]);
-  
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   
-  const itemsPerPageOptions = [10, 20, 30, 50];
+  const itemsPerPageOptions = [10, 20, 30, 50, 100];
 
-  // Función principal para cargar datos
-  const fetchResumen = useCallback(
+  // Cargar placas al montar el componente
+  useEffect(() => {
+    cargarPlacas();
+  }, []);
+
+  // Efecto para búsqueda con debounce
+  useEffect(() => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      setPagination(prev => ({
+        ...prev,
+        currentPage: 1
+      }));
+      
+      fetchServiciosPrincipales(1, pagination.itemsPerPage, filters);
+    }, 500);
+
+    setSearchTimeout(timeout);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [filters.fecha_inicio, filters.fecha_fin, filters.flota_placa]);
+
+  // Cargar placas desde la API utils
+  const cargarPlacas = useCallback(async () => {
+    try {
+      // Asumiendo que existe un endpoint para obtener placas
+      // Si el endpoint es diferente, ajústalo según corresponda
+      const response = await utilsAPI.getPlacasList(); 
+      setPlacas(response || []);
+    } catch (err) {
+      console.error('Error cargando placas:', err);
+      setError('Error al cargar la lista de placas');
+    }
+  }, []);
+
+  // Función principal para cargar servicios principales
+  const fetchServiciosPrincipales = useCallback(
     async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
       setIsLoading(true);
       setError(null);
@@ -86,17 +123,10 @@ const MonitoreoPlacas = () => {
       // Validar fechas
       const validationErrors = {};
       
-      if (filtersToUse.fecha_inicio && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_inicio)) {
-        validationErrors.fecha_inicio = 'Formato de fecha inválido. Use YYYY-MM-DD';
-      }
-      
-      if (filtersToUse.fecha_fin && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_fin)) {
-        validationErrors.fecha_fin = 'Formato de fecha inválido. Use YYYY-MM-DD';
-      }
-      
-      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin && 
-          !gerenciaServiceAPI.validarRangoFechas(filtersToUse.fecha_inicio, filtersToUse.fecha_fin)) {
-        validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
+      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin) {
+        if (filtersToUse.fecha_inicio > filtersToUse.fecha_fin) {
+          validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
+        }
       }
       
       if (Object.keys(validationErrors).length > 0) {
@@ -107,42 +137,40 @@ const MonitoreoPlacas = () => {
       
       try {
         // Preparar filtros para API
-        const cleanFilters = {};
-        Object.entries(filtersToUse).forEach(([key, value]) => {
-          if (value && value.trim() !== '') {
-            cleanFilters[key] = value.trim();
-          }
-        });
+        const apiFilters = {
+          page: page,
+          page_size: itemsPerPage
+        };
         
-        const response = await gerenciaServiceAPI.getResumenPorPlaca(cleanFilters);
+        // Solo enviar filtros que tengan valor
+        if (filtersToUse.fecha_inicio) {
+          apiFilters.fecha_inicio = filtersToUse.fecha_inicio;
+        }
         
-        // Calcular paginación
-        const totalItems = response.detalle_por_placa?.length || 0;
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        if (filtersToUse.fecha_fin) {
+          apiFilters.fecha_fin = filtersToUse.fecha_fin;
+        }
         
-        // Calcular índices para la página actual
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
+        if (filtersToUse.flota_placa && filtersToUse.flota_placa.trim() !== '') {
+          apiFilters.flota_placa = filtersToUse.flota_placa.trim();
+        }
         
-        // Obtener elementos de la página actual
-        const paginatedItems = response.detalle_por_placa?.slice(startIndex, endIndex) || [];
+        // Llamar a la API de servicios principales
+        const response = await serviciosPrincipalesAPI.getAllServiciosPrincipales(apiFilters);
         
-        setData({
-          ...response,
-          detalle_por_placa: paginatedItems
-        });
+        setServiciosData(response.data || []);
         
         setPagination({
-          currentPage: page,
-          itemsPerPage: itemsPerPage,
-          totalItems: totalItems,
-          totalPages: totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
+          currentPage: response.pagination.page,
+          itemsPerPage: response.pagination.page_size,
+          totalItems: response.pagination.total,
+          totalPages: response.pagination.total_pages,
+          hasNext: response.pagination.has_next,
+          hasPrev: response.pagination.has_prev,
         });
         
       } catch (err) {
-        setError('Error al cargar el resumen: ' + (err.message || 'Error desconocido'));
+        setError('Error al cargar los servicios: ' + (err.message || 'Error desconocido'));
       } finally {
         setIsLoading(false);
       }
@@ -150,50 +178,21 @@ const MonitoreoPlacas = () => {
     []
   );
 
-  // Efecto para búsqueda en tiempo real con debounce
-  useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    const timeout = setTimeout(() => {
-      setPagination(prev => ({
-        ...prev,
-        currentPage: 1
-      }));
-      
-      fetchResumen(1, pagination.itemsPerPage, filters);
-    }, 500);
-
-    setSearchTimeout(timeout);
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [filters]);
-
-  // Cargar datos iniciales
-  useEffect(() => {
-    fetchResumen();
-    cargarPlacasSugerencias();
-  }, []);
-
-  // Cargar sugerencias de placas
-  const cargarPlacasSugerencias = useCallback(async () => {
-    try {
-      const placas = await gerenciaServiceAPI.getPlacasSugerencias();
-      setPlacasSugerencias(placas);
-    } catch (err) {
-      console.error('Error cargando sugerencias de placas:', err);
-    }
-  }, []);
-
   // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => ({
       ...prev,
       [key]: value
     }));
+    
+    // Limpiar errores específicos
+    if (key === 'fecha_inicio' || key === 'fecha_fin') {
+      setErrors(prev => ({
+        ...prev,
+        [key]: '',
+        rango_fechas: ''
+      }));
+    }
   }, []);
 
   // Handler para seleccionar fecha automáticamente
@@ -204,9 +203,9 @@ const MonitoreoPlacas = () => {
 
   const clearFilters = useCallback(() => {
     setFilters({
-      placa: '',
       fecha_inicio: '',
-      fecha_fin: ''
+      fecha_fin: '',
+      flota_placa: ''
     });
     setErrors({
       fecha_inicio: '',
@@ -216,46 +215,123 @@ const MonitoreoPlacas = () => {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    fetchResumen(pagination.currentPage, pagination.itemsPerPage, filters);
-  }, [fetchResumen, pagination.currentPage, pagination.itemsPerPage, filters]);
+    fetchServiciosPrincipales(pagination.currentPage, pagination.itemsPerPage, filters);
+  }, [fetchServiciosPrincipales, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   const handlePageChange = useCallback(
     (newPage) => {
-      fetchResumen(newPage, pagination.itemsPerPage, filters);
+      fetchServiciosPrincipales(newPage, pagination.itemsPerPage, filters);
     },
-    [fetchResumen, pagination.itemsPerPage, filters]
+    [fetchServiciosPrincipales, pagination.itemsPerPage, filters]
   );
 
   const handleItemsPerPageChange = useCallback(
     (newItemsPerPage) => {
-      fetchResumen(1, newItemsPerPage, filters);
+      fetchServiciosPrincipales(1, newItemsPerPage, filters);
     },
-    [fetchResumen, filters]
+    [fetchServiciosPrincipales, filters]
   );
 
-  // Función para exportar a Excel
-  const handleExportExcel = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Aquí iría la lógica para exportar a Excel
-      // Por ahora solo mostramos un mensaje
-      setSuccessMessage('Función de exportación a Excel implementada en el backend');
-    } catch (err) {
-      setError('Error al exportar: ' + err.message);
-    } finally {
-      setIsLoading(false);
-    }
+  // Handler para cambio de monto
+  const handleMontoChange = useCallback((servicioId, value) => {
+    setMontos(prev => ({
+      ...prev,
+      [servicioId]: value
+    }));
   }, []);
 
-  // Formatear moneda
-  const formatMoneda = (valor) => {
-    return gerenciaServiceAPI.formatMoneda(valor);
+  // Handler para enviar monto (solo lógica, no envía a API aún)
+  const handleEnviarMonto = useCallback((servicioId, e) => {
+    e.stopPropagation();
+    const monto = montos[servicioId];
+    console.log('Enviar monto para servicio:', servicioId, 'Monto:', monto);
+    // Aquí iría la llamada a la API
+  }, [montos]);
+
+  // Exportar a Excel
+  const handleExportarExcel = useCallback(async () => {
+    try {
+      setLoadingDownload(true);
+      
+      const filtersForAPI = {};
+      
+      // Solo enviar filtros que tengan valor
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && value.trim() !== '') {
+          filtersForAPI[key] = value.trim();
+        }
+      });
+      
+      const blob = await serviciosPrincipalesAPI.exportServiciosExcel(filtersForAPI);
+      
+      // Usar el método downloadExcel de la API
+      serviciosPrincipalesAPI.downloadExcel(
+        blob, 
+        `monitoreo_placas_${new Date().toISOString().split('T')[0]}.xlsx`
+      );
+      
+      setSuccessMessage('Exportación completada exitosamente');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (err) {
+      setError('Error al exportar: ' + err.message);
+      console.error('Error exporting servicios:', err);
+    } finally {
+      setLoadingDownload(false);
+    }
+  }, [filters]);
+
+  // Funciones auxiliares para estados y badges
+  const getEstadoIcon = (estado) => {
+    const iconMap = {
+      'Programado': Clock,
+      'En Proceso': Truck,
+      'Completado': CheckCircle,
+      'Cancelado': X
+    };
+    return iconMap[estado] || Clock;
+  };
+
+  const getEstadoBadgeClass = (estado) => {
+    const classMap = {
+      'Programado': 'bg-yellow-100 text-yellow-800',
+      'En Proceso': 'bg-blue-100 text-blue-800',
+      'Completado': 'bg-green-100 text-green-800',
+      'Cancelado': 'bg-red-100 text-red-800'
+    };
+    return classMap[estado] || 'bg-gray-100 text-gray-800';
+  };
+
+  const puedeCambiarEstado = (servicio) => {
+    return servicio.estado === 'Programado' || servicio.estado === 'En Proceso';
+  };
+
+  // Handlers para acciones
+  const handleRowClick = (servicio) => {
+    console.log('Fila clickeada:', servicio);
+  };
+
+  const handleAbrirCambioEstado = (servicio, e) => {
+    e.stopPropagation();
+    console.log('Cambiar estado:', servicio);
+  };
+
+  const handleCreate = () => {
+    console.log('Crear nuevo servicio');
+  };
+
+  const formatearFecha = (fechaStr) => {
+    if (!fechaStr) return "N/A";
+    // Si viene como objeto de Mongo, extraemos el string
+    const date = typeof fechaStr === 'object' ? fechaStr.$date : fechaStr;
+    
+    // Dividimos "2026-02-03..." por el guion y tomamos solo los primeros 3 elementos
+    const [year, month, day] = date.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
   };
 
   // Mostrar loading solo en carga inicial
-  if (isLoading && data.detalle_por_placa.length === 0) {
+  if (isLoading && serviciosData.length === 0) {
     return (
       <div className="p-4">
         <div className="animate-pulse">
@@ -274,45 +350,31 @@ const MonitoreoPlacas = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Resumen por Placa
+            Monitoreo de Placas
           </h1>
           <p className="text-gray-600 mt-1">
-            Análisis de servicios y ventas por vehículo
+            Visualización y seguimiento de servicios por placa y rango de fechas
           </p>
         </div>
-      </div>
-
-      {/* Panel de Resumen General */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-blue-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Placas</p>
-              <p className="text-2xl font-bold text-blue-700">{data.resumen.total_placas}</p>
-            </div>
-            <Truck className="h-8 w-8 text-blue-500" />
-          </div>
-        </div>
         
-        <div className="bg-white rounded-lg border border-green-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Servicios</p>
-              <p className="text-2xl font-bold text-green-700">{data.resumen.total_servicios}</p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-green-500" />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-purple-300 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Vendido</p>
-              <p className="text-2xl font-bold text-purple-700">{formatMoneda(data.resumen.total_vendido)}</p>
-            </div>
-            <DollarSign className="h-8 w-8 text-purple-500" />
-          </div>
-        </div>
+        {/* Botón de exportación */}
+        <button
+          onClick={handleExportarExcel}
+          disabled={loadingDownload}
+          className="mt-4 lg:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2 disabled:opacity-50"
+        >
+          {loadingDownload ? (
+            <>
+              <Loader className="h-4 w-4 animate-spin" />
+              Exportando...
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4" />
+              Exportar a Excel
+            </>
+          )}
+        </button>
       </div>
 
       {/* Mensajes de éxito y error */}
@@ -360,7 +422,7 @@ const MonitoreoPlacas = () => {
               <Filter className="h-5 w-5 text-blue-600" />
               Filtros de Búsqueda
             </h3>
-            <p className="text-sm text-gray-600">Filtrado en tiempo real </p>
+            <p className="text-sm text-gray-600">Filtrado en tiempo real</p>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -384,32 +446,28 @@ const MonitoreoPlacas = () => {
           </div>
         </div>
 
-        {/* Filtros en tiempo real */}
+        {/* Filtros */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Placa */}
+          {/* Placa - Nuevo filtro select */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Placa del Vehículo
+              <Car className="h-4 w-4" />
+              Placa
             </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={filters.placa}
-                onChange={(e) => handleFilterChange('placa', e.target.value.toUpperCase())}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm uppercase"
-                placeholder="Ej: ABC-123"
-                list="placas-sugerencias"
-              />
-              <datalist id="placas-sugerencias">
-                {placasSugerencias.map((placa, index) => (
-                  <option key={index} value={placa} />
-                ))}
-              </datalist>
-            </div>
+            <select
+              value={filters.flota_placa}
+              onChange={(e) => handleFilterChange('flota_placa', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+            >
+              <option value="">Todas las placas</option>
+              {placas.map((placa, index) => (
+                <option key={index} value={placa}>
+                  {placa}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-gray-500 mt-1">
-              Deje vacío para ver todas las placas
+              Seleccione una placa para filtrar
             </p>
           </div>
 
@@ -429,7 +487,7 @@ const MonitoreoPlacas = () => {
               />
               <button
                 onClick={() => handleSelectToday('fecha_inicio')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300"
+                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300 whitespace-nowrap"
                 type="button"
               >
                 Hoy
@@ -457,7 +515,7 @@ const MonitoreoPlacas = () => {
               />
               <button
                 onClick={() => handleSelectToday('fecha_fin')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300"
+                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300 whitespace-nowrap"
                 type="button"
               >
                 Hoy
@@ -477,13 +535,13 @@ const MonitoreoPlacas = () => {
         )}
 
         {/* Contador de filtros activos */}
-        {Object.values(filters).some(f => f && f.trim() !== '') && (
+        {Object.values(filters).some(f => f) && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="text-sm text-gray-600 flex items-center justify-between">
               <span>
                 Filtros activos: 
                 <span className="font-medium text-blue-600 ml-2">
-                  {Object.values(filters).filter(f => f && f.trim() !== '').length}
+                  {Object.values(filters).filter(f => f).length}
                 </span>
               </span>
               <button
@@ -497,100 +555,278 @@ const MonitoreoPlacas = () => {
         )}
       </div>
 
-      {/* Tabla de Detalle por Placa */}
+      {/* Información de registros */}
+      {serviciosData.length > 0 && (
+        <div className="m-4 text-sm text-gray-600 text-center">
+          Mostrando {serviciosData.length} de {pagination.totalItems} registros
+          {filters.flota_placa && ' · Filtrado por placa'}
+          {(filters.fecha_inicio || filters.fecha_fin) && ' · Filtrado por rango de fechas'}
+        </div>
+      )}
+
+      {/* Tabla de Servicios */}
       <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm border-collapse">
+          <table className="min-w-full text-xs border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b border-gray-300">
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  PLACA
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Hash className="h-3 w-3" />
+                    Código
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  TOTAL DE SERVICIOS
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <CalendarDays className="h-3 w-3" />
+                    Fecha de Servicio
+                  </div>
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  TOTAL VENDIDO
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Cliente / Cuenta
+                  </div>
                 </th>
-                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  SERVICIOS DISTINTOS
-                </th> */}
-                {/* <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  FLETES ASOCIADOS
-                </th> */}
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Package className="h-3 w-3" />
+                    Tipo Servicio
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    Origen
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    Destino
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Car className="h-3 w-3" />
+                    Placa 
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Conductor
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Package className="h-3 w-3" />
+                    Capacidad
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    GIA's
+                  </div>
+                </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Estado
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {data.detalle_por_placa.map((item, index) => (
-                <tr 
-                  key={`${item.placa}-${index}`} 
-                  className="border-b border-gray-200 hover:bg-blue-50"
-                >
-                  {/* Placa */}
-                  <td className="px-4 py-3">
-                    <div className="font-bold text-gray-900 text-lg">
-                      {item.placa? item.placa:"SIN PLACA (CUADRILLA / ALMACEN)"}
-                    </div>
-                  </td>
+              {serviciosData.map((servicio) => {
+                const EstadoIcon = getEstadoIcon(servicio.estado);
+                const puedeCambiar = puedeCambiarEstado(servicio);
+                
+                return (
+                  <tr 
+                    key={servicio.id} 
+                    className="border-b border-gray-200 hover:bg-blue-50 cursor-pointer"
+                    onClick={() => handleRowClick(servicio)}
+                  >
+                    {/* Código */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {servicio.codigo_servicio_principal || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {servicio.zona || 'Sin zona'}
+                      </div>
+                    </td>
 
-                  {/* Total de Servicios */}
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-gray-900 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full mr-2">
-                        {item.total_servicios}
-                      </span>
-                     
-                     
-                    </div>
-                  </td>
+                    {/* Fecha */}
+                    <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">
+                       F. Servicio: {formatearFecha(servicio.fecha_servicio)}
+                      </div>
+                      <div className="font-medium text-gray-900">
+                       F. Salida: {formatearFecha(servicio.fecha_salida)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                       Mes: {servicio.mes || 'N/A'} 
+                      </div>
+                      <div className="text-xs text-gray-500">
+                       H. Cita: {servicio.hora_cita?.slice(0, 5) || 'Sin hora'}
+                      </div>
+                    </td>
 
-                  {/* Total Vendido */}
-                  <td className="px-4 py-3">
-                    <div className="font-bold text-green-700">
-                      {formatMoneda(item.total_vendido)}
-                    </div>
-                  </td>
+                    {/* Cliente */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {servicio.cliente?.nombre || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Cuenta: {servicio.cuenta?.nombre || servicio.cuenta?.numero || 'N/A'}
+                      </div>
+                    </td>
 
-                  {/* Servicios Distintos */}
-                  {/* <td className="px-4 py-3">
-                    <div className="text-gray-900 text-center">
-                      {item.cantidad_servicios_distintos}
-                    </div>
-                  </td> */}
+                    {/* Tipo Servicio */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {servicio.tipo_servicio || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Modalidad: {servicio.modalidad_servicio || 'N/A'}
+                      </div>
+                    </td>
 
-                  {/* Fletes Asociados */}
-                  {/* <td className="px-4 py-3">
-                    <div className="text-gray-900 text-center">
-                      {item.cantidad_fletes}
-                    </div>
-                  </td> */}
-                </tr>
-              ))}
+                    {/* Origen/Destino */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="text-sm text-gray-900 truncate max-w-[150px]">
+                        {servicio.origen?.split(',')[0] || 'N/A'}
+                      </div>
+                      
+                    </td>
+                    <td className="px-3 py-2 border-r border-gray-200">    
+                      <div className="text-sm text-gray-900 truncate max-w-[150px]">
+                        {servicio.destino?.split(',')[0] || 'N/A'}
+                      </div>
+                    </td>
+
+                    {/* Vehículo */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {servicio.flota?.placa || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {servicio.flota?.tipo_vehiculo || 'Sin tipo'}
+                      </div>
+                    </td>
+
+                    {/* Conductor */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="font-medium text-gray-900">
+                        {Array.isArray(servicio.conductor) 
+                          ? (servicio.conductor[0]?.nombre || servicio.conductor[0]?.nombres_completos || 'N/A')
+                          : (servicio.conductor?.nombre || servicio.conductor?.nombres_completos || 'N/A')}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Aux: {Array.isArray(servicio.auxiliar) 
+                          ? (servicio.auxiliar[0]?.nombres_completos || 'Sin auxiliar')
+                          : (servicio.auxiliar?.nombres_completos || 'Sin auxiliar')}
+                      </div>
+                    </td>
+
+                    {/* Capacidad */}
+                    <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="text-center">
+                          <div className="font-medium text-gray-900">
+                            {servicio.m3 || '0'}
+                          </div>
+                          <div className="text-xs text-gray-500">m³</div>
+                        </div>
+                        <div className="text-gray-300">/</div>
+                        <div className="text-center">
+                          <div className="font-medium text-gray-900">
+                            {servicio.tn || '0'}
+                          </div>
+                          <div className="text-xs text-gray-500">TN</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* GIA's */}
+                    <td className="px-3 py-2 border-r border-gray-200">
+                      <div className="text-xs">
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-500">RR:</span>
+                          <span className="font-medium">{servicio.gia_rr || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-500">RT:</span>
+                          <span className="font-medium">{servicio.gia_rt || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Estado con botón para cambiar */}
+                    <td className="px-3 py-2 border-r border-gray-200" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col items-start gap-1">
+                        {/* Badge de estado */}
+                        <div className={`flex items-center px-2 py-1 rounded ${getEstadoBadgeClass(servicio.estado)}`}>
+                          <EstadoIcon className={`h-3 w-3 mr-1 ${
+                            servicio.estado === 'Programado' ? 'text-yellow-600' :
+                            servicio.estado === 'Completado' ? 'text-green-600' :
+                            servicio.estado === 'Cancelado' ? 'text-red-600' :
+                            'text-blue-600'
+                          }`} />
+                          <span className="text-xs font-medium">{servicio.estado}</span>
+                        </div>
+                        
+                        {/* Botón para cambiar estado */}
+                        {puedeCambiar && (
+                          <button
+                            onClick={(e) => handleAbrirCambioEstado(servicio, e)}
+                            className="text-xs text-white font-medium flex items-center bg-blue-500 p-2 rounded hover:underline"
+                            title="Cambiar estado"
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            Cambiar estado
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         {/* Sin resultados */}
-        {data.detalle_por_placa.length === 0 && !isLoading && (
+        {serviciosData.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron resultados</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron servicios</h3>
             <p className="text-gray-600 mb-6">
               {Object.values(filters).some(f => f && f.trim() !== '')
                 ? 'Intenta ajustar los filtros de búsqueda'
-                : 'No hay datos disponibles para mostrar'}
+                : 'No hay servicios registrados en el sistema'}
             </p>
-            {Object.values(filters).some(f => f && f.trim() !== '') && (
+            <div className="flex justify-center space-x-3">
               <Button onClick={clearFilters} size="small">
                 Limpiar filtros
               </Button>
-            )}
+              <Button
+                onClick={handleCreate}
+                variant="secondary"
+                size="small"
+              >
+                Registrar primer servicio
+              </Button>
+            </div>
           </div>
         )}
       </div>
 
       {/* Paginación y registros por página */}
-      {data.detalle_por_placa.length > 0 && (
+      {serviciosData.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <span className="text-sm text-gray-600">Mostrar</span>
@@ -622,28 +858,6 @@ const MonitoreoPlacas = () => {
               pagination.totalItems
             )}
           />
-        </div>
-      )}
-
-      {/* Información de filtros aplicados */}
-      {Object.values(data.filtros_aplicados).some(f => f !== null) && (
-        <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">Filtros Aplicados:</h4>
-          <div className="text-sm text-gray-600">
-            {data.filtros_aplicados.placa && (
-              <p>• Placa: <span className="font-medium">{data.filtros_aplicados.placa}</span></p>
-            )}
-            {data.filtros_aplicados.fecha_inicio && (
-              <p>• Fecha Inicio: <span className="font-medium">
-                {gerenciaServiceAPI.formatFechaDisplay(data.filtros_aplicados.fecha_inicio)}
-              </span></p>
-            )}
-            {data.filtros_aplicados.fecha_fin && (
-              <p>• Fecha Fin: <span className="font-medium">
-                {gerenciaServiceAPI.formatFechaDisplay(data.filtros_aplicados.fecha_fin)}
-              </span></p>
-            )}
-          </div>
         </div>
       )}
     </div>
