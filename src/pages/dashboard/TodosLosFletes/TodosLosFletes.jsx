@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Truck,
   RefreshCw,
@@ -29,7 +30,9 @@ import Pagination from "../../../components/common/Pagination/Pagination";
 import { fletesAPI } from "../../../api/endpoints/fletes";
 import utilsAPI from "../../../api/endpoints/utils";
 
-const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
+const TodosLosFletes = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [fletes, setFletes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState(null);
@@ -44,12 +47,53 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
     hasPrev: false,
   });
 
+  // Función para convertir mes y año a rango de fechas
+  const getDateRangeFromMonthYear = useCallback((mes, anio) => {
+    if (!mes || !anio) {
+      return {
+        fecha_servicio_desde: "",
+        fecha_servicio_hasta: ""
+      };
+    }
+
+    const año = parseInt(anio);
+    const mesNum = parseInt(mes);
+    
+    // Crear fecha de inicio (primer día del mes)
+    const fechaInicio = new Date(año, mesNum - 1, 1);
+    
+    // Crear fecha de fin (último día del mes)
+    const fechaFin = new Date(año, mesNum, 0); // El día 0 del mes siguiente da el último día del mes actual
+    
+    // Formatear a YYYY-MM-DD
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    return {
+      fecha_servicio_desde: formatDate(fechaInicio),
+      fecha_servicio_hasta: formatDate(fechaFin)
+    };
+  }, []);
+
+  // Obtener mes y año de la URL
+  const mesFromURL = searchParams.get("mes") || "";
+  const anioFromURL = searchParams.get("anio") || "";
+  
+  // Obtener rango de fechas basado en mes y año
+  const dateRange = getDateRangeFromMonthYear(mesFromURL, anioFromURL);
+
   // Estados para filtros
   const [filters, setFilters] = useState({
     cliente: "",
     codigo_flete: "",
     codigo_servicio: "",
     estado_flete: "",
+    fecha_servicio_desde: dateRange.fecha_servicio_desde,
+    fecha_servicio_hasta: dateRange.fecha_servicio_hasta,
   });
 
   const [localFilters, setLocalFilters] = useState({
@@ -57,7 +101,28 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
     codigo_flete: "",
     codigo_servicio: "",
     estado_flete: "",
+    fecha_servicio_desde: dateRange.fecha_servicio_desde,
+    fecha_servicio_hasta: dateRange.fecha_servicio_hasta,
   });
+
+  // Actualizar filtros cuando cambian los parámetros de URL (mes/año)
+  useEffect(() => {
+    const mes = searchParams.get("mes") || "";
+    const anio = searchParams.get("anio") || "";
+    const newDateRange = getDateRangeFromMonthYear(mes, anio);
+    
+    setFilters(prev => ({
+      ...prev,
+      fecha_servicio_desde: newDateRange.fecha_servicio_desde,
+      fecha_servicio_hasta: newDateRange.fecha_servicio_hasta,
+    }));
+    
+    setLocalFilters(prev => ({
+      ...prev,
+      fecha_servicio_desde: newDateRange.fecha_servicio_desde,
+      fecha_servicio_hasta: newDateRange.fecha_servicio_hasta,
+    }));
+  }, [searchParams, getDateRangeFromMonthYear]);
 
   const [clientesList, setClientesList] = useState([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
@@ -102,11 +167,6 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
         cleanFilters.page = page;
         cleanFilters.page_size = itemsPerPage;
 
-        // Añadir filtro de servicio si existe
-        if (servicioId) {
-          cleanFilters.servicio_id = servicioId;
-        }
-
         const response = await fletesAPI.getAdvancedFletes(cleanFilters);
 
         if (response && response.items) {
@@ -139,7 +199,7 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
         setIsLoading(false);
       }
     },
-    [servicioId],
+    [pagination.itemsPerPage, filters],
   );
 
   // Función para cargar clientes desde el endpoint
@@ -176,9 +236,9 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
     return () => {
       if (timeout) clearTimeout(timeout);
     };
-  }, [filters]);
+  }, [filters, fetchFletes, pagination.itemsPerPage]);
 
-  // Cargar datos iniciales
+  // Efecto para cargar datos iniciales
   useEffect(() => {
     fetchFletes();
     cargarClientes();
@@ -202,6 +262,8 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
       const filters_post = {
         cliente_nombre: filters.cliente || undefined,
         estado: filters.estado_flete || undefined,
+        fecha_servicio_desde: filters.fecha_servicio_desde || undefined,
+        fecha_servicio_hasta: filters.fecha_servicio_hasta || undefined,
       }
       const blob = await fletesAPI.exportAllFletesExcel({
         ...filters_post,
@@ -219,21 +281,30 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
   }, [filters]);
 
   const clearFilters = useCallback(() => {
+    // Obtener el rango de fechas actual desde la URL
+    const mes = searchParams.get("mes") || "";
+    const anio = searchParams.get("anio") || "";
+    const dateRange = getDateRangeFromMonthYear(mes, anio);
+
     setLocalFilters({
       cliente: "",
       codigo_flete: "",
       codigo_servicio: "",
       estado_flete: "",
+      fecha_servicio_desde: dateRange.fecha_servicio_desde,
+      fecha_servicio_hasta: dateRange.fecha_servicio_hasta,
     });
     setFilters({
       cliente: "",
       codigo_flete: "",
       codigo_servicio: "",
       estado_flete: "",
+      fecha_servicio_desde: dateRange.fecha_servicio_desde,
+      fecha_servicio_hasta: dateRange.fecha_servicio_hasta,
     });
 
-    fetchFletes(1, pagination.itemsPerPage, {});
-  }, [fetchFletes, pagination.itemsPerPage]);
+    fetchFletes(1, pagination.itemsPerPage, dateRange);
+  }, [fetchFletes, pagination.itemsPerPage, searchParams, getDateRangeFromMonthYear]);
 
   const handleLocalFilterChange = useCallback((key, value) => {
     setLocalFilters((prev) => ({
@@ -268,6 +339,31 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
     },
     [fetchFletes, filters],
   );
+
+  // Función para actualizar mes y año en la URL
+  const updateMesAnio = useCallback((mes, anio) => {
+    const params = new URLSearchParams(searchParams);
+    if (mes) {
+      params.set("mes", mes);
+    } else {
+      params.delete("mes");
+    }
+    if (anio) {
+      params.set("anio", anio);
+    } else {
+      params.delete("anio");
+    }
+    setSearchParams(params);
+  }, [searchParams, setSearchParams]);
+
+  // Función para obtener el nombre del mes
+  const getMonthName = (mes) => {
+    const months = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+    return months[parseInt(mes) - 1] || mes;
+  };
 
   // Función para obtener clase de estado
   const getEstadoBadgeClass = (estado) => {
@@ -367,11 +463,22 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {servicioCodigo ? `Fletes del Servicio: ${servicioCodigo}` : "Todos los Fletes"}
+            Todos los Fletes
           </h1>
           <p className="text-gray-600 mt-1">
             Total: {pagination.totalItems} fletes encontrados
           </p>
+          {/* Mostrar mes y año si están en la URL */}
+          {(mesFromURL || anioFromURL) && (
+            <div className="mt-2">
+              <p className="text-sm text-blue-600 font-medium">
+                Filtrando por: {mesFromURL && getMonthName(mesFromURL)} {anioFromURL}
+              </p>
+              <p className="text-xs text-gray-500">
+                Rango: {filters.fecha_servicio_desde} al {filters.fecha_servicio_hasta}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -547,6 +654,44 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
               ))}
             </select>
           </div>
+
+          {/* Fecha Servicio Desde - Solo lectura ya que viene de la URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Fecha Servicio Desde
+            </label>
+            <input
+              type="date"
+              value={localFilters.fecha_servicio_desde}
+              onChange={(e) =>
+                handleLocalFilterChange("fecha_servicio_desde", e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            />
+            {mesFromURL && anioFromURL && (
+              <p className="text-xs text-gray-500 mt-1">
+                Del mes {getMonthName(mesFromURL)} {anioFromURL}
+              </p>
+            )}
+          </div>
+
+          {/* Fecha Servicio Hasta - Solo lectura ya que viene de la URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Fecha Servicio Hasta
+            </label>
+            <input
+              type="date"
+              value={localFilters.fecha_servicio_hasta}
+              onChange={(e) =>
+                handleLocalFilterChange("fecha_servicio_hasta", e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              min={localFilters.fecha_servicio_desde}
+            />
+          </div>
         </div>
 
         {/* Contador de filtros activos */}
@@ -633,6 +778,12 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
                     Estado Flete
                   </div>
                 </th>
+                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    Pertenece a Factura
+                  </div>
+                </th>
                 <th className="py-2 px-3 text-left font-semibold text-gray-700 whitespace-nowrap">
                   Acciones
                 </th>
@@ -705,7 +856,17 @@ const TodosLosFletes = ({ servicioId, servicioCodigo }) => {
                       {flete.estado_flete || "N/A"}
                     </span>
                   </td>
-
+                  <td className="px-3 py-2 border-r border-gray-200">
+                    {flete.factura_id ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-300">
+                        Sí
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-300">
+                        No
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex space-x-1">
                       <button

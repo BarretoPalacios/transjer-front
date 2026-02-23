@@ -12,12 +12,16 @@ import {
   RefreshCw,
   BarChart3,
   Filter,
-  Download 
+  Download, 
+  ArrowRight
 } from 'lucide-react';
 import { facturacionGestionAPI } from "../../../api/endpoints/facturacionGestion";
 import {gerenciaServiceAPI} from '../../../api/endpoints/gerenciaService';
+import { useNavigate } from 'react-router-dom';
 
 const AnaliticasGerenciales = () => {
+
+  const navigate = useNavigate();
 
   const [loadingExport, setLoadingExport] = useState(false);
   const [errorExport, setErrorExport] = useState(null);
@@ -308,6 +312,15 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
               </div>
             </div>
             <p className="text-gray-500 text-xs">Suma de todos los fletes valorizados</p>
+            <div className="mt-2">
+              <button
+                    onClick={() => navigate(`/contabilidad/fletes-completos?mes=${mes}&anio=${anio}`)}   
+                    className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+                  >
+                    <ArrowRight className="h-4 w-4" />                    
+                    Ver detalles
+                  </button>
+            </div>
           </div>
           
           {/* Total Vendido Bruto */}
@@ -348,6 +361,15 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                 {dashboardData.facturas.conteo_facturas} factura{dashboardData.facturas.conteo_facturas !== 1 ? 's' : ''}
               </span>
             </div>
+            {/* <div className="mt-2">
+              <button
+                    onClick={() => navigate(`/contabilidad/fletes-por-facturar`)}
+                    className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+                  >
+                    <ArrowRight className="h-4 w-4" />                    
+                    Ver detalles
+                  </button>
+            </div> */}
           </div>
           
           {/* Facturación Bruta Pendiente */}
@@ -364,16 +386,13 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
               </div>
             </div>
             <div className="mt-2">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-gray-500">Falta un </span>
-                {/* <span className="font-medium">{porcentajes.porcentajeFacturacionPendiente}%</span> */}
-              </div>
-              <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-yellow-500 transition-all duration-500"
-                  // style={{ width: `${porcentajes.porcentajeFacturacionPendiente}%` }}
-                ></div>
-              </div>
+              <button
+                    onClick={() => navigate(`/contabilidad/fletes-por-facturar`)}
+                    className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+                  >
+                    <ArrowRight className="h-4 w-4" />                    
+                    Ver detalles
+                  </button>
             </div>
           </div>
         </div>
