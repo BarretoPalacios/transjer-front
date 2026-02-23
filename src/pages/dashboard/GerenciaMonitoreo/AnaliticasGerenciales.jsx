@@ -314,7 +314,7 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
             <p className="text-gray-500 text-xs">Suma de todos los fletes valorizados</p>
             <div className="mt-2">
               <button
-                    onClick={() => navigate(`/contabilidad/fletes-completos?mes=${mes}&anio=${anio}`)}   
+                    onClick={() => mostrarHistoricoTotal ? navigate(`/contabilidad/fletes-completos`) : navigate(`/contabilidad/fletes-completos?mes=${mes}&anio=${anio}`)}
                     className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
                   >
                     <ArrowRight className="h-4 w-4" />                    
