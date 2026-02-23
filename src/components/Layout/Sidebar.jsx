@@ -37,6 +37,7 @@ import {
   BanknoteArrowDownIcon,
   PlusCircle,
   Users2Icon,
+  LineChart,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePermissions } from "../../hooks/usePermissions"; // Importar el hook de permisos
@@ -110,6 +111,7 @@ const Sidebar = ({
       "personal": ["gestion", "view"],
       
       // Contabilidad
+      "fletes-completos": ["contabilidad", "view"],
       "fletes-pendientes": ["contabilidad", "view"],
       "fletes-por-facturar": ["contabilidad", "view"],
       "facturacion": ["contabilidad", "manage"],
@@ -200,6 +202,13 @@ const Sidebar = ({
         badge: null,
         show: shouldShowItem({ id: "contabilidad" }),
         submenu: [
+          {
+            id: "fletes-completos",
+            label: "Todos los Fletes",
+            path: "/contabilidad/fletes-completos",
+            icon: LineChart,
+            show: shouldShowSubItem({ id: "fletes-completos" }),
+          },
           {
             id: "fletes-pendientes",
             label: "Fletes Pendientes",

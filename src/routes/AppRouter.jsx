@@ -33,6 +33,7 @@ import MonitoreoProveedores from "../pages/dashboard/MonitoreoProveedores/Monito
 import Usuarios from "../pages/dashboard/Usuarios/Usuarios";
 import MonitoreoClientes from "../pages/dashboard/MonitoreoClientes/MonitoreoClientes";
 import DetalleGestion from "../pages/dashboard/GerenciaMonitoreo/DetalleGestion";
+import TodosLosFletes from "../pages/dashboard/TodosLosFletes/TodosLosFletes";
 
 const AppRouter = () => {
   return (
@@ -117,6 +118,12 @@ const AppRouter = () => {
             </ProtectedRoute>
           } />
           
+          <Route path="contabilidad/fletes-completos" element={
+            <ProtectedRoute requirePermission={['contabilidad', 'view']}>
+              <TodosLosFletes />
+            </ProtectedRoute>
+          } />
+
           <Route path="contabilidad/fletes-pendientes" element={
             <ProtectedRoute requirePermission={['contabilidad', 'view']}>
               <FletesPendientes />
