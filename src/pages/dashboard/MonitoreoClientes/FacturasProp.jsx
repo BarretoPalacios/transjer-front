@@ -51,8 +51,9 @@ import {
 } from "../../../utils/facturacionUtils";
 import utilsAPI from "../../../api/endpoints/utils";
 
-const SeguimientoFacturas = () => {
-
+const SeguimientoFacturas = ({ clienteId = '', fechaInicio = '', fechaFin = '' }) => {
+// Determinar si tenemos props para filtrar inicialmente
+const hasInitialFilters = !!(clienteId && fechaInicio && fechaFin);
   const EstadoPagoNeto = {
   PENDIENTE: "Pendiente",
   // PROGRAMADO: "Programado",
@@ -102,20 +103,20 @@ const PrioridadPago = {
   });
 
   // Estados para filtros - AÑADIR nombre_cliente
-  const [filters, setFilters] = useState({
-    estado_pago_neto: "",
-    prioridad: "",
-    nombre_cliente: "",
-    numero_factura: "",
-    fecha_emision_inicio: "",
-    fecha_emision_fin: "",
-    fecha_vencimiento_inicio: "",
-    fecha_vencimiento_fin: "",
-    fecha_servicio_inicio: "",
-    fecha_servicio_fin: "",
-    estado_detraccion: "",
-    nombre_proveedor: "",
-  });
+const [filters, setFilters] = useState({
+  estado_pago_neto: "",
+  prioridad: "",
+  nombre_cliente: clienteId || "",
+  numero_factura: "",
+  fecha_emision_inicio: "",
+  fecha_emision_fin: "",
+  fecha_vencimiento_inicio: "",
+  fecha_vencimiento_fin: "",
+  fecha_servicio_inicio: fechaInicio || "",
+  fecha_servicio_fin: fechaFin || "",
+  estado_detraccion: "",
+  nombre_proveedor: "",
+});
 
     // Estados para las listas de clientes y proveedores
   const [clientesList, setClientesList] = useState([]);
@@ -131,53 +132,61 @@ const PrioridadPago = {
   const isInitialMount = useRef(true);
 
   // Función principal para cargar gestiones
-  const fetchGestiones = useCallback(
-    async (page = 1, itemsPerPage = pagination.itemsPerPage) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        // Preparar filtros para API
-        const filtersForAPI = {};
+ // Función principal para cargar gestiones
+const fetchGestiones = useCallback(
+  async (page = 1, itemsPerPage = pagination.itemsPerPage) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Preparar filtros para API
+      const filtersForAPI = {};
 
+      // Si hay props y es la primera carga, usar las props como filtros
+      if (hasInitialFilters && isInitialMount.current) {
+        filtersForAPI.nombre_cliente = clienteId;
+        filtersForAPI.fecha_servicio_inicio = fechaInicio;
+        filtersForAPI.fecha_servicio_fin = fechaFin;
+      } else {
         // Solo enviar filtros aplicados que tengan valor
         Object.entries(appliedFilters).forEach(([key, value]) => {
           if (value !== "" && value !== undefined && value !== null) {
             filtersForAPI[key] = value;
           }
         });
-
-        // Si hay búsqueda aplicada, agregar filtro de código de factura
-        if (appliedSearch) {
-          filtersForAPI.codigo_factura = appliedSearch;
-        }
-
-        const response = await facturacionGestionAPI.getAllGestiones(filtersForAPI, {
-          page: page,
-          pageSize: itemsPerPage,
-        });
-        console.log("data:" , response)
-        setGestiones(response.items);
-
-        // Actualizar paginación
-        setPagination({ 
-          currentPage: response.pagination.page,
-          itemsPerPage: response.pagination.pageSize,
-          totalItems: response.pagination.total,
-          totalPages: response.pagination.totalPages,
-          hasNext: response.pagination.hasNext,
-          hasPrev: response.pagination.hasPrev,
-        });
-
-        await calcularEstadisticas();
-      } catch (err) {
-        setError("Error al cargar las gestiones: " + err.message);
-        console.error("Error fetching gestiones:", err);
-      } finally {
-        setIsLoading(false);
       }
-    },
-    [appliedFilters, appliedSearch, pagination.itemsPerPage]
-  );
+
+      // Si hay búsqueda aplicada, agregar filtro de código de factura
+      if (appliedSearch) {
+        filtersForAPI.codigo_factura = appliedSearch;
+      }
+
+      const response = await facturacionGestionAPI.getAllGestiones(filtersForAPI, {
+        page: page,
+        pageSize: itemsPerPage,
+      });
+      console.log("data:" , response)
+      setGestiones(response.items);
+
+      // Actualizar paginación
+      setPagination({ 
+        currentPage: response.pagination.page,
+        itemsPerPage: response.pagination.pageSize,
+        totalItems: response.pagination.total,
+        totalPages: response.pagination.totalPages,
+        hasNext: response.pagination.hasNext,
+        hasPrev: response.pagination.hasPrev,
+      });
+
+      await calcularEstadisticas();
+    } catch (err) {
+      setError("Error al cargar las gestiones: " + err.message);
+      console.error("Error fetching gestiones:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  },
+  [appliedFilters, appliedSearch, pagination.itemsPerPage, hasInitialFilters, clienteId, fechaInicio, fechaFin]
+);
 
   // Calcular estadísticas
 // Calcular estadísticas
@@ -302,14 +311,33 @@ const cargarProveedores = useCallback(async () => {
     }
   }, [appliedFilters, appliedSearch, fetchGestiones, pagination.itemsPerPage]);
 
-  useEffect(() => {
-    if (isInitialMount.current) {
-      fetchGestiones(1, pagination.itemsPerPage);
-      isInitialMount.current = false;
+useEffect(() => {
+  if (isInitialMount.current) {
+    // Si hay props, aplicarlas como filtros iniciales
+    if (hasInitialFilters) {
+      const initialFilters = {
+        estado_pago_neto: "",
+        prioridad: "",
+        nombre_cliente: clienteId,
+        numero_factura: "",
+        fecha_emision_inicio: "",
+        fecha_emision_fin: "",
+        fecha_vencimiento_inicio: "",
+        fecha_vencimiento_fin: "",
+        fecha_servicio_inicio: fechaInicio,
+        fecha_servicio_fin: fechaFin,
+        estado_detraccion: "",
+        nombre_proveedor: "",
+      };
+      setFilters(initialFilters);
+      setAppliedFilters(initialFilters);
     }
-         cargarClientes();
+    fetchGestiones(1, pagination.itemsPerPage);
+    isInitialMount.current = false;
+  }
+  cargarClientes();
   cargarProveedores();
-  }, [fetchGestiones, pagination.itemsPerPage]);
+}, [fetchGestiones, pagination.itemsPerPage, hasInitialFilters, clienteId, fechaInicio, fechaFin]);
 
   // Handler para ver detalles
   const handleViewDetails = useCallback((gestion) => {
@@ -463,30 +491,41 @@ const cargarProveedores = useCallback(async () => {
     }
   }, [appliedFilters, appliedSearch]);
 
-  const clearFilters = useCallback(() => {
-    const emptyFilters = {
-     estado_pago_neto: "",
+const clearFilters = useCallback(() => {
+  const emptyFilters = {
+    estado_pago_neto: "",
     prioridad: "",
-    nombre_cliente: "",
+    nombre_cliente: hasInitialFilters ? clienteId : "",
     numero_factura: "",
     fecha_emision_inicio: "",
     fecha_emision_fin: "",
     fecha_vencimiento_inicio: "",
     fecha_vencimiento_fin: "",
-    fecha_servicio_inicio: "",
-    fecha_servicio_fin: "",
+    fecha_servicio_inicio: hasInitialFilters ? fechaInicio : "",
+    fecha_servicio_fin: hasInitialFilters ? fechaFin : "",
     estado_detraccion: "",
     nombre_proveedor: "",
-    };
-    setFilters(emptyFilters);
-    setAppliedFilters(emptyFilters);
-    setSearchTerm("");
-    setAppliedSearch("");
-  }, []);
+  };
+  setFilters(emptyFilters);
+  setAppliedFilters(emptyFilters);
+  setSearchTerm("");
+  setAppliedSearch("");
+}, [hasInitialFilters, clienteId, fechaInicio, fechaFin]);
 
-  const aplicarFiltros = useCallback(() => {
+ const aplicarFiltros = useCallback(() => {
+  // Si hay props, asegurar que los filtros de props estén presentes
+  if (hasInitialFilters) {
+    const filtersWithProps = {
+      ...filters,
+      nombre_cliente: clienteId,
+      fecha_servicio_inicio: fechaInicio,
+      fecha_servicio_fin: fechaFin,
+    };
+    setAppliedFilters(filtersWithProps);
+  } else {
     setAppliedFilters(filters);
-  }, [filters]);
+  }
+}, [filters, hasInitialFilters, clienteId, fechaInicio, fechaFin]);
 
   const handleSearch = useCallback(() => {
     setAppliedSearch(searchTerm);

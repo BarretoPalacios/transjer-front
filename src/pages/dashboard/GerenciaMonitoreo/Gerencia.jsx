@@ -75,6 +75,8 @@ const Gerencia = () => {
     fecha_emision_fin: "",
     fecha_vencimiento_inicio: "",
     fecha_vencimiento_fin: "",
+    fecha_servicio_inicio:"",
+    fecha_servicio_fin:"",
     estado_pago_neto: "",
     estado_detraccion: "",
     nombre_proveedor: "",
@@ -87,6 +89,8 @@ const Gerencia = () => {
     fecha_emision_fin: "",
     fecha_vencimiento_inicio: "",
     fecha_vencimiento_fin: "",
+    fecha_servicio_inicio:"",
+    fecha_servicio_fin:"",
     estado_pago_neto: "",
     estado_detraccion: "",
     nombre_proveedor: "",
@@ -272,6 +276,8 @@ const handleExport = useCallback(async () => {
       fecha_emision_fin: "",
       fecha_vencimiento_inicio: "",
       fecha_vencimiento_fin: "",
+      fecha_servicio_inicio:"",
+    fecha_servicio_fin:"",
       estado_pago_neto: "",
       estado_detraccion: "",
       nombre_proveedor: "",
@@ -1192,7 +1198,47 @@ const handleExport = useCallback(async () => {
                 disabled={loadingData}
               />
             </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                <Clock className="h-4 w-4 inline mr-1" />
+                Fecha Servicio Desde
+              </label>
+              <input
+                type="date"
+                value={tempFilters.fecha_servicio_inicio}
+                onChange={(e) =>
+                  setTempFilters({
+                    ...tempFilters,
+                    fecha_servicio_inicio: e.target.value,
+                  })
+                }
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                disabled={loadingData}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                <Clock className="h-4 w-4 inline mr-1" />
+                Fecha Servicio Hasta
+              </label>
+              <input
+                type="date"
+                value={tempFilters.fecha_servicio_fin}
+                onChange={(e) =>
+                  setTempFilters({
+                    ...tempFilters,
+                    fecha_servicio_fin: e.target.value,
+                  })
+                }
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                disabled={loadingData}
+              />
+            </div>
           </div>
+
+
+          
 
           {/* Indicador de filtros aplicados */}
           {(Object.values(appliedFilters).some((filter) => filter !== "") || clienteCustomValue || proveedorCustomValue) && (
@@ -1245,6 +1291,12 @@ const handleExport = useCallback(async () => {
                       Vencimiento: {appliedFilters.fecha_vencimiento_inicio} - {appliedFilters.fecha_vencimiento_fin}
                     </span>
                   )}
+                  {appliedFilters.fecha_servicio_inicio && appliedFilters.fecha_servicio_fin && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                      <Truck className="h-3 w-3 mr-1" />
+                      Servicio: {appliedFilters.fecha_servicio_inicio} - {appliedFilters.fecha_servicio_fin}
+                    </span>
+                   )}
                 </div>
               </div>
             </div>

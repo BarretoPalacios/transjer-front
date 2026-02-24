@@ -1,25 +1,56 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, RefreshCw, X, CheckCircle, Eye, Download, SplinePointer, Loader } from 'lucide-react';
+import { RefreshCw, X, CheckCircle, Download, Loader, Truck, Wrench, FileText } from 'lucide-react';
 
 // Componentes comunes
 import Button from '../../../components/common/Button/Button';
-import Pagination from '../../../components/common/Pagination/Pagination';
+
+import SeguimientoFacturas from './FacturasProp';
+import TodosLosFletes from './FletesProp';
+import Servicios from './ServiciosProps';
+
 
 // API
 import { gerenciaServiceAPI } from '../../../api/endpoints/gerenciaService';
+import utilsAPI from '../../../api/endpoints/utils';
 
-  // Obtener mes actual
-  const obtenerMesActual = () => {
-    const meses = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    return meses[new Date().getMonth()];
-  };
+// Tarjeta de resumen para el dashboard - versión simplificada
+const TarjetaResumen = ({ titulo, valor }) => {
+  return (
+    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="flex flex-col">
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{titulo}</p>
+        <p className="text-xl font-bold text-gray-900 mt-1">{valor}</p>
+      </div>
+    </div>
+  );
+};
 
-  // Obtener año actual
-  const obtenerAñoActual = () => new Date().getFullYear().toString();
+// Componente de Tabs
+const Tabs = ({ activeTab, onTabChange, tabs }) => {
+  return (
+    <div className="border-b border-gray-200 mb-6">
+      <nav className="flex -mb-px space-x-8">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`
+              py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === tab.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+};
 
 const MonitoreoClientes = () => {
   const navigate = useNavigate();
@@ -37,22 +68,23 @@ const MonitoreoClientes = () => {
     detalle_por_cliente: []
   });
   
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [clientes, setClientes] = useState([]);
+  const [loadingClientes, setLoadingClientes] = useState(true);
   
-  // Estados de paginación
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    itemsPerPage: 50,
-    totalItems: 0,
-    totalPages: 0,
-    hasNext: false,
-    hasPrev: false,
-  });
+  // Estado para el tab activo
+  const [activeTab, setActiveTab] = useState('facturacion');
   
-  // Estados para filtros
+  // Definición de los tabs
+  const tabs = [
+    { id: 'facturacion', label: 'Facturación', icon: <FileText className="h-4 w-4" /> },
+    { id: 'flotas', label: 'Flotas', icon: <Truck className="h-4 w-4" /> },
+    { id: 'servicios', label: 'Servicios', icon: <Wrench className="h-4 w-4" /> }
+  ];
+  
+  // Estados para filtros - SOLO cliente y rango de fechas
   const [filters, setFilters] = useState({
-    mes: obtenerMesActual(),
-    año: obtenerAñoActual(),
+    cliente_id: '',
     fecha_inicio: '',
     fecha_fin: ''
   });
@@ -67,43 +99,32 @@ const MonitoreoClientes = () => {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   
-  const itemsPerPageOptions = [10, 20, 30, 50];
-
-  // Mapeo de nombres de mes a números
-  const mesesANumero = {
-    'Enero': 1,
-    'Febrero': 2,
-    'Marzo': 3,
-    'Abril': 4,
-    'Mayo': 5,
-    'Junio': 6,
-    'Julio': 7,
-    'Agosto': 8,
-    'Septiembre': 9,
-    'Octubre': 10,
-    'Noviembre': 11,
-    'Diciembre': 12
-  };
-
-
-
-  // Inicializar filtros con mes y año actual
+  // Cargar lista de clientes al iniciar
   useEffect(() => {
-    setFilters(prev => ({
-      ...prev,
-      mes: obtenerMesActual(),
-      año: obtenerAñoActual()
-    }));
-  }, []);
+    const fetchClientes = async () => {
+      try {
+        setLoadingClientes(true);
+        const response = await utilsAPI.getClientesList();
+        setClientes(response || []);
+      } catch (err) {
+        console.error('Error al cargar clientes:', err);
+        setError('Error al cargar la lista de clientes');
+      } finally {
+        setLoadingClientes(false);
+      }
+    };
 
-  // Función para obtener número del mes
-  const obtenerNumeroMes = useCallback((nombreMes) => {
-    return mesesANumero[nombreMes] || null;
+    fetchClientes();
   }, []);
 
   // Función principal para cargar datos
   const fetchResumen = useCallback(
-    async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
+    async (filtersToUse = filters) => {
+      // Validar que haya al menos un cliente y rango de fechas
+      if (!filtersToUse.cliente_id || !filtersToUse.fecha_inicio || !filtersToUse.fecha_fin) {
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       setSuccessMessage(null);
@@ -113,74 +134,48 @@ const MonitoreoClientes = () => {
         rango_fechas: ''
       });
       
-      // Si hay rango de fechas específico, usar eso (tiene prioridad)
-      let filtrosAPI = {};
+      // Validar fechas
+      const validationErrors = {};
       
-      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin) {
-        // Validar fechas
-        const validationErrors = {};
-        
-        if (filtersToUse.fecha_inicio && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_inicio)) {
-          validationErrors.fecha_inicio = 'Formato de fecha inválido. Use YYYY-MM-DD';
-        }
-        
-        if (filtersToUse.fecha_fin && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_fin)) {
-          validationErrors.fecha_fin = 'Formato de fecha inválido. Use YYYY-MM-DD';
-        }
-        
-        if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin && 
-            !gerenciaServiceAPI.validarRangoFechas(filtersToUse.fecha_inicio, filtersToUse.fecha_fin)) {
-          validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
-        }
-        
-        if (Object.keys(validationErrors).length > 0) {
-          setErrors(validationErrors);
-          setIsLoading(false);
-          return;
-        }
-        
-        filtrosAPI = {
-          fecha_inicio: filtersToUse.fecha_inicio,
-          fecha_fin: filtersToUse.fecha_fin
-        };
-      } else if (filtersToUse.mes && filtersToUse.año) {
-        // Si no hay rango de fechas específico, usar mes y año (convertir mes a número)
-        const mesNumero = obtenerNumeroMes(filtersToUse.mes);
-        if (mesNumero) {
-          filtrosAPI = {
-            mes: mesNumero,  // Enviar como número, no como string
-            anio: parseInt(filtersToUse.año, 10)  // También enviar año como número
-          };
-        }
+      if (filtersToUse.fecha_inicio && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_inicio)) {
+        validationErrors.fecha_inicio = 'Formato de fecha inválido. Use YYYY-MM-DD';
       }
       
+      if (filtersToUse.fecha_fin && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_fin)) {
+        validationErrors.fecha_fin = 'Formato de fecha inválido. Use YYYY-MM-DD';
+      }
+      
+      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin && 
+          !gerenciaServiceAPI.validarRangoFechas(filtersToUse.fecha_inicio, filtersToUse.fecha_fin)) {
+        validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
+      }
+      
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Preparar filtros para API - SOLO cliente y rango de fechas
+      const filtrosAPI = {
+        cliente: filtersToUse.cliente_id,
+        fecha_inicio: filtersToUse.fecha_inicio,
+        fecha_fin: filtersToUse.fecha_fin
+      };
+      
       try {
-        // Preparar filtros para API
+        // Limpiar filtros vacíos
         const cleanFilters = {};
         Object.entries(filtrosAPI).forEach(([key, value]) => {
           if (value !== null && value !== undefined && value !== '') {
-            // Para números, asegurarnos de enviarlos como números
-            if (typeof value === 'number') {
-              cleanFilters[key] = value;
-            } else if (typeof value === 'string' && value.trim() !== '') {
-              cleanFilters[key] = value.trim();
-            }
+            cleanFilters[key] = value;
           }
         });
+
         console.log('Filtros enviados a la API:', cleanFilters);
+        
         // Llamar a la API específica para clientes
         const response = await gerenciaServiceAPI.getResumenPorCliente(cleanFilters);
-        
-        // Calcular paginación
-        const totalItems = response.detalle_por_cliente?.length || 0;
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        
-        // Calcular índices para la página actual
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        
-        // Obtener elementos de la página actual
-        const paginatedItems = response.detalle_por_cliente?.slice(startIndex, endIndex) || [];
         
         setData({
           resumen_general: response.resumen_general || {
@@ -193,16 +188,7 @@ const MonitoreoClientes = () => {
             gran_total_neto_vencido: 0,
             gran_total_neto_por_vencer: 0
           },
-          detalle_por_cliente: paginatedItems
-        });
-        
-        setPagination({
-          currentPage: page,
-          itemsPerPage: itemsPerPage,
-          totalItems: totalItems,
-          totalPages: totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
+          detalle_por_cliente: response.detalle_por_cliente || []
         });
         
       } catch (err) {
@@ -211,13 +197,8 @@ const MonitoreoClientes = () => {
         setIsLoading(false);
       }
     },
-    [obtenerNumeroMes]
+    []
   );
-
-  // Cargar datos iniciales
-  useEffect(() => {
-    fetchResumen();
-  }, []);
 
   // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
@@ -229,13 +210,16 @@ const MonitoreoClientes = () => {
 
   // Función para aplicar filtros
   const aplicarFiltros = useCallback(() => {
-    fetchResumen(1, pagination.itemsPerPage, filters);
-  }, [fetchResumen, pagination.itemsPerPage, filters]);
+    if (!filters.cliente_id || !filters.fecha_inicio || !filters.fecha_fin) {
+      setError('Debe seleccionar un cliente y un rango de fechas completo');
+      return;
+    }
+    fetchResumen(filters);
+  }, [fetchResumen, filters]);
 
   const clearFilters = useCallback(() => {
     setFilters({
-      mes: obtenerMesActual(),
-      año: obtenerAñoActual(),
+      cliente_id: '',
       fecha_inicio: '',
       fecha_fin: ''
     });
@@ -244,143 +228,64 @@ const MonitoreoClientes = () => {
       fecha_fin: '',
       rango_fechas: ''
     });
-    fetchResumen(1, pagination.itemsPerPage, {
-      mes: obtenerMesActual(),
-      año: obtenerAñoActual(),
-      fecha_inicio: '',
-      fecha_fin: ''
+    setData({
+      resumen_general: {
+        clientes_activos: 0,
+        gran_total_facturado: 0,
+        gran_total_detraccion: 0,
+        gran_total_neto: 0,
+        gran_total_neto_pagado: 0,
+        gran_total_neto_pendiente: 0,
+        gran_total_neto_vencido: 0,
+        gran_total_neto_por_vencer: 0
+      },
+      detalle_por_cliente: []
     });
   }, []);
 
-
-const todoElPerido = useCallback(() => {
-  // Obtener fecha actual
-  const hoy = new Date();
-  const añoActual = hoy.getFullYear();
-  
-  // Formatear fecha actual como YYYY-MM-DD
-  const fechaHoy = hoy.toISOString().split('T')[0];
-  
-  // Crear fecha de inicio (1 de enero del año actual)
-  const fechaInicio = `${añoActual}-01-01`;
-  
-  // Actualizar los filtros con el rango completo del año
-  setFilters({
-    mes: '', // Limpiar mes ya que usaremos rango de fechas
-    año: '', // Limpiar año ya que usaremos rango de fechas
-    fecha_inicio: fechaInicio,
-    fecha_fin: fechaHoy
-  });
-  
-  setErrors({
-    fecha_inicio: '',
-    fecha_fin: '',
-    rango_fechas: ''
-  });
-  
-  // Llamar a fetchResumen con el nuevo rango de fechas
-  fetchResumen(1, pagination.itemsPerPage, {
-    mes: '',
-    año: '',
-    fecha_inicio: fechaInicio,
-    fecha_fin: fechaHoy
-  });
-}, [fetchResumen, pagination.itemsPerPage]);
-
   const handleRefresh = useCallback(() => {
-    fetchResumen(pagination.currentPage, pagination.itemsPerPage, filters);
-  }, [fetchResumen, pagination.currentPage, pagination.itemsPerPage, filters]);
-
-  const handlePageChange = useCallback(
-    (newPage) => {
-      fetchResumen(newPage, pagination.itemsPerPage, filters);
-    },
-    [fetchResumen, pagination.itemsPerPage, filters]
-  );
-
-  const handleItemsPerPageChange = useCallback(
-    (newItemsPerPage) => {
-      fetchResumen(1, newItemsPerPage, filters);
-    },
-    [fetchResumen, filters]
-  );
+    if (filters.cliente_id && filters.fecha_inicio && filters.fecha_fin) {
+      fetchResumen(filters);
+    }
+  }, [fetchResumen, filters]);
 
   // Formatear moneda
   const formatMoneda = (valor) => {
     return gerenciaServiceAPI.formatMoneda(valor);
   };
 
-  // Función para navegar a detalles del cliente
-  const verDetallesCliente = useCallback((cliente) => {
-    // Construir query parameters
-    const queryParams = new URLSearchParams();
-    
-    // Siempre pasar el nombre del cliente
-    queryParams.append('cliente', encodeURIComponent(cliente.cliente || ''));
-    
-    // Si hay filtros de fecha específicos, pasarlos
-    if (filters.fecha_inicio && filters.fecha_fin) {
-      queryParams.append('fecha_inicio', filters.fecha_inicio);
-      queryParams.append('fecha_fin', filters.fecha_fin);
-      queryParams.append('filtro_tipo', 'rango_fechas');
-    } else if (filters.mes && filters.año) {
-      // Si hay mes y año, pasarlos como números
-      const mesNumero = obtenerNumeroMes(filters.mes);
-      if (mesNumero) {
-        queryParams.append('mes', mesNumero.toString());  // Convertir a string para URL
-        queryParams.append('año', filters.año);
-        queryParams.append('filtro_tipo', 'mes_año');
-      }
-    }
-    
-    // Navegar a la ruta de detalles con todos los parámetros
-    navigate(`/gerencia/detalles?${queryParams.toString()}`);
-  }, [navigate, filters, obtenerNumeroMes]);
-
-
   const [loadingDownload, setloadingDownload] = useState(false);
 
   // Función para exportar a Excel
   const handleExportarExcel = useCallback(async () => {
-      try {
-        setloadingDownload(true)
-        const filtersForAPI = {};
-        
-        // Solo enviar filtros que tengan valor
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value && value.trim() !== '') {
-            filtersForAPI[key] = value.trim();
-          }
-        });
+    if (!filters.cliente_id || !filters.fecha_inicio || !filters.fecha_fin) {
+      setError('Debe seleccionar un cliente y un rango de fechas para exportar');
+      return;
+    }
 
-        if (filtersForAPI.mes) {
-          const mesNumero = obtenerNumeroMes(filtersForAPI.mes);
-          if (mesNumero) {
-            filtersForAPI.mes = mesNumero; // Convertir mes a número para la API
-          }
-        }
-        
-        const blob = await gerenciaServiceAPI.exportResumenExcel(filtersForAPI);
-        
-        // Crear un enlace para descargar el archivo
-        const url = window.URL.createObjectURL(new Blob([blob]));
-        const link = document.createElement('a');
-        link
-          .setAttribute('href', url);
-        link.setAttribute('download', `resumen_clientes_${Date.now()}.xlsx`);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
+    try {
+      setloadingDownload(true);
+      
+      const blob = await gerenciaServiceAPI.exportResumenExcel(filters);
+      
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `resumen_cliente_${filters.cliente_id}_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
 
-        setloadingDownload(false)
-      } catch (err) {
-        setError('Error al exportar: ' + err.message);
-        console.error('Error exporting servicios:', err);
-      }
-    }, [filters]);
+      setloadingDownload(false);
+    } catch (err) {
+      setError('Error al exportar: ' + err.message);
+      console.error('Error exporting:', err);
+      setloadingDownload(false);
+    }
+  }, [filters]);
 
   // Mostrar loading solo en carga inicial
-  if (isLoading && data.detalle_por_cliente.length === 0) {
+  if (loadingClientes) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="animate-pulse">
@@ -393,13 +298,38 @@ const todoElPerido = useCallback(() => {
     );
   }
 
+  const hayResultados = data.detalle_por_cliente.length > 0;
+
+  // Renderizar el componente según el tab activo
+  const renderTabContent = () => {
+    if (!filters.cliente_id || !filters.fecha_inicio || !filters.fecha_fin) {
+      return null;
+    }
+
+    const props = {
+      clienteId: filters.cliente_id,
+      fechaInicio: filters.fecha_inicio,
+      fechaFin: filters.fecha_fin
+    };
+
+    switch (activeTab) {
+      case 'facturacion':
+        return <SeguimientoFacturas {...props} />;
+      case 'flotas':
+        return <TodosLosFletes {...props} />;
+      case 'servicios':
+        return <Servicios {...props} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto p-4">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Resumen de Facturación por Cliente</h1>
-         
+          <h1 className="text-2xl font-bold text-gray-800">Monitoreo de Clientes</h1>
         </div>
 
         {/* Mensajes de éxito y error */}
@@ -439,60 +369,49 @@ const todoElPerido = useCallback(() => {
           </div>
         )}
 
-        {/* Filtros - Mes/Año y Rango de fechas */}
+        {/* Filtros - SOLO Cliente y Rango de fechas */}
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-            {/* Filtros de Mes y Año */}
-            <div className="md:col-span-2 flex gap-3 border-r border-gray-100 pr-6">
-              <div className="flex-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Mes</label>
-                <select 
-                  value={filters.mes}
-                  onChange={(e) => handleFilterChange('mes', e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Enero">Enero</option>
-                  <option value="Febrero">Febrero</option>
-                  <option value="Marzo">Marzo</option>
-                  <option value="Abril">Abril</option>
-                  <option value="Mayo">Mayo</option>
-                  <option value="Junio">Junio</option>
-                  <option value="Julio">Julio</option>
-                  <option value="Agosto">Agosto</option>
-                  <option value="Septiembre">Septiembre</option>
-                  <option value="Octubre">Octubre</option>
-                  <option value="Noviembre">Noviembre</option>
-                  <option value="Diciembre">Diciembre</option>
-                </select>
-              </div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Año</label>
-                <select 
-                  value={filters.año}
-                  onChange={(e) => handleFilterChange('año', e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
-                </select>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            {/* Select de Clientes */}
+            <div className="md:col-span-1">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                Cliente <span className="text-red-500">*</span>
+              </label>
+              <select 
+                value={filters.cliente_id}
+                onChange={(e) => handleFilterChange('cliente_id', e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loadingClientes}
+              >
+                <option value="">Seleccionar cliente</option>
+                {clientes.map((cliente) => (
+                  <option key={cliente} value={cliente}>
+                    {cliente}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Filtros de Rango de Fechas */}
             <div className="md:col-span-2 flex gap-3 items-end">
               <div className="flex-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Desde</label>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  Desde <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="date" 
                   value={filters.fecha_inicio}
                   onChange={(e) => handleFilterChange('fecha_inicio', e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                {errors.fecha_inicio && (
+                  <p className="text-xs text-red-500 mt-1">{errors.fecha_inicio}</p>
+                )}
               </div>
               <div className="flex-1">
-                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Hasta</label>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  Hasta <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="date" 
                   value={filters.fecha_fin}
@@ -500,50 +419,32 @@ const todoElPerido = useCallback(() => {
                   className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500"
                   min={filters.fecha_inicio}
                 />
+                {errors.fecha_fin && (
+                  <p className="text-xs text-red-500 mt-1">{errors.fecha_fin}</p>
+                )}
               </div>
             </div>
           </div>
 
+          {errors.rango_fechas && (
+            <p className="text-xs text-red-500 mt-2">{errors.rango_fechas}</p>
+          )}
+
           {/* Botones de acción */}
           <div className="flex justify-between items-center mt-6">
-            {/* Botón Exportar a Excel */}
-            <button 
-              onClick={handleExportarExcel}
-              disabled={loadingDownload}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2"
-            >
-              {loadingDownload ? (
-                <span className="flex items-center">
-                  <Loader className="h-4 w-4 mr-2" />
-                  Exportando...
-                </span>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  Exportar a Excel
-                </>
-              )}
-            </button>
-            <button 
-                onClick={todoElPerido}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg text-sm font-bold transition"
-              >
-                <span className="font-bold">Ver Periodo Completo</span>
-              </button>
-
-            {/* Botones de filtros */}
             <div className="flex gap-3">
               <button 
                 onClick={clearFilters}
                 className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg text-sm font-bold transition"
               >
-                <span className="font-bold">Limpiar Filtros</span>
+                Limpiar
               </button>
               <button 
                 onClick={aplicarFiltros}
-                className="bg-gray-800 hover:bg-black text-white px-5 py-2.5 rounded-lg text-sm font-bold transition shadow-md"
+                disabled={!filters.cliente_id || !filters.fecha_inicio || !filters.fecha_fin || isLoading}
+                className="bg-gray-800 hover:bg-black text-white px-5 py-2.5 rounded-lg text-sm font-bold transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="font-bold">Filtrar</span>
+                {isLoading ? 'Buscando...' : 'Buscar'}
               </button>
               <Button
                 onClick={handleRefresh}
@@ -551,136 +452,133 @@ const todoElPerido = useCallback(() => {
                 size="small"
                 icon={RefreshCw}
                 isLoading={isLoading}
+                disabled={!filters.cliente_id || !filters.fecha_inicio || !filters.fecha_fin}
               >
-                <span className="font-bold">Recargar</span>
+                Recargar
               </Button>
             </div>
-          </div>
-          
-          {errors.rango_fechas && (
-            <p className="text-xs text-red-500 mt-2">{errors.rango_fechas}</p>
-          )}
-          
-          {/* Contador de filtros activos */}
-          {Object.values(filters).some(f => f && f.trim() !== '') && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="text-sm text-gray-600 flex items-center justify-between">
-                <span>
-                  Filtros configurados: 
-                  <span className="font-medium text-blue-600 ml-2">
-                    {Object.values(filters).filter(f => f && f.trim() !== '').length}
+
+            {hayResultados && (
+              <button 
+                onClick={handleExportarExcel}
+                disabled={loadingDownload}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2"
+              >
+                {loadingDownload ? (
+                  <span className="flex items-center">
+                    <Loader className="h-4 w-4 mr-2 animate-spin" />
+                    Exportando...
                   </span>
-                </span>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Exportar a Excel
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Dashboard de Resultados - SOLO si hay datos */}
+        {hayResultados ? (
+          <>
+            {/* Primera fila de tarjetas - Información General */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <TarjetaResumen 
+                titulo="Clientes Activos" 
+                valor={data.resumen_general.clientes_activos}
+              />
+              <TarjetaResumen 
+                titulo="Vendido Bruto (con detracción)" 
+                valor={formatMoneda(data.resumen_general.gran_total_facturado)}
+              />
+              <TarjetaResumen 
+                titulo="Vendido Neto (sin detracción)" 
+                valor={formatMoneda(data.resumen_general.gran_total_neto)}
+              />
+              <TarjetaResumen 
+                titulo="Total Detracción" 
+                valor={formatMoneda(data.resumen_general.gran_total_detraccion)}
+              />
+            </div>
+
+            {/* Segunda fila de tarjetas - Estado de Pagos */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+              <TarjetaResumen 
+                titulo="Neto Pagado" 
+                valor={formatMoneda(data.resumen_general.gran_total_neto_pagado)}
+              />
+              <TarjetaResumen 
+                titulo="Neto Pendiente" 
+                valor={formatMoneda(data.resumen_general.gran_total_neto_pendiente)}
+              />
+              <TarjetaResumen 
+                titulo="Neto Vencido" 
+                valor={formatMoneda(data.resumen_general.gran_total_neto_vencido)}
+              />
+              <TarjetaResumen 
+                titulo="Neto por Vencer" 
+                valor={formatMoneda(data.resumen_general.gran_total_neto_por_vencer)}
+              />
+            </div>
+
+            {/* Información del cliente y período */}
+            {/* <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold">Cliente:</span> {filters.cliente_id}
+              </p>
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold">Período:</span> {new Date(filters.fecha_inicio).toLocaleDateString('es-ES')} - {new Date(filters.fecha_fin).toLocaleDateString('es-ES')}
+              </p>
+            </div> */}
+
+            {/* Tabs horizontales */}
+            <Tabs 
+              activeTab={activeTab} 
+              onTabChange={setActiveTab} 
+              tabs={tabs} 
+            />
+
+            {/* Contenido del tab actual */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              {renderTabContent()}
+            </div>
+          </>
+        ) : (
+          /* Mensaje cuando no hay resultados */
+          filters.cliente_id && filters.fecha_inicio && filters.fecha_fin && !isLoading && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+              <div className="flex flex-col items-center">
+                <div className="text-gray-300 mb-4">
+                  <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No se encontraron resultados</h3>
+                <p className="text-gray-600 max-w-md">
+                  No hay datos disponibles para el cliente y rango de fechas seleccionados.
+                  Intenta con otro cliente o ajusta las fechas de búsqueda.
+                </p>
               </div>
             </div>
-          )}
-          
-          <p className="text-[10px] text-gray-400 mt-3 italic">
-            * El rango de fechas tiene prioridad sobre la selección de mes y año.
-          </p>
-        </div>
+          )
+        )}
 
-        {/* Tabla de Detalle por Cliente */}
-        <div className="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase">Cliente</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase">Numero de Facturas</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase ">Total Facturado Con Detracción</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {data.detalle_por_cliente.map((item, index) => (
-                <tr key={`${item.cliente}-${index}`} className="hover:bg-blue-50 transition">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                    {item.cliente || "CLIENTE SIN NOMBRE"}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                    {item.nro_facturas || 0} Facturas
-                  </td>
-                  <td className="px-6 py-4 text-sm text-center text-gray-700 font-mono">
-                    {formatMoneda(item.neto_total)}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button 
-                      onClick={() => verDetallesCliente(item)}
-                      className="text-blue-500 hover:text-blue-700 text-xs font-bold uppercase"
-                    >
-                      <span className="font-bold">Ver Detalles</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              
-              {/* Sin resultados */}
-              {data.detalle_por_cliente.length === 0 && !isLoading && (
-                <tr>
-                  <td colSpan="3" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center">
-                      <div className="text-gray-300 mb-3">
-                        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron resultados</h3>
-                      <p className="text-gray-600">
-                        {Object.values(filters).some(f => f && f.trim() !== '')
-                          ? 'Intenta ajustar los filtros de búsqueda'
-                          : 'No hay datos disponibles para mostrar'}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            <tfoot className="bg-gray-50 border-t border-gray-200">
-              <tr>
-                <td className="px-6 py-4 text-sm font-bold text-gray-800">TOTAL PERIODO</td>
-                <td></td>
-                <td className="px-6 py-4 text-sm text-center text-blue-700 font-mono font-bold">
-                  {formatMoneda(data.resumen_general.gran_total_neto)}
-                </td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {/* Paginación */}
-        {data.detalle_por_cliente.length > 0 && (
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between">
-            <div className="flex items-center space-x-4 mb-4 sm:mb-0">
-              <span className="text-sm text-gray-600">Mostrar</span>
-              <select
-                className="border border-gray-300 rounded px-3 py-1 text-sm"
-                value={pagination.itemsPerPage}
-                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-              >
-                {itemsPerPageOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <span className="text-sm text-gray-600">registros por página</span>
+        {/* Mensaje inicial cuando no hay filtros seleccionados */}
+        {(!filters.cliente_id || !filters.fecha_inicio || !filters.fecha_fin) && !isLoading && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="flex flex-col items-center">
+              <div className="text-gray-300 mb-4">
+                <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Selecciona un cliente y rango de fechas</h3>
+              <p className="text-gray-600 max-w-md">
+                Para ver el resumen de facturación, selecciona un cliente y define un rango de fechas.
+              </p>
             </div>
-
-            <Pagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              totalItems={pagination.totalItems}
-              itemsPerPage={pagination.itemsPerPage}
-              onPageChange={handlePageChange}
-              startIndex={
-                (pagination.currentPage - 1) * pagination.itemsPerPage + 1
-              }
-              endIndex={Math.min(
-                pagination.currentPage * pagination.itemsPerPage,
-                pagination.totalItems
-              )}
-            />
           </div>
         )}
       </div>
