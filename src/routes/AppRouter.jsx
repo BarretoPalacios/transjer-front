@@ -34,6 +34,7 @@ import Usuarios from "../pages/dashboard/Usuarios/Usuarios";
 import MonitoreoClientes from "../pages/dashboard/MonitoreoClientes/MonitoreoClientes";
 import DetalleGestion from "../pages/dashboard/GerenciaMonitoreo/DetalleGestion";
 import TodosLosFletes from "../pages/dashboard/TodosLosFletes/TodosLosFletes";
+import ReportesPrincipales from "../pages/dashboard/Servicios/ReportesPrincipales";
 
 const AppRouter = () => {
   return (
@@ -96,6 +97,12 @@ const AppRouter = () => {
           <Route path="servicios/detalle/:id" element={
             <ProtectedRoute requirePermission={['servicios', 'view']}>
               <ServicioDetalle />
+            </ProtectedRoute>
+          } />
+
+          <Route path="reportes-servicios-principales" element={
+            <ProtectedRoute requirePermission={['servicios', 'view']}>
+              <ReportesPrincipales />
             </ProtectedRoute>
           } />
           

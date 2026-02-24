@@ -260,6 +260,11 @@ export const serviciosPrincipalesAPI = {
     return response.data;
   },
 
+   getAnaliticasGenerales: async () => {
+    const response = await axiosInstance.get('/servicios-principales/stats/analiticas-generales');
+    return response.data;
+  },
+
   // ========================================
   // UTILIDADES
   // ========================================

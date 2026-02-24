@@ -121,6 +121,7 @@ const Sidebar = ({
       // Servicios
       "buscar-servicio": ["servicios", "view"],
       "servicios": ["servicios", "view"],
+      "reportes-servicios-principales": ["servicios", "view"],
       "historicos": ["servicios", "view"],
       "reportes-historicos": ["servicios", "view"],
       
@@ -268,6 +269,14 @@ const Sidebar = ({
             path: "/servicios",
             badge: null,
             show: shouldShowSubItem({ id: "servicios" }),
+          },
+          {
+            id: "reportes-servicios-principales",
+            label: "Estadísticas de Servicios Actuales",
+            icon: ChartColumnDecreasing,
+            path: "/reportes-servicios-principales",
+            badge: null,
+            show: shouldShowSubItem({ id: "reportes-servicios-principales" }),
           },
           {
             id: "historicos",
