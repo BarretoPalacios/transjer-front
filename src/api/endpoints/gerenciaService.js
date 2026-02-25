@@ -458,6 +458,22 @@ getResumenPorCliente: async (filters = {}) => {
 
   return response.data
 },
+
+getAnalisisFletesPorCliente: async (filters = {}) => {
+  const params = new URLSearchParams();
+
+  // Parámetros de filtrado específicos para Clientes
+  if (filters.cliente) params.append('nombre_cliente', filters.cliente);
+  if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
+  if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
+
+
+  const response = await axiosInstance.get(`/gerencia/analisis_de_fletes_por_cliente?${params.toString()}`);
+  
+  console.log('Analisis de fltes por Cliente Response:', response.data);
+
+  return response.data
+},
 // ==========================================
 // Sugerencias de Proveedores (autocompletado)
 // ==========================================

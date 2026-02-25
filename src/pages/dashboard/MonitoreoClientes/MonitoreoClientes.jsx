@@ -67,6 +67,18 @@ const MonitoreoClientes = () => {
     },
     detalle_por_cliente: []
   });
+
+  const [analisisFletes, setAnalisisFletes] = useState({
+  conteo_total: 0,
+  periodo: '',
+  cliente_filtrado: '',
+  detalles: {
+    pendientes: { cantidad: 0, monto: 0 },
+    valorizados_sin_factura: { cantidad: 0, monto: 0 },
+    valorizados_con_factura: { cantidad: 0, monto: 0 }
+  },
+  venta_total_valorizada: 0
+});
   
   const [isLoading, setIsLoading] = useState(false);
   const [clientes, setClientes] = useState([]);
@@ -119,87 +131,103 @@ const MonitoreoClientes = () => {
 
 
   // Función principal para cargar datos
-  const fetchResumen = useCallback(
-    async (filtersToUse = filters) => {
-      // Validar que haya al menos un cliente y rango de fechas
-      if (!filtersToUse.cliente_id || !filtersToUse.fecha_inicio || !filtersToUse.fecha_fin) {
-        return;
-      }
+// Función principal para cargar datos
+const fetchResumen = useCallback(
+  async (filtersToUse = filters) => {
+    // Validar que haya al menos un cliente y rango de fechas
+    if (!filtersToUse.cliente_id || !filtersToUse.fecha_inicio || !filtersToUse.fecha_fin) {
+      return;
+    }
 
-      setIsLoading(true);
-      setError(null);
-      setSuccessMessage(null);
-      setErrors({
-        fecha_inicio: '',
-        fecha_fin: '',
-        rango_fechas: ''
+    setIsLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+    setErrors({
+      fecha_inicio: '',
+      fecha_fin: '',
+      rango_fechas: ''
+    });
+    
+    // Validar fechas
+    const validationErrors = {};
+    
+    if (filtersToUse.fecha_inicio && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_inicio)) {
+      validationErrors.fecha_inicio = 'Formato de fecha inválido. Use YYYY-MM-DD';
+    }
+    
+    if (filtersToUse.fecha_fin && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_fin)) {
+      validationErrors.fecha_fin = 'Formato de fecha inválido. Use YYYY-MM-DD';
+    }
+    
+    if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin && 
+        !gerenciaServiceAPI.validarRangoFechas(filtersToUse.fecha_inicio, filtersToUse.fecha_fin)) {
+      validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
+    }
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Preparar filtros para API - SOLO cliente y rango de fechas
+    const filtrosAPI = {
+      cliente: filtersToUse.cliente_id,
+      fecha_inicio: filtersToUse.fecha_inicio,
+      fecha_fin: filtersToUse.fecha_fin
+    };
+    
+    try {
+      // Limpiar filtros vacíos
+      const cleanFilters = {};
+      Object.entries(filtrosAPI).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          cleanFilters[key] = value;
+        }
+      });
+
+      console.log('Filtros enviados a la API:', cleanFilters);
+      
+      // Llamar a ambas APIs en paralelo para mejor rendimiento
+      const [resumenResponse, analisisResponse] = await Promise.all([
+        gerenciaServiceAPI.getResumenPorCliente(cleanFilters),
+        gerenciaServiceAPI.getAnalisisFletesPorCliente(cleanFilters)
+      ]);
+      
+      setData({
+        resumen_general: resumenResponse.resumen_general || {
+          clientes_activos: 0,
+          gran_total_facturado: 0,
+          gran_total_detraccion: 0,
+          gran_total_neto: 0,
+          gran_total_neto_pagado: 0,
+          gran_total_neto_pendiente: 0,
+          gran_total_neto_vencido: 0,
+          gran_total_neto_por_vencer: 0
+        },
+        detalle_por_cliente: resumenResponse.detalle_por_cliente || []
       });
       
-      // Validar fechas
-      const validationErrors = {};
+      setAnalisisFletes(analisisResponse || {
+        conteo_total: 0,
+        periodo: '',
+        cliente_filtrado: '',
+        detalles: {
+          pendientes: { cantidad: 0, monto: 0 },
+          valorizados_sin_factura: { cantidad: 0, monto: 0 },
+          valorizados_con_factura: { cantidad: 0, monto: 0 }
+        },
+        venta_total_valorizada: 0
+      });
       
-      if (filtersToUse.fecha_inicio && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_inicio)) {
-        validationErrors.fecha_inicio = 'Formato de fecha inválido. Use YYYY-MM-DD';
-      }
-      
-      if (filtersToUse.fecha_fin && !gerenciaServiceAPI.validarFecha(filtersToUse.fecha_fin)) {
-        validationErrors.fecha_fin = 'Formato de fecha inválido. Use YYYY-MM-DD';
-      }
-      
-      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin && 
-          !gerenciaServiceAPI.validarRangoFechas(filtersToUse.fecha_inicio, filtersToUse.fecha_fin)) {
-        validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
-      }
-      
-      if (Object.keys(validationErrors).length > 0) {
-        setErrors(validationErrors);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Preparar filtros para API - SOLO cliente y rango de fechas
-      const filtrosAPI = {
-        cliente: filtersToUse.cliente_id,
-        fecha_inicio: filtersToUse.fecha_inicio,
-        fecha_fin: filtersToUse.fecha_fin
-      };
-      
-      try {
-        // Limpiar filtros vacíos
-        const cleanFilters = {};
-        Object.entries(filtrosAPI).forEach(([key, value]) => {
-          if (value !== null && value !== undefined && value !== '') {
-            cleanFilters[key] = value;
-          }
-        });
-
-        console.log('Filtros enviados a la API:', cleanFilters);
-        
-        // Llamar a la API específica para clientes
-        const response = await gerenciaServiceAPI.getResumenPorCliente(cleanFilters);
-        
-        setData({
-          resumen_general: response.resumen_general || {
-            clientes_activos: 0,
-            gran_total_facturado: 0,
-            gran_total_detraccion: 0,
-            gran_total_neto: 0,
-            gran_total_neto_pagado: 0,
-            gran_total_neto_pendiente: 0,
-            gran_total_neto_vencido: 0,
-            gran_total_neto_por_vencer: 0
-          },
-          detalle_por_cliente: response.detalle_por_cliente || []
-        });
-        
-      } catch (err) {
-        setError('Error al cargar el resumen: ' + (err.message || 'Error desconocido'));
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
+    } catch (err) {
+      setError('Error al cargar el resumen: ' + (err.message || 'Error desconocido'));
+    } finally {
+      setIsLoading(false);
+    }
+  },
+  []
+);
 
   // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
@@ -207,7 +235,7 @@ const MonitoreoClientes = () => {
       ...prev,
       [key]: value
     }));
-    
+
   }, []);
 
   // Función para aplicar filtros
@@ -219,31 +247,42 @@ const MonitoreoClientes = () => {
     fetchResumen(filters);
   }, [fetchResumen, filters]);
 
-  const clearFilters = useCallback(() => {
-    setFilters({
-      cliente_id: '',
-      fecha_inicio: '',
-      fecha_fin: ''
-    });
-    setErrors({
-      fecha_inicio: '',
-      fecha_fin: '',
-      rango_fechas: ''
-    });
-    setData({
-      resumen_general: {
-        clientes_activos: 0,
-        gran_total_facturado: 0,
-        gran_total_detraccion: 0,
-        gran_total_neto: 0,
-        gran_total_neto_pagado: 0,
-        gran_total_neto_pendiente: 0,
-        gran_total_neto_vencido: 0,
-        gran_total_neto_por_vencer: 0
-      },
-      detalle_por_cliente: []
-    });
-  }, []);
+const clearFilters = useCallback(() => {
+  setFilters({
+    cliente_id: '',
+    fecha_inicio: '',
+    fecha_fin: ''
+  });
+  setErrors({
+    fecha_inicio: '',
+    fecha_fin: '',
+    rango_fechas: ''
+  });
+  setData({
+    resumen_general: {
+      clientes_activos: 0,
+      gran_total_facturado: 0,
+      gran_total_detraccion: 0,
+      gran_total_neto: 0,
+      gran_total_neto_pagado: 0,
+      gran_total_neto_pendiente: 0,
+      gran_total_neto_vencido: 0,
+      gran_total_neto_por_vencer: 0
+    },
+    detalle_por_cliente: []
+  });
+  setAnalisisFletes({
+    conteo_total: 0,
+    periodo: '',
+    cliente_filtrado: '',
+    detalles: {
+      pendientes: { cantidad: 0, monto: 0 },
+      valorizados_sin_factura: { cantidad: 0, monto: 0 },
+      valorizados_con_factura: { cantidad: 0, monto: 0 }
+    },
+    venta_total_valorizada: 0
+  });
+}, []);
 
   const handleRefresh = useCallback(() => {
     if (filters.cliente_id && filters.fecha_inicio && filters.fecha_fin) {
@@ -530,15 +569,35 @@ const renderTabContent = () => {
               />
             </div>
 
-            {/* Información del cliente y período */}
-            {/* <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">
-                <span className="font-semibold">Cliente:</span> {filters.cliente_id}
-              </p>
-              <p className="text-sm text-gray-600">
-                <span className="font-semibold">Período:</span> {new Date(filters.fecha_inicio).toLocaleDateString('es-ES')} - {new Date(filters.fecha_fin).toLocaleDateString('es-ES')}
-              </p>
-            </div> */}
+{/* Separador para Análisis de Fletes */}
+<div className="mb-4">
+  <h2 className="text-lg font-semibold text-gray-800">Fletes</h2>
+</div>
+
+            {/* Tercera fila de tarjetas - Análisis de Fletes */}
+<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+  <TarjetaResumen 
+    titulo="Total Fletes" 
+    valor={analisisFletes.conteo_total}
+  />
+  <TarjetaResumen 
+    titulo="Venta Neta" 
+    valor={formatMoneda(analisisFletes.venta_total_valorizada)}
+  />
+  <TarjetaResumen 
+    titulo="Venta Bruta (con IGV) " 
+    valor={formatMoneda(analisisFletes.venta_total_valorizada * 1.18)}
+  />
+
+  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="flex flex-col">
+        {/* <p className="text-xs font-medium text-black uppercase tracking-wider">Fletes</p> */}
+        <p className="text-sm text-gray-600 mt-1">Pendientes: {analisisFletes.detalles?.pendientes?.cantidad || 0} - {formatMoneda(analisisFletes.detalles?.pendientes?.monto || 0)}</p>
+        <p className="text-sm text-gray-600 mt-1">Valorizados s/Factura: {analisisFletes.detalles?.valorizados_sin_factura?.cantidad || 0} - {formatMoneda(analisisFletes.detalles?.valorizados_sin_factura?.monto || 0)}</p>
+        <p className="text-sm text-gray-600 mt-1">Valorizados c/Factura: {analisisFletes.detalles?.valorizados_con_factura?.cantidad || 0} - {formatMoneda(analisisFletes.detalles?.valorizados_con_factura?.monto || 0)}</p>
+      </div>
+    </div>
+</div>
 
             {/* Tabs horizontales */}
             <Tabs 
