@@ -117,6 +117,7 @@ const MonitoreoClientes = () => {
     fetchClientes();
   }, []);
 
+
   // Función principal para cargar datos
   const fetchResumen = useCallback(
     async (filtersToUse = filters) => {
@@ -206,6 +207,7 @@ const MonitoreoClientes = () => {
       ...prev,
       [key]: value
     }));
+    
   }, []);
 
   // Función para aplicar filtros
@@ -301,28 +303,32 @@ const MonitoreoClientes = () => {
   const hayResultados = data.detalle_por_cliente.length > 0;
 
   // Renderizar el componente según el tab activo
-  const renderTabContent = () => {
-    if (!filters.cliente_id || !filters.fecha_inicio || !filters.fecha_fin) {
-      return null;
-    }
+const renderTabContent = () => {
+  if (!filters.cliente_id || !filters.fecha_inicio || !filters.fecha_fin) {
+    return null;
+  }
 
-    const props = {
-      clienteId: filters.cliente_id,
-      fechaInicio: filters.fecha_inicio,
-      fechaFin: filters.fecha_fin
-    };
-
-    switch (activeTab) {
-      case 'facturacion':
-        return <SeguimientoFacturas {...props} />;
-      case 'flotas':
-        return <TodosLosFletes {...props} />;
-      case 'servicios':
-        return <Servicios {...props} />;
-      default:
-        return null;
-    }
+  const props = {
+    clienteId: filters.cliente_id,
+    fechaInicio: filters.fecha_inicio,
+    fechaFin: filters.fecha_fin
   };
+
+  // Crear una key única basada en los filtros y el tab activo
+  // Esto hará que el componente se recree cuando cambien los filtros
+  const componentKey = `${activeTab}-${filters.cliente_id}-${filters.fecha_inicio}-${filters.fecha_fin}`;
+
+  switch (activeTab) {
+    case 'facturacion':
+      return <SeguimientoFacturas key={componentKey} {...props} />;
+    case 'flotas':
+      return <TodosLosFletes key={componentKey} {...props} />;
+    case 'servicios':
+      return <Servicios key={componentKey} {...props} />;
+    default:
+      return null;
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -485,40 +491,41 @@ const MonitoreoClientes = () => {
           <>
             {/* Primera fila de tarjetas - Información General */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <TarjetaResumen 
+              {/* <TarjetaResumen 
                 titulo="Clientes Activos" 
                 valor={data.resumen_general.clientes_activos}
-              />
+              /> */}
               <TarjetaResumen 
-                titulo="Vendido Bruto (con detracción)" 
+                titulo="Facturado Bruto" 
                 valor={formatMoneda(data.resumen_general.gran_total_facturado)}
               />
               <TarjetaResumen 
-                titulo="Vendido Neto (sin detracción)" 
+                titulo="Facturado Bruto (con detracción)" 
                 valor={formatMoneda(data.resumen_general.gran_total_neto)}
               />
               <TarjetaResumen 
                 titulo="Total Detracción" 
                 valor={formatMoneda(data.resumen_general.gran_total_detraccion)}
               />
+              <TarjetaResumen 
+                titulo="Numero de Facturas" 
+                valor={(data.detalle_por_cliente[0]?.nro_facturas || 0)}
+              />
             </div>
 
             {/* Segunda fila de tarjetas - Estado de Pagos */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
               <TarjetaResumen 
-                titulo="Neto Pagado" 
+                titulo="Cobrado" 
                 valor={formatMoneda(data.resumen_general.gran_total_neto_pagado)}
               />
+              
               <TarjetaResumen 
-                titulo="Neto Pendiente" 
-                valor={formatMoneda(data.resumen_general.gran_total_neto_pendiente)}
-              />
-              <TarjetaResumen 
-                titulo="Neto Vencido" 
+                titulo="Vencido" 
                 valor={formatMoneda(data.resumen_general.gran_total_neto_vencido)}
               />
               <TarjetaResumen 
-                titulo="Neto por Vencer" 
+                titulo="Por Vencer" 
                 valor={formatMoneda(data.resumen_general.gran_total_neto_por_vencer)}
               />
             </div>
