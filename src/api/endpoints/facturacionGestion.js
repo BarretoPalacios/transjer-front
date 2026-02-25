@@ -262,6 +262,8 @@ getResumenPorPlaca: async (filters = {}) => {
     if (filters.fecha_probable_fin) params.append('fecha_probable_fin', filters.fecha_probable_fin);
     if (filters.fecha_emision_inicio) params.append('fecha_emision_inicio', filters.fecha_emision_inicio);
     if (filters.fecha_emision_fin) params.append('fecha_emision_fin', filters.fecha_emision_fin);
+    if (filters.fecha_servicio_inicio) params.append('fecha_servicio_inicio', filters.fecha_servicio_inicio);
+    if (filters.fecha_servicio_fin) params.append('fecha_servicio_fin', filters.fecha_servicio_fin);
     if (filters.nombre_cliente) params.append('nombre_cliente', filters.nombre_cliente);
     if (filters.nombre_proveedor) params.append('nombre_proveedor', filters.nombre_proveedor);
     if (filters.placa_flota) params.append('placa_flota', filters.placa_flota);
