@@ -101,9 +101,33 @@ const PrioridadPago = {
     hasPrev: false,
   });
 
+  const getUrlParams = () => {
+  const params = new URLSearchParams(window.location.search);
+  const mes = parseInt(params.get('mes'), 10);
+  const anio = parseInt(params.get('anio'), 10);
+  const estado = params.get('estado');
+
+  const urlData = {
+    fecha_inicio: "",
+    fecha_fin: "",
+    estado: estado || ""
+  };
+
+  if (!isNaN(mes) && !isNaN(anio)) {
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+    urlData.fecha_inicio = `${anio}-${mes.toString().padStart(2, '0')}-01`;
+    urlData.fecha_fin = `${anio}-${mes.toString().padStart(2, '0')}-${ultimoDia.toString().padStart(2, '0')}`;
+  }
+
+  return urlData;
+};
+
+// Guardamos el resultado en una constante para usarla en los estados
+const initialUrlData = getUrlParams();
+
   // Estados para filtros - AÑADIR nombre_cliente
   const [filters, setFilters] = useState({
-    estado_pago_neto: "",
+    estado_pago_neto: initialUrlData.estado || "",
     prioridad: "",
     nombre_cliente: "",
     numero_factura: "",
@@ -111,8 +135,8 @@ const PrioridadPago = {
     fecha_emision_fin: "",
     fecha_vencimiento_inicio: "",
     fecha_vencimiento_fin: "",
-    fecha_servicio_inicio: "",
-    fecha_servicio_fin: "",
+    fecha_servicio_inicio: initialUrlData.fecha_inicio || "",
+  fecha_servicio_fin: initialUrlData.fecha_fin || "",
     estado_detraccion: "",
     nombre_proveedor: "",
   });

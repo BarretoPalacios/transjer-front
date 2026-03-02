@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   DollarSign,
   FileText,
@@ -12,15 +12,14 @@ import {
   RefreshCw,
   BarChart3,
   Filter,
-  Download, 
-  ArrowRight
-} from 'lucide-react';
+  Download,
+  ArrowRight,
+} from "lucide-react";
 import { facturacionGestionAPI } from "../../../api/endpoints/facturacionGestion";
-import {gerenciaServiceAPI} from '../../../api/endpoints/gerenciaService';
-import { useNavigate } from 'react-router-dom';
+import { gerenciaServiceAPI } from "../../../api/endpoints/gerenciaService";
+import { useNavigate } from "react-router-dom";
 
 const AnaliticasGerenciales = () => {
-
   const navigate = useNavigate();
 
   const [loadingExport, setLoadingExport] = useState(false);
@@ -30,11 +29,11 @@ const AnaliticasGerenciales = () => {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [mostrarHistoricoTotal, setMostrarHistoricoTotal] = useState(false);
-  
+
   // Estados para los filtros
   const [mes, setMes] = useState(new Date().getMonth() + 1); // Mes actual (1-12)
   const [anio, setAnio] = useState(new Date().getFullYear()); // Año actual
-  
+
   // Datos iniciales del dashboard
   const [dashboardData, setDashboardData] = useState(null);
 
@@ -44,23 +43,27 @@ const AnaliticasGerenciales = () => {
       setLoading(true);
       setError(null);
       setMostrarHistoricoTotal(mostrarTodo);
-      
+
       // Usar el nuevo endpoint getResumenFinanciero
       const response = await facturacionGestionAPI.getResumenFinanciero(
-        mostrarTodo ? undefined : {
-          mes,
-          anio
-        }
+        mostrarTodo
+          ? undefined
+          : {
+              mes,
+              anio,
+            },
       );
-      
+
       // Mapear los datos de la API al formato esperado
-      
+
       setDashboardData(response);
-      
+
       setLastUpdated(new Date());
     } catch (err) {
-      console.error('Error al obtener KPIs financieros:', err);
-      setError('No se pudieron cargar los datos financieros. Por favor, intente nuevamente.');
+      console.error("Error al obtener KPIs financieros:", err);
+      setError(
+        "No se pudieron cargar los datos financieros. Por favor, intente nuevamente.",
+      );
     } finally {
       setLoading(false);
     }
@@ -68,62 +71,63 @@ const AnaliticasGerenciales = () => {
 
   // Función para formatear moneda
   const formatCurrency = (value) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN',
+    const numValue = typeof value === "string" ? parseFloat(value) : value;
+    return new Intl.NumberFormat("es-PE", {
+      style: "currency",
+      currency: "PEN",
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(numValue || 0);
   };
 
-
   const handleDownload = async () => {
-  try {
-    setLoadingExport(true);
-    
-    // 1. Llamada al servicio
-    const blob = await gerenciaServiceAPI.exportDataMaestraExcel();
+    try {
+      setLoadingExport(true);
 
-    // 2. Creación del objeto URL
-    const url = window.URL.createObjectURL(new Blob([blob]));
-    const link = document.createElement('a');
-    link.href = url;
+      // 1. Llamada al servicio
+      const blob = await gerenciaServiceAPI.exportDataMaestraExcel();
 
-    // 3. Configuración del archivo
-    const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
-    link.setAttribute('download', `DATA_MAESTRA_${timestamp}.xlsx`);
+      // 2. Creación del objeto URL
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
 
-    // 4. Ejecución de descarga
-    document.body.appendChild(link);
-    link.click();
+      // 3. Configuración del archivo
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[-:T]/g, "")
+        .slice(0, 12);
+      link.setAttribute("download", `DATA_MAESTRA_${timestamp}.xlsx`);
 
-    // 5. Limpieza
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    
-  } catch (error) {
-    console.error("Error al exportar:", error);
-    // Aquí podrías disparar una alerta de error (Toast/Swal)
-  } finally {
-    setLoadingExport(false);
-  }
-};
+      // 4. Ejecución de descarga
+      document.body.appendChild(link);
+      link.click();
+
+      // 5. Limpieza
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error al exportar:", error);
+      // Aquí podrías disparar una alerta de error (Toast/Swal)
+    } finally {
+      setLoadingExport(false);
+    }
+  };
 
   // Lista de meses
   const meses = [
-    { id: 1, nombre: 'Enero' },
-    { id: 2, nombre: 'Febrero' },
-    { id: 3, nombre: 'Marzo' },
-    { id: 4, nombre: 'Abril' },
-    { id: 5, nombre: 'Mayo' },
-    { id: 6, nombre: 'Junio' },
-    { id: 7, nombre: 'Julio' },
-    { id: 8, nombre: 'Agosto' },
-    { id: 9, nombre: 'Septiembre' },
-    { id: 10, nombre: 'Octubre' },
-    { id: 11, nombre: 'Noviembre' },
-    { id: 12, nombre: 'Diciembre' }
+    { id: 1, nombre: "Enero" },
+    { id: 2, nombre: "Febrero" },
+    { id: 3, nombre: "Marzo" },
+    { id: 4, nombre: "Abril" },
+    { id: 5, nombre: "Mayo" },
+    { id: 6, nombre: "Junio" },
+    { id: 7, nombre: "Julio" },
+    { id: 8, nombre: "Agosto" },
+    { id: 9, nombre: "Septiembre" },
+    { id: 10, nombre: "Octubre" },
+    { id: 11, nombre: "Noviembre" },
+    { id: 12, nombre: "Diciembre" },
   ];
 
   // Generar lista de años (últimos 10 años y próximos 2)
@@ -150,7 +154,7 @@ const AnaliticasGerenciales = () => {
     fetchData(true);
   };
 
-const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
+  const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18;
 
   useEffect(() => {
     fetchData();
@@ -193,11 +197,14 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h1 className="text-xl font-bold text-gray-900 mb-1">Resumen Financiero</h1>
+                <h1 className="text-xl font-bold text-gray-900 mb-1">
+                  Resumen Financiero
+                </h1>
                 <p className="text-gray-600 text-sm">
-                  Período: {mostrarHistoricoTotal 
-                    ? 'HISTÓRICO TOTAL' 
-                    : `${meses.find(m => m.id === mes)?.nombre} ${anio}`}
+                  Período:{" "}
+                  {mostrarHistoricoTotal
+                    ? "HISTÓRICO TOTAL"
+                    : `${meses.find((m) => m.id === mes)?.nombre} ${anio}`}
                 </p>
                 {mostrarHistoricoTotal && (
                   <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
@@ -205,14 +212,16 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                   </span>
                 )}
               </div>
-              
+
               <button
                 onClick={() => fetchData(mostrarHistoricoTotal)}
                 disabled={loading}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                {loading ? 'Actualizando...' : 'Actualizar'}
+                <RefreshCw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
+                {loading ? "Actualizando..." : "Actualizar"}
               </button>
 
               <button
@@ -221,17 +230,19 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className={`h-4 w-4 `} />
-                {loadingExport ? 'Descargando...' : 'Descargar Data Maestra'}
+                {loadingExport ? "Descargando..." : "Descargar Data Maestra"}
               </button>
             </div>
-            
+
             {/* Filtros de mes y año - SIEMPRE HABILITADOS */}
             <div className="flex flex-col md:flex-row md:items-center gap-3 p-3 bg-white rounded-lg shadow-sm ">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">Filtrar por:</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Filtrar por:
+                </span>
               </div>
-              
+
               <div className="flex flex-col md:flex-row md:items-center gap-2 flex-1">
                 {/* Selector de Mes - Siempre habilitado */}
                 <div className="flex-1 md:max-w-[150px]">
@@ -271,13 +282,13 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                   >
                     Filtrar
                   </button>
-                  
+
                   <button
                     onClick={verTodoHistorico}
                     className={`px-4 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 whitespace-nowrap ${
                       mostrarHistoricoTotal
-                        ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-500'
+                        ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-500"
                     }`}
                   >
                     Mostrar Todos Los Periodos
@@ -296,13 +307,15 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
           <BarChart3 className="text-blue-500 mr-2 text-sm h-4 w-4" />
           Resumen de Ventas
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {/* Total Vendido Neto */}
           <div className="bg-white rounded-lg shadow-sm p-3 border-l-3 border-blue-500 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Vendido Neto</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Vendido Neto
+                </h3>
                 <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.fletes.venta_total_valorizada)}
                 </p>
@@ -311,23 +324,33 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                 <DollarSign className="h-4 w-4" />
               </div>
             </div>
-            <p className="text-gray-500 text-xs">Suma de todos los fletes valorizados</p>
+            <p className="text-gray-500 text-xs">
+              Suma de todos los fletes valorizados
+            </p>
             <div className="mt-2">
               <button
-                    onClick={() => mostrarHistoricoTotal ? navigate(`/contabilidad/fletes-completos`) : navigate(`/contabilidad/fletes-completos?mes=${mes}&anio=${anio}`)}
-                    className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
-                  >
-                    <ArrowRight className="h-4 w-4" />                    
-                    Ver detalles
-                  </button>
+                onClick={() =>
+                  mostrarHistoricoTotal
+                    ? navigate(`/contabilidad/fletes-completos`)
+                    : navigate(
+                        `/contabilidad/fletes-completos?mes=${mes}&anio=${anio}`,
+                      )
+                }
+                className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Ver detalles
+              </button>
             </div>
           </div>
-          
+
           {/* Total Vendido Bruto */}
           <div className="bg-white rounded-lg shadow-sm p-3 border-l-3 border-green-500 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Vendido Bruto</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Vendido Bruto
+                </h3>
                 <p className="text-black text-lg font-semibold">
                   {formatCurrency(vendidoBruto)}
                 </p>
@@ -338,19 +361,22 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
             </div>
             <p className="text-gray-500 text-xs">Vendido Neto + IVG</p>
           </div>
-          
+
           {/* Facturación Bruta */}
           <div className="bg-white rounded-lg shadow-sm p-3 border-l-3 border-purple-500 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Facturación Bruta</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Facturación Bruta
+                </h3>
                 <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.facturas.monto_total_bruto)}
                 </p>
                 <p className="text-black text-xs font-semibold">
-                  Con Detracción: {formatCurrency(dashboardData.facturas.monto_neto_total)}
+                  Con Detracción:{" "}
+                  {formatCurrency(dashboardData.facturas.monto_neto_total)}
                 </p>
-              </div> 
+              </div>
               <div className="p-2 bg-purple-100 text-purple-600 rounded-md">
                 <FileText className="h-4 w-4" />
               </div>
@@ -358,27 +384,38 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
             <div className="flex justify-between items-center mt-1">
               <p className="text-gray-500 text-xs">Total facturado</p>
               <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full">
-                {dashboardData.facturas.conteo_facturas} factura{dashboardData.facturas.conteo_facturas !== 1 ? 's' : ''}
+                {dashboardData.facturas.conteo_facturas} factura
+                {dashboardData.facturas.conteo_facturas !== 1 ? "s" : ""}
               </span>
             </div>
-            {/* <div className="mt-2">
+            <div className="mt-2">
               <button
-                    onClick={() => navigate(`/contabilidad/fletes-por-facturar`)}
-                    className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
-                  >
-                    <ArrowRight className="h-4 w-4" />                    
-                    Ver detalles
-                  </button>
-            </div> */}
+                onClick={() =>
+                  mostrarHistoricoTotal
+                    ? navigate(`/contabilidad/segimineto`)
+                    : navigate(
+                        `/contabilidad/segimineto?mes=${mes}&anio=${anio}`,
+                      )
+                }
+                className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Ver detalles
+              </button>
+            </div>
           </div>
-          
+
           {/* Facturación Bruta Pendiente */}
           <div className="bg-white rounded-lg shadow-sm p-3 border-l-3 border-yellow-500 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Facturación Pendiente</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Facturación Pendiente
+                </h3>
                 <p className="text-black text-lg font-semibold">
-                  {formatCurrency(vendidoBruto - dashboardData.facturas.monto_total_bruto)} 
+                  {formatCurrency(
+                    vendidoBruto - dashboardData.facturas.monto_total_bruto,
+                  )}
                 </p>
               </div>
               <div className="p-2 bg-yellow-100 text-yellow-600 rounded-md">
@@ -387,31 +424,39 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
             </div>
             <div className="mt-2">
               <button
-              onClick={() => mostrarHistoricoTotal ? navigate(`/contabilidad/fletes-por-facturar`) : navigate(`/contabilidad/fletes-por-facturar?mes=${mes}&anio=${anio}`)}
-                    // onClick={() => navigate(`/contabilidad/fletes-por-facturar`)}
-                    className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
-                  >
-                    <ArrowRight className="h-4 w-4" />                    
-                    Ver detalles
-                  </button>
+                onClick={() =>
+                  mostrarHistoricoTotal
+                    ? navigate(`/contabilidad/fletes-por-facturar`)
+                    : navigate(
+                        `/contabilidad/fletes-por-facturar?mes=${mes}&anio=${anio}`,
+                      )
+                }
+                
+                className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Ver detalles
+              </button>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Sección de cobranza y detracciones */}
       <div className="mb-8">
         <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center">
           <DollarSign className="text-green-500 mr-2 text-sm h-4 w-4" />
           Cobranza y Detracciones
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Pendiente por Cobrar */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Pendiente por Cobrar</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Pendiente por Cobrar
+                </h3>
                 <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.facturas.monto_total_pendiente)}
                 </p>
@@ -420,7 +465,7 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                 <AlertCircle className="h-4 w-4" />
               </div>
             </div>
-            
+
             <div className="space-y-2 mt-3">
               <div>
                 <div className="flex justify-between text-xs mb-1">
@@ -430,13 +475,13 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                   </span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-blue-500 transition-all duration-500"
                     // style={{ width: `${porcentajes.porcentajePorVencer}%` }}
                   ></div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-gray-600">Vencido</span>
@@ -445,20 +490,27 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                   </span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-green-500 transition-all duration-500"
-                    style={{ width: dashboardData.facturas.vencido.cantidad > 0 ? '100%' : '0%' }}
+                    style={{
+                      width:
+                        dashboardData.facturas.vencido.cantidad > 0
+                          ? "100%"
+                          : "0%",
+                    }}
                   ></div>
                 </div>
               </div>
             </div>
           </div>
-          
+
           {/* Total Cobrado */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Total Cobrado</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Total Cobrado
+                </h3>
                 <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.facturas.pagado.monto)}
                 </p>
@@ -466,21 +518,40 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
               <div className="p-2 bg-green-100 text-green-600 rounded-md">
                 <TrendingUp className="h-4 w-4" />
               </div>
-            </div>  
-            
+            </div>
+            <div className="mt-2">
+              <button
+                onClick={() =>
+                  mostrarHistoricoTotal
+                    ? navigate(`/contabilidad/segimineto?estado=Pagado`)
+                    : navigate(
+                        `/contabilidad/segimineto?mes=${mes}&anio=${anio}&estado=Pagado`,
+                      )
+                }
+                
+                className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Ver detalles
+              </button>
+            </div>
             <div className="flex justify-between items-center mt-1 mb-3">
               <p className="text-gray-500 text-xs">Monto cobrado</p>
               <span className="text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded-full">
-                {dashboardData.facturas.pagado.cantidad} factura{dashboardData.facturas.pagado.cantidad !== 1 ? 's' : ''} cobrada{dashboardData.facturas.pagado.cantidad !== 1 ? 's' : ''}
+                {dashboardData.facturas.pagado.cantidad} factura
+                {dashboardData.facturas.pagado.cantidad !== 1 ? "s" : ""}{" "}
+                cobrada{dashboardData.facturas.pagado.cantidad !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
-          
+
           {/* Detracciones */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Total Detracciones</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Total Detracciones
+                </h3>
                 <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.total_detracciones)}
                 </p>
@@ -489,30 +560,33 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                 <Percent className="h-4 w-4" />
               </div>
             </div>
-            
+
             <div className="flex justify-between items-center mt-1 mb-3">
               <p className="text-gray-500 text-xs">Monto retenido</p>
               <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">
-                {dashboardData.cnt_detracciones} factura{dashboardData.cnt_detracciones !== 1 ? 's' : ''}
+                {dashboardData.cnt_detracciones} factura
+                {dashboardData.cnt_detracciones !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Sección de vencimientos */}
       <div className="mb-8">
         <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center">
           <Calendar className="text-orange-500 mr-2 text-sm h-4 w-4" />
           Estado de Vencimientos
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Por Vencer */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Por Vencer</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Por Vencer
+                </h3>
                 <p className="text-black text-lg font-semibold">
                   {formatCurrency(dashboardData.facturas.por_vencer.monto)}
                 </p>
@@ -521,33 +595,48 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                 <Calendar className="h-4 w-4" />
               </div>
             </div>
-            
+            <div className="mt-2">
+              <button
+                onClick={() =>
+                  mostrarHistoricoTotal
+                    ? navigate(`/contabilidad/segimineto?estado=Pendiente`)
+                    : navigate(
+                        `/contabilidad/segimineto?mes=${mes}&anio=${anio}&estado=Pendiente`,
+                      )
+                }
+                
+                className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Ver detalles
+              </button>
+            </div>
             <div className="flex items-center justify-between mt-2">
               <div className="text-left">
                 <p className="text-gray-500 text-xs">Próximos vencimientos</p>
                 <p className="text-gray-400 text-xs">
-                  {dashboardData.facturas.por_vencer.cantidad === 0 ? 'Sin facturas por vencer' : `${dashboardData.facturas.por_vencer.cantidad} factura(s) por vencer`}
+                  {dashboardData.facturas.por_vencer.cantidad === 0
+                    ? "Sin facturas por vencer"
+                    : `${dashboardData.facturas.por_vencer.cantidad} factura(s) por vencer`}
                 </p>
               </div>
-              {/* <div className="text-right">
-                <div className="text-xs text-gray-600">Estado</div>
-                <div className={`text-xs font-medium ${dashboardData.total_vencido === 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {dashboardData.total_vencido === 0 ? 'Al día' : 'Con mora'}
-                </div>
-              </div> */}
             </div>
           </div>
-          
+
           {/* Vencido */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
                 <h3 className="text-gray-500 text-xs font-medium">Vencido</h3>
-                <p className={`text-lg font-semibold ${dashboardData.facturas.vencido.monto === 0 ? 'text-green-600' : 'text-black'}`}>
+                <p
+                  className={`text-lg font-semibold ${dashboardData.facturas.vencido.monto === 0 ? "text-green-600" : "text-black"}`}
+                >
                   {formatCurrency(dashboardData.facturas.vencido.monto)}
                 </p>
               </div>
-              <div className={`p-2 rounded-md ${dashboardData.facturas.vencido.monto === 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+              <div
+                className={`p-2 rounded-md ${dashboardData.facturas.vencido.monto === 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}
+              >
                 {dashboardData.facturas.vencido.monto === 0 ? (
                   <CheckCircle className="h-4 w-4" />
                 ) : (
@@ -555,38 +644,58 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
                 )}
               </div>
             </div>
-            
+            <div className="mt-2">
+              <button
+                onClick={() =>
+                  mostrarHistoricoTotal
+                    ? navigate(`/contabilidad/segimineto?estado=Vencido`)
+                    : navigate(
+                        `/contabilidad/segimineto?mes=${mes}&anio=${anio}&estado=Vencido`,
+                      )
+                }
+                
+                className="mt-2 flex items-center gap-1.5 bg-blue-700 hover:bg-blue-400 text-white border border-gray-200 py-1 px-2.5 rounded-md text-[11px] font-medium transition-all shadow-sm active:bg-gray-100"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Ver detalles
+              </button>
+            </div>
             <div className="flex items-center justify-between mt-2">
               <div className="text-left">
                 <p className="text-gray-500 text-xs">Documentos vencidos</p>
                 <p className="text-gray-400 text-xs">
-                  {dashboardData.facturas.vencido.monto === 0 ? 'Sin mora en pagos' : 'Atención requerida'}
+                  {dashboardData.facturas.vencido.monto === 0
+                    ? "Sin mora en pagos"
+                    : "Atención requerida"}
                 </p>
               </div>
               <div className="text-right">
                 <div className="text-xs text-gray-600">Cantidad</div>
                 <div className="text-xs font-medium">
-                  {dashboardData.facturas.vencido.cantidad} factura{dashboardData.facturas.vencido.cantidad !== 1 ? 's' : ''}
+                  {dashboardData.facturas.vencido.cantidad} factura
+                  {dashboardData.facturas.vencido.cantidad !== 1 ? "s" : ""}
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Sección de fletes */}
       <div className="mb-6">
         <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center">
           <Truck className="text-teal-500 mr-2 text-sm h-4 w-4" />
           Estado de Fletes
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {/* Total Fletes */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Total Fletes</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Total Fletes
+                </h3>
                 <p className="text-gray-800 text-lg font-semibold">
                   {dashboardData.fletes.conteo_total}
                 </p>
@@ -603,12 +712,14 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
               </span>
             </p>
           </div>
-          
+
           {/* Fletes Pendientes */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Fletes Pendientes</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Fletes Pendientes
+                </h3>
                 <p className="text-black text-lg font-semibold">
                   {dashboardData.fletes.detalles.pendientes.cantidad}
                 </p>
@@ -625,14 +736,19 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
               </span>
             </p>
           </div>
-          
+
           {/* Fletes Valorizados */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Fletes Valorizados</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Fletes Valorizados
+                </h3>
                 <p className="text-black text-lg font-semibold">
-                  {dashboardData.fletes.detalles.valorizados_sin_factura.cantidad}
+                  {
+                    dashboardData.fletes.detalles.valorizados_sin_factura
+                      .cantidad
+                  }
                 </p>
               </div>
               <div className="p-2 bg-blue-100 text-blue-600 rounded-md">
@@ -643,18 +759,25 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
             <p className="text-gray-500 text-xs flex items-center">
               Valor Neto
               <span className="ml-2 text-xs text-black font-bold">
-                {formatCurrency(dashboardData.fletes.detalles.valorizados_sin_factura.monto)}
+                {formatCurrency(
+                  dashboardData.fletes.detalles.valorizados_sin_factura.monto,
+                )}
               </span>
             </p>
           </div>
-          
+
           {/* Fletes con Factura */}
           <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="text-gray-500 text-xs font-medium">Fletes con Factura</h3>
+                <h3 className="text-gray-500 text-xs font-medium">
+                  Fletes con Factura
+                </h3>
                 <p className="text-black text-lg font-semibold">
-                  {dashboardData.fletes.detalles.valorizados_con_factura.cantidad}
+                  {
+                    dashboardData.fletes.detalles.valorizados_con_factura
+                      .cantidad
+                  }
                 </p>
               </div>
               <div className="p-2 bg-green-100 text-green-600 rounded-md">
@@ -665,85 +788,112 @@ const vendidoBruto = dashboardData?.fletes?.venta_total_valorizada * 1.18
             <p className="text-gray-500 text-xs flex items-center">
               Valor Neto
               <span className="ml-2 text-xs text-black font-bold">
-                {formatCurrency(dashboardData.fletes.detalles.valorizados_con_factura.monto)}
+                {formatCurrency(
+                  dashboardData.fletes.detalles.valorizados_con_factura.monto,
+                )}
               </span>
             </p>
           </div>
         </div>
-        
+
         {/* Gráfico de distribución de fletes */}
-<div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
-  <h3 className="text-gray-700 text-sm font-medium mb-2">Distribución de Estados</h3>
-  <div className="flex items-center justify-between">
-    <div className="w-3/4">
-      <div className="flex items-center h-4 mb-2 rounded overflow-hidden bg-gray-100">
-        {dashboardData.fletes.conteo_total > 0 ? (
-          <>
-            <div 
-              className="h-full bg-yellow-500 transition-all duration-500" 
-              style={{ 
-                width: `${(dashboardData.fletes.detalles.pendientes.cantidad / dashboardData.fletes.conteo_total) * 100}%` 
-              }}
-              title={`Pendientes: ${dashboardData.fletes.detalles.pendientes.cantidad}`}
-            ></div>
-            <div 
-              className="h-full bg-blue-500 transition-all duration-500" 
-              style={{ 
-                width: `${(dashboardData.fletes.detalles.valorizados_sin_factura.cantidad / dashboardData.fletes.conteo_total) * 100}%` 
-              }}
-              title={`Sin Factura: ${dashboardData.fletes.detalles.valorizados_sin_factura.cantidad}`}
-            ></div>
-            <div 
-              className="h-full bg-green-500 transition-all duration-500" 
-              style={{ 
-                width: `${(dashboardData.fletes.detalles.valorizados_con_factura.cantidad / dashboardData.fletes.conteo_total) * 100}%` 
-              }}
-              title={`Con Factura: ${dashboardData.fletes.detalles.valorizados_con_factura.cantidad}`}
-            ></div>
-          </>
-        ) : (
-          <div className="h-full w-full bg-gray-200"></div>
-        )}
-      </div>
-    </div>
-    
-    <div className="w-1/4 pl-4">
-      {dashboardData.fletes.conteo_total > 0 ? (
-        <div className="space-y-1">
+        <div className="bg-white rounded-lg shadow-sm p-3 transition-transform hover:-translate-y-1">
+          <h3 className="text-gray-700 text-sm font-medium mb-2">
+            Distribución de Estados
+          </h3>
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-2 h-2 rounded-full bg-yellow-500 mr-1"></div>
-              <span className="text-[10px] text-gray-500">Pendientes por Valorizar</span>
+            <div className="w-3/4">
+              <div className="flex items-center h-4 mb-2 rounded overflow-hidden bg-gray-100">
+                {dashboardData.fletes.conteo_total > 0 ? (
+                  <>
+                    <div
+                      className="h-full bg-yellow-500 transition-all duration-500"
+                      style={{
+                        width: `${(dashboardData.fletes.detalles.pendientes.cantidad / dashboardData.fletes.conteo_total) * 100}%`,
+                      }}
+                      title={`Pendientes: ${dashboardData.fletes.detalles.pendientes.cantidad}`}
+                    ></div>
+                    <div
+                      className="h-full bg-blue-500 transition-all duration-500"
+                      style={{
+                        width: `${(dashboardData.fletes.detalles.valorizados_sin_factura.cantidad / dashboardData.fletes.conteo_total) * 100}%`,
+                      }}
+                      title={`Sin Factura: ${dashboardData.fletes.detalles.valorizados_sin_factura.cantidad}`}
+                    ></div>
+                    <div
+                      className="h-full bg-green-500 transition-all duration-500"
+                      style={{
+                        width: `${(dashboardData.fletes.detalles.valorizados_con_factura.cantidad / dashboardData.fletes.conteo_total) * 100}%`,
+                      }}
+                      title={`Con Factura: ${dashboardData.fletes.detalles.valorizados_con_factura.cantidad}`}
+                    ></div>
+                  </>
+                ) : (
+                  <div className="h-full w-full bg-gray-200"></div>
+                )}
+              </div>
             </div>
-            <span className="text-xs font-semibold text-gray-700">
-              {Math.round((dashboardData.fletes.detalles.pendientes.cantidad / dashboardData.fletes.conteo_total) * 100)}%
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
-              <span className="text-[10px] text-gray-500">Valorizados sin factura</span>
+
+            <div className="w-1/4 pl-4">
+              {dashboardData.fletes.conteo_total > 0 ? (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 rounded-full bg-yellow-500 mr-1"></div>
+                      <span className="text-[10px] text-gray-500">
+                        Pendientes por Valorizar
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700">
+                      {Math.round(
+                        (dashboardData.fletes.detalles.pendientes.cantidad /
+                          dashboardData.fletes.conteo_total) *
+                          100,
+                      )}
+                      %
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
+                      <span className="text-[10px] text-gray-500">
+                        Valorizados sin factura
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700">
+                      {Math.round(
+                        (dashboardData.fletes.detalles.valorizados_sin_factura
+                          .cantidad /
+                          dashboardData.fletes.conteo_total) *
+                          100,
+                      )}
+                      %
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
+                      <span className="text-[10px] text-gray-500">
+                        Facturados
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700">
+                      {Math.round(
+                        (dashboardData.fletes.detalles.valorizados_con_factura
+                          .cantidad /
+                          dashboardData.fletes.conteo_total) *
+                          100,
+                      )}
+                      %
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400">Sin datos</div>
+              )}
             </div>
-            <span className="text-xs font-semibold text-gray-700">
-              {Math.round((dashboardData.fletes.detalles.valorizados_sin_factura.cantidad / dashboardData.fletes.conteo_total) * 100)}%
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
-              <span className="text-[10px] text-gray-500">Facturados</span>
-            </div>
-            <span className="text-xs font-semibold text-gray-700">
-              {Math.round((dashboardData.fletes.detalles.valorizados_con_factura.cantidad / dashboardData.fletes.conteo_total) * 100)}%
-            </span>
           </div>
         </div>
-      ) : (
-        <div className="text-xs text-gray-400">Sin datos</div>
-      )}
-    </div>
-  </div>
-</div>
       </div>
     </div>
   );
