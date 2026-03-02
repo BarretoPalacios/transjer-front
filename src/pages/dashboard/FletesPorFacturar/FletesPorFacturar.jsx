@@ -355,12 +355,59 @@ const FletesPorFacturar = () => {
     }
   }, [pagination.currentPage, pagination.itemsPerPage]);
 
+  useEffect(() => {
+  // Obtener parámetros de la URL
+  const searchParams = new URLSearchParams(window.location.search);
+  const mes = searchParams.get('mes');
+  const anio = searchParams.get('anio');
+  
+  // Si hay parámetros mes y año en la URL
+  if (mes && anio) {
+    // Validar que mes sea un número entre 1-12
+    const mesNum = parseInt(mes, 10);
+    const anioNum = parseInt(anio, 10);
+    
+    if (!isNaN(mesNum) && mesNum >= 1 && mesNum <= 12 && !isNaN(anioNum)) {
+      // Calcular fecha desde (primer día del mes)
+      const fechaDesde = `${anioNum}-${mesNum.toString().padStart(2, '0')}-01`;
+      
+      // Calcular fecha hasta (último día del mes)
+      // Crear una fecha para el primer día del siguiente mes y restar 1 día
+      const ultimoDia = new Date(anioNum, mesNum, 0).getDate(); // 0 = último día del mes anterior
+      const fechaHasta = `${anioNum}-${mesNum.toString().padStart(2, '0')}-${ultimoDia.toString().padStart(2, '0')}`;
+      
+      
+      // Actualizar los filtros
+      setFilters(prev => ({
+        ...prev,
+        fecha_servicio_desde: fechaDesde,
+        fecha_servicio_hasta: fechaHasta
+      }));
+      
+      // Forzar una carga inmediata con los nuevos filtros
+      // Esto evita el debounce para la carga inicial
+      fetchFletes(1, pagination.itemsPerPage, {
+        ...filters,
+        fecha_servicio_desde: fechaDesde,
+        fecha_servicio_hasta: fechaHasta
+      });
+    } else {
+      console.error('Parámetros mes/año inválidos:', mes, anio);
+      // Si los parámetros son inválidos, cargar normal
+      fetchFletes(1, pagination.itemsPerPage, filters);
+    }
+  } else {
+    // Si no hay parámetros, cargar normal
+    fetchFletes(1, pagination.itemsPerPage, filters);
+  }
+}, []);
+
   // Cargar datos iniciales
   useEffect(() => {
-    if (isInitialMount.current) {
-      fetchFletes(1, pagination.itemsPerPage, filters);
-      isInitialMount.current = false;
-    }
+    // if (isInitialMount.current) {
+    //   fetchFletes(1, pagination.itemsPerPage, filters);
+    //   isInitialMount.current = false;
+    // }
     cargarClientes();
     cargarReportePendientes();
   }, []);
