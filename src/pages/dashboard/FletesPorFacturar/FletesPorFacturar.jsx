@@ -74,6 +74,8 @@ const FletesPorFacturar = () => {
   const [filters, setFilters] = useState({
     codigo_flete: "",
     cliente: "",
+    fecha_servicio_desde: "",
+    fecha_servicio_hasta: "",
   });
 
   const [clientesList, setClientesList] = useState([]);
@@ -129,7 +131,7 @@ const FletesPorFacturar = () => {
   const [isDeletingGasto, setIsDeletingGasto] = useState(false);
 
   const [reportePendientes, setReportePendientes] = useState([]);
-const [loadingReporte, setLoadingReporte] = useState(false);
+  const [loadingReporte, setLoadingReporte] = useState(false);
 
   const itemsPerPageOptions = [10, 15, 20, 30, 50];
   const isInitialMount = useRef(true);
@@ -302,18 +304,18 @@ const [loadingReporte, setLoadingReporte] = useState(false);
   }, []);
 
   const cargarReportePendientes = useCallback(async () => {
-  setLoadingReporte(true);
-  try {
-    // Asumiendo que fletesAPI es donde registraste la ruta '/stats/pendientes-facturacion'
-    const response = await fletesAPI.getPendientesFacturacion(); 
-    setReportePendientes(response || []);
-  } catch (err) {
-    console.error("Error cargando reporte de pendientes:", err);
-    setReportePendientes([]);
-  } finally {
-    setLoadingReporte(false);
-  }
-}, []);
+    setLoadingReporte(true);
+    try {
+      // Asumiendo que fletesAPI es donde registraste la ruta '/stats/pendientes-facturacion'
+      const response = await fletesAPI.getPendientesFacturacion();
+      setReportePendientes(response || []);
+    } catch (err) {
+      console.error("Error cargando reporte de pendientes:", err);
+      setReportePendientes([]);
+    } finally {
+      setLoadingReporte(false);
+    }
+  }, []);
 
   // Efecto para búsqueda en tiempo real con debounce
   useEffect(() => {
@@ -487,6 +489,8 @@ const [loadingReporte, setLoadingReporte] = useState(false);
     setFilters({
       codigo_flete: "",
       cliente: "",
+      fecha_servicio_desde: "",
+      fecha_servicio_hasta: "",
     });
   }, []);
 
@@ -500,6 +504,8 @@ const [loadingReporte, setLoadingReporte] = useState(false);
         estado: "VALORIZADO",
         pertenece_a_factura: false,
         cliente_nombre: filters.cliente,
+        fecha_servicio_desde: filters.fecha_servicio_desde,
+        fecha_servicio_hasta: filters.fecha_servicio_hasta,
       });
       fletesAPI.downloadExcel(
         blob,
@@ -1083,8 +1089,6 @@ const [loadingReporte, setLoadingReporte] = useState(false);
         </div>
       )}
 
-
-
       {/* Filtros */}
       <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
@@ -1123,31 +1127,66 @@ const [loadingReporte, setLoadingReporte] = useState(false);
 
         {/* Filtros en tiempo real */}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Cliente
-          </label>
-          <select
-            value={filters.cliente}
-            onChange={(e) => handleFilterChange("cliente", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-            disabled={loadingClientes}
-          >
-            <option value="">Todos los clientes</option>
-            {loadingClientes ? (
-              <option value="" disabled>
-                Cargando clientes...
-              </option>
-            ) : (
-              clientesList.map((cliente, index) => (
-                <option key={index} value={cliente}>
-                  {cliente}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
+        <div className="flex flex-wrap items-end gap-4">
+  {/* Filtro: Cliente */}
+  <div className="flex-1 min-w-[200px]">
+    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+      <User className="h-4 w-4" />
+      Cliente
+    </label>
+    <select
+      value={filters.cliente}
+      onChange={(e) => handleFilterChange("cliente", e.target.value)}
+      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+      disabled={loadingClientes}
+    >
+      <option value="">Todos los clientes</option>
+      {loadingClientes ? (
+        <option value="" disabled>
+          Cargando clientes...
+        </option>
+      ) : (
+        clientesList.map((cliente, index) => (
+          <option key={index} value={cliente}>
+            {cliente}
+          </option>
+        ))
+      )}
+    </select>
+  </div>
+
+  {/* Filtro: Fecha Desde */}
+  <div className="flex-1 min-w-[150px]">
+    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+      <Calendar className="h-4 w-4" />
+      Fecha Servicio Desde
+    </label>
+    <input
+      type="date"
+      value={filters.fecha_servicio_desde}
+      onChange={(e) =>
+        handleFilterChange("fecha_servicio_desde", e.target.value)
+      }
+      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+    />
+  </div>
+
+  {/* Filtro: Fecha Hasta */}
+  <div className="flex-1 min-w-[150px]">
+    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+      <Calendar className="h-4 w-4" />
+      Fecha Servicio Hasta
+    </label>
+    <input
+      type="date"
+      value={filters.fecha_servicio_hasta}
+      onChange={(e) =>
+        handleFilterChange("fecha_servicio_hasta", e.target.value)
+      }
+      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+    />
+  </div>
+</div>
 
         {Object.values(filters).some((f) => f.trim() !== "") && (
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -1590,73 +1629,104 @@ const [loadingReporte, setLoadingReporte] = useState(false);
       )}
 
       {/* estadisticas de cada cliente */}
-<div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-8">
-  <div className="overflow-x-auto">
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-50">
-        <tr>
-          <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Cliente
-          </th>
-          <th scope="col" className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Fletes
-          </th>
-          <th scope="col" className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Monto Pendiente
-          </th>
-        </tr>
-      </thead>
-      <tbody className="bg-white divide-y divide-gray-100">
-        {loadingReporte ? (
-          <tr>
-            <td colSpan="3" className="px-4 py-8 text-center text-sm text-gray-500">
-              Cargando reporte financiero...
-            </td>
-          </tr>
-        ) : reportePendientes.length > 0 ? (
-          reportePendientes.map((item) => (
-            <tr key={item._id} className="hover:bg-orange-50/50 transition-colors">
-              <td className="px-4 py-3 whitespace-nowrap">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-gray-800">{item.nombre_cliente}</span>
-                  {/* <span className="text-[10px] text-gray-400 font-mono">RUC: {item.ruc}</span> */}
-                </div>
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-center">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                  {item.cantidad_fletes}
-                </span>
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-bold text-gray-900">
-                S/ {item.monto_total_pendiente.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-              </td>
-            </tr>
-          ))
-        ) : (
-          <tr>
-            <td colSpan="3" className="px-4 py-8 text-center text-sm text-gray-400 italic">
-              No hay fletes pendientes de facturación.
-            </td>
-          </tr>
-        )}
-      </tbody>
-      {/* Fila de Totales opcional */}
-      {reportePendientes.length > 0 && (
-        <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-          <tr>
-            <td className="px-4 py-2 text-xs font-bold text-gray-500 uppercase">Total Cartera</td>
-            <td className="px-4 py-2 text-center text-xs font-bold text-gray-600">
-               {reportePendientes.reduce((acc, i) => acc + i.cantidad_fletes, 0)}
-            </td>
-            <td className="px-4 py-2 text-right text-sm font-black text-orange-600">
-              S/ {reportePendientes.reduce((acc, i) => acc + i.monto_total_pendiente, 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-            </td>
-          </tr>
-        </tfoot>
-      )}
-    </table>
-  </div>
-</div>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-8">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  Cliente
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  Fletes
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                >
+                  Monto Pendiente
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {loadingReporte ? (
+                <tr>
+                  <td
+                    colSpan="3"
+                    className="px-4 py-8 text-center text-sm text-gray-500"
+                  >
+                    Cargando reporte financiero...
+                  </td>
+                </tr>
+              ) : reportePendientes.length > 0 ? (
+                reportePendientes.map((item) => (
+                  <tr
+                    key={item._id}
+                    className="hover:bg-orange-50/50 transition-colors"
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-800">
+                          {item.nombre_cliente}
+                        </span>
+                        {/* <span className="text-[10px] text-gray-400 font-mono">RUC: {item.ruc}</span> */}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                        {item.cantidad_fletes}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-bold text-gray-900">
+                      S/{" "}
+                      {item.monto_total_pendiente.toLocaleString("es-PE", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan="3"
+                    className="px-4 py-8 text-center text-sm text-gray-400 italic"
+                  >
+                    No hay fletes pendientes de facturación.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {/* Fila de Totales opcional */}
+            {reportePendientes.length > 0 && (
+              <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                <tr>
+                  <td className="px-4 py-2 text-xs font-bold text-gray-500 uppercase">
+                    Total Cartera
+                  </td>
+                  <td className="px-4 py-2 text-center text-xs font-bold text-gray-600">
+                    {reportePendientes.reduce(
+                      (acc, i) => acc + i.cantidad_fletes,
+                      0,
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-right text-sm font-black text-orange-600">
+                    S/{" "}
+                    {reportePendientes
+                      .reduce((acc, i) => acc + i.monto_total_pendiente, 0)
+                      .toLocaleString("es-PE", { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
 
       {/* Modal de detalles del flete/servicio/gastos */}
       <Modal

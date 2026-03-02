@@ -130,7 +130,7 @@ const Sidebar = ({
       "gastos-reportes": ["gastos", "view"],
       
       // Gerencia
-      "monitoreo-facturas": ["gerencia", "view"],
+      // "monitoreo-facturas": ["gerencia", "view"],
       "monitoreo-placas": ["gerencia", "view"],
       "monitoreo-proveedores": ["gerencia", "view"],
       "monitoreo-clientes": ["gerencia", "view"],
@@ -335,13 +335,13 @@ const Sidebar = ({
             icon: BarChart3,
             show: shouldShowSubItem({ id: "analiticas" }),
           },
-          {
-            id: "monitoreo-facturas",
-            label: "Resumen de Facturas",
-            icon: MonitorCheck,
-            path: "/gerencia/gerencia",
-            show: shouldShowSubItem({ id: "monitoreo-facturas" }),
-          },
+          // {
+          //   id: "monitoreo-facturas",
+          //   label: "Resumen de Facturas",
+          //   icon: MonitorCheck,
+          //   path: "/gerencia/gerencia",
+          //   show: shouldShowSubItem({ id: "monitoreo-facturas" }),
+          // },
           {
             id: "monitoreo-clientes",
             label: "Resumen de clientes",
