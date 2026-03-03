@@ -90,13 +90,18 @@ export const formatCurrency = (amount) => {
 };
 
 export const formatearFecha = (fechaString) => {
-  // Dividimos la cadena por el guion para evitar problemas de zona horaria
-  const [year, month, day] = fechaString.split('-');
+  if (!fechaString) return "";
+
+  // 1. Extraemos solo la parte de la fecha (YYYY-MM-DD) 
+  // antes de cualquier "T" o espacio
+  const soloFecha = fechaString.split('T')[0].split(' ')[0];
+
+  // 2. Ahora dividimos por el guion de forma segura
+  const [year, month, day] = soloFecha.split('-');
   
-  // Retornamos el formato deseado
+  // 3. Retornamos el formato deseado DD/MM/YYYY
   return `${day}/${month}/${year}`;
 }
-
 const normalizarFecha = (fechaStr) => {
   const fecha = new Date(fechaStr);
   if (fechaStr.includes('-') && !fechaStr.includes('T')) {

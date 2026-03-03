@@ -179,7 +179,7 @@ const initialUrlData = getUrlParams();
           page: page,
           pageSize: itemsPerPage,
         });
-        console.log("data:" , response)
+        // console.log("data:" , response)
         setGestiones(response.items);
 
         // Actualizar paginación
@@ -192,7 +192,7 @@ const initialUrlData = getUrlParams();
           hasPrev: response.pagination.hasPrev,
         });
 
-        await calcularEstadisticas();
+        setEstadisticas(response.stats || {});
       } catch (err) {
         setError("Error al cargar las gestiones: " + err.message);
         console.error("Error fetching gestiones:", err);
@@ -203,89 +203,8 @@ const initialUrlData = getUrlParams();
     [appliedFilters, appliedSearch, pagination.itemsPerPage]
   );
 
-  // Calcular estadísticas
-// Calcular estadísticas
-const calcularEstadisticas = useCallback(async () => {
-  try {
-    const stats = await facturacionGestionAPI.getEstadisticasDashboard();
-    // console.log(stats)
-    // Formatear los montos del backend (quitar comas y convertir a número)
-    const formatNumber = (str) => parseFloat(str.replace(/,/g, '')) || 0;
-    
-    // Actualizar estadísticas con el nuevo formato del backend
-    setEstadisticas({
-      // Propiedades principales del backend
-      total_gestiones: stats.total_gestiones || 0,
-      cant_anuladas: stats.cant_anuladas || 0,
-      cant_vencidas: stats.cant_vencidas || 0,
-      por_estado_pago: stats.por_estado_pago || {},
-      
-      // Montos del backend
-      montos_totales: {
-        total_facturado: stats.montos_totales?.total_facturado || "0.00",
-        total_pagado: stats.montos_totales?.total_pagado || "0.00",
-        total_detracciones: stats.montos_totales?.total_detracciones || "0.00",
-        total_pendiente: stats.montos_totales?.total_pendiente || "0.00",
-        total_pendiente_vencido: stats.montos_totales?.total_pendiente_vencido || "0.00"
-      },
-      
-      // Propiedades calculadas para compatibilidad
-      neto_cobrado: formatNumber(stats.montos_totales?.total_pagado || "0"),
-      neto_pendiente: formatNumber(stats.montos_totales?.total_pendiente || "0"),
-      detracciones_pendientes: formatNumber(stats.montos_totales?.total_detracciones || "0"),
-      detracciones_pagadas: 0, // Por defecto, podrías calcularlo si tienes más datos
-      por_vencer: stats.cant_vencidas || 0,
-      saldo_total: formatNumber(stats.montos_totales?.total_pendiente || "0"),
-    });
-  } catch (err) {
-    console.error("Error al cargar estadísticas del dashboard:", err);
-    // Valores por defecto si hay error
-    setEstadisticas({
-      total_gestiones: 0,
-      cant_anuladas: 0,
-      cant_vencidas: 0,
-      por_estado_pago: {},
-      montos_totales: {
-        total_facturado: "0.00",
-        total_pagado: "0.00",
-        total_detracciones: "0.00",
-        total_pendiente: "0.00",
-        total_pendiente_vencido: "0.00"
-      },
-      neto_cobrado: 0,
-      neto_pendiente: 0,
-      detracciones_pendientes: 0,
-      detracciones_pagadas: 0,
-      por_vencer: 0,
-      saldo_total: 0,
-    });
-  }
-}, []);
 
-const [estadisticas, setEstadisticas] = useState({
-  // Propiedades principales del nuevo formato del backend
-  total_gestiones: 0,
-  cant_anuladas: 0,
-  cant_vencidas: 0,
-  por_estado_pago: {},
-  
-  // Montos del nuevo formato
-  montos_totales: {
-    total_facturado: "0.00",
-    total_pagado: "0.00",
-    total_detracciones: "0.00",
-    total_pendiente: "0.00",
-    total_pendiente_vencido: "0.00"
-  },
-  
-  // Propiedades calculadas para compatibilidad
-  neto_cobrado: 0,
-  neto_pendiente: 0,
-  detracciones_pendientes: 0,
-  detracciones_pagadas: 0,
-  por_vencer: 0,
-  saldo_total: 0,
-}); 
+const [estadisticas, setEstadisticas] = useState({}); 
 
 
   // Función para cargar clientes desde el endpoint
@@ -939,7 +858,7 @@ const formatDate = (dateString) => {
       <div>
         <p className="text-xs font-medium text-gray-500 mb-1">Total Facturado</p>
         <p className="text-lg font-semibold text-gray-900">
-          S/ {estadisticas.montos_totales?.total_facturado || "0.00"}
+          S/ {estadisticas.monto_total_facturado || "0.00"}
         </p>
       </div>
       <DollarSign className="text-green-500 h-5 w-5" />
@@ -953,7 +872,7 @@ const formatDate = (dateString) => {
       <div>
         <p className="text-xs font-medium text-gray-500 mb-1">Total Pagado</p>
         <p className="text-lg font-semibold text-gray-900">
-          S/ {estadisticas.montos_totales?.total_pagado || "0.00"}
+          S/ {estadisticas.monto_total_pagado || "0.00"}
         </p>
       </div>
       <CheckCircle className="text-blue-500 h-5 w-5" />
@@ -967,7 +886,7 @@ const formatDate = (dateString) => {
       <div>
         <p className="text-xs font-medium text-gray-500 mb-1">Detracción Total</p>
         <p className="text-lg font-semibold text-gray-900">
-          S/ {estadisticas.montos_totales?.total_detracciones || "0.00"}
+          S/ {estadisticas.monto_total_detracciones || "0.00"}
         </p>
       </div>
       <AlertTriangle className="text-yellow-500 h-5 w-5" />
@@ -979,23 +898,23 @@ const formatDate = (dateString) => {
   <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-xs font-medium text-gray-500 mb-1">Total Pendiente</p>
+        <p className="text-xs font-medium text-gray-500 mb-1">Total Por Vencer</p>
         <p className="text-lg font-semibold text-gray-900">
-          S/ {estadisticas.montos_totales?.total_pendiente || "0.00"}
+          S/ {estadisticas.monto_total_por_vencer || "0.00"}
         </p>
       </div>
       <Clock className="text-orange-500 h-5 w-5" />
     </div>
-    <p className="text-xs text-gray-400 mt-2">Monto total pendiente de pago</p>
+    <p className="text-xs text-gray-400 mt-2">Monto total Por Vencer de pago</p>
   </div>
 
   {/* Pendiente Vencido */}
   <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-xs font-medium text-gray-500 mb-1">Pendiente Vencido</p>
+        <p className="text-xs font-medium text-gray-500 mb-1">Total Vencido</p>
         <p className="text-lg font-semibold text-gray-900">
-          S/ {estadisticas.montos_totales?.total_pendiente_vencido || "0.00"}
+          S/ {estadisticas.monto_total_vencido || "0.00"}
         </p>
       </div>
       <AlertTriangle className="text-red-500 h-5 w-5" />
@@ -1005,14 +924,14 @@ const formatDate = (dateString) => {
 </div>
 
 {/* PANEL DE CONTADORES */}
-<div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+<div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
   {/* Total Gestiones */}
   <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
     <div className="flex items-center justify-between">
       <div>
         <p className="text-xs font-medium text-gray-500 mb-1">Total de Facturas</p>
         <p className="text-lg font-semibold text-gray-900">
-          {estadisticas.total_gestiones || 0}
+          {estadisticas.cant_total_facturas || 0}
         </p>
       </div>
       <FileText className="text-gray-500 h-5 w-5" />
@@ -1026,7 +945,7 @@ const formatDate = (dateString) => {
       <div>
         <p className="text-xs font-medium text-gray-500 mb-1">Facturas Vencidas</p>
         <p className="text-lg font-semibold text-gray-900">
-          {estadisticas.cant_vencidas || 0}
+          {estadisticas.cant_facturas_vencidas || 0}
         </p>
       </div>
       <Clock className="text-red-500 h-5 w-5" />
@@ -1038,14 +957,27 @@ const formatDate = (dateString) => {
   <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-xs font-medium text-gray-500 mb-1">Facturas Anuladas</p>
+        <p className="text-xs font-medium text-gray-500 mb-1">Facturas Pagadas</p>
         <p className="text-lg font-semibold text-gray-900">
-          {estadisticas.cant_anuladas || 0}
+          {estadisticas.cant_facturas_pagadas || 0}
         </p>
       </div>
       <XCircle className="text-gray-500 h-5 w-5" />
     </div>
     {/* <p className="text-xs text-gray-400 mt-2">Gestiones anuladas</p> */}
+  </div>
+
+  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-xs font-medium text-gray-500 mb-1">Facturas Por Vencer</p>
+        <p className="text-lg font-semibold text-gray-900">
+          {estadisticas.cant_facturas_por_vencer || 0}
+        </p>
+      </div>
+      <Clock className="text-orange-500 h-5 w-5" />
+    </div>
+    {/* <p className="text-xs text-gray-400 mt-2">Gestiones con fecha vencida</p> */}
   </div>
 </div>
 

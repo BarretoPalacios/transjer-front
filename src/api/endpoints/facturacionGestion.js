@@ -66,6 +66,7 @@ export const facturacionGestionAPI = {
 
     const response = await axiosInstance.get(`/facturacion-gestion/?${params.toString()}`);
     
+    console.log(response)
     // Devuelve toda la respuesta paginada
     return {
       items: response.data.items,
@@ -76,7 +77,9 @@ export const facturacionGestionAPI = {
         totalPages: response.data.total_pages,
         hasNext: response.data.has_next,
         hasPrev: response.data.has_prev
-      }
+      },
+      stats: response.data.stats || {} 
+      
     };
   },
 
