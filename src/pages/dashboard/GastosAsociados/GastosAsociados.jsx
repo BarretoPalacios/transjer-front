@@ -22,20 +22,20 @@ import {
   Hash
 } from 'lucide-react';
 
-// Componentes comunes
 import Button from '../../../components/common/Button/Button';
 import Modal from '../../../components/common/Modal/Modal';
 import Pagination from '../../../components/common/Pagination/Pagination';
 
-// API actualizado
 import { gastosAdicionalesAPI } from '../../../api/endpoints/gastosAdicionales';
+import utilsAPI from '../../../api/endpoints/utils';
+
+
 
 const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
   const [gastos, setGastos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState(null);
   
-  // Estados de paginación
   const [pagination, setPagination] = useState({
     currentPage: 1,
     itemsPerPage: 10,
@@ -45,28 +45,22 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     hasPrev: false,
   });
   
-  // Estados para filtros enfocados en facturación
   const [filters, setFilters] = useState({
-    tipo_gasto: '',
-    estado_facturacion: '',
-    estado_aprobacion: '',
-    se_factura_cliente: '',
-    numero_factura: ''
+    fecha_inicio: '',
+    fecha_fin: '',
+    cliente: ''
   });
   
-  // Estadísticas de facturación
   const [estadisticas, setEstadisticas] = useState({
     total_gastos: 0,
     facturados: 0,
     pendientes: 0
   });
   
-  // Modal para crear/editar
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' o 'edit'
+  const [modalMode, setModalMode] = useState('create');
   const [gastoSeleccionado, setGastoSeleccionado] = useState(null);
   
-  // Formulario
   const [formData, setFormData] = useState({
     tipo_gasto: '',
     descripcion: '',
@@ -78,7 +72,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     numero_factura: ''
   });
   
-  // Modal de detalles
   const [showDetalleModal, setShowDetalleModal] = useState(false);
   
   const [error, setError] = useState(null);
@@ -86,7 +79,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
   
   const itemsPerPageOptions = [10, 20, 30, 50];
 
-  // Tipos de gasto predefinidos
   const tiposGasto = [
     'Estadía',
     'Peaje',
@@ -104,28 +96,36 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     'Otros'
   ];
 
-  // Estados de aprobación
   const estadosAprobacion = [
     { value: 'pendiente', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
     { value: 'aprobado', label: 'Aprobado', color: 'bg-green-100 text-green-800 border-green-300' },
     { value: 'rechazado', label: 'Rechazado', color: 'bg-red-100 text-red-800 border-red-300' }
   ];
 
-  // Estados de facturación
   const estadosFacturacion = [
     { value: 'Pendiente', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
     { value: 'Facturado', label: 'Facturado', color: 'bg-green-100 text-green-800 border-green-300' },
     { value: 'No Facturable', label: 'No Facturable', color: 'bg-gray-100 text-gray-800 border-gray-300' }
   ];
 
-  // Opciones para facturación al cliente
-  const opcionesFacturaCliente = [
-    { value: '', label: 'Todos' },
-    { value: 'true', label: 'Facturable' },
-    { value: 'false', label: 'No Facturable' }
-  ];
+  const [clientesList, setClientesList] = useState([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
 
-  // Función principal para cargar gastos
+    const cargarClientes = useCallback(async () => {
+    setLoadingClientes(true);
+    try {
+      // Aquí debes hacer la llamada a tu API
+      // Ejemplo: const response = await api.get('/utils/clientes-list');
+      const response = await utilsAPI.getClientesList();
+      setClientesList(response || []);
+    } catch (err) {
+      console.error("Error cargando clientes:", err);
+      setClientesList([]);
+    } finally {
+      setLoadingClientes(false);
+    }
+  }, []);
+
   const fetchGastos = useCallback(
     async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
       setIsLoading(true);
@@ -133,19 +133,13 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
       setSuccessMessage(null);
       
       try {
-        // Preparar filtros para API
         const cleanFilters = {};
         Object.entries(filtersToUse).forEach(([key, value]) => {
           if (value && value.trim() !== '') {
-            if (key === 'se_factura_cliente') {
-              cleanFilters[key] = value === 'true';
-            } else {
-              cleanFilters[key] = value.trim();
-            }
+            cleanFilters[key] = value.trim();
           }
         });
         
-        // Añadir filtros fijos
         cleanFilters.id_flete = fleteId;
         
         const response = await gastosAdicionalesAPI.getAllGastos(
@@ -165,7 +159,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
             hasPrev: response.pagination.hasPrev || false,
           });
           
-          // Calcular estadísticas
           calcularEstadisticas(response.items);
         } else {
           setGastos(response || []);
@@ -190,7 +183,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     [fleteId]
   );
 
-  // Función para calcular estadísticas
   const calcularEstadisticas = useCallback((gastosList) => {
     const stats = {
       total_gastos: 0,
@@ -210,9 +202,9 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     });
     
     setEstadisticas(stats);
+    cargarClientes();
   }, []);
 
-  // Efecto para búsqueda en tiempo real con debounce
   useEffect(() => {
     if (searchTimeout) {
       clearTimeout(searchTimeout);
@@ -234,7 +226,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     };
   }, [filters]);
 
-  // Cargar datos iniciales
   useEffect(() => {
     if (fleteId) {
       fetchGastos();
@@ -305,7 +296,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
         usuario_registro: localStorage.getItem('username') || 'Sistema'
       };
       
-      // Incluir número de factura si se proporciona
       if (formData.numero_factura) {
         gastoData.numero_factura = formData.numero_factura;
       }
@@ -408,7 +398,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     }
   }, [fetchGastos, pagination.currentPage, pagination.itemsPerPage, filters]);
 
-  // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => ({
       ...prev,
@@ -418,11 +407,9 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
 
   const clearFilters = useCallback(() => {
     setFilters({
-      tipo_gasto: '',
-      estado_facturacion: '',
-      estado_aprobacion: '',
-      se_factura_cliente: '',
-      numero_factura: ''
+      fecha_inicio: '',
+      fecha_fin: '',
+      cliente: ''
     });
   }, []);
 
@@ -444,7 +431,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     [fetchGastos, filters]
   );
 
-  // Formatear fecha
   const formatFecha = (fecha) => {
     if (!fecha) return 'N/A';
     try {
@@ -458,7 +444,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     }
   };
 
-  // Formatear moneda
   const formatMoneda = (valor) => {
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
@@ -467,7 +452,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
     }).format(valor || 0);
   };
 
-  // Mostrar loading solo en carga inicial
   if (isLoading && gastos.length === 0) {
     return (
       <div className="p-4">
@@ -483,7 +467,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
 
   return (
     <div className="">
-      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -493,20 +476,8 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
             Gestión de gastos adicionales y control de facturación
           </p>
         </div>
-        
-        <div className="flex items-center space-x-2 mt-4 lg:mt-0">
-          {/* <Button
-            onClick={handleCreate}
-            variant="primary"
-            size="small"
-            icon={Plus}
-          >
-            Nuevo Gasto
-          </Button> */}
-        </div>
       </div>
 
-      {/* Panel de Estadísticas */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg border border-gray-300 p-4 shadow-sm">
           <div className="flex items-center justify-between">
@@ -539,7 +510,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
         </div>
       </div>
 
-      {/* Mensajes de éxito y error */}
       {successMessage && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
           <div className="flex items-center text-green-700">
@@ -576,15 +546,14 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
         </div>
       )}
 
-      {/* Filtros */}
       <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Filter className="h-5 w-5 text-blue-600" />
-              Filtros de Facturación
+              Filtros
             </h3>
-            <p className="text-sm text-gray-600">Filtrado en tiempo real</p>
+            <p className="text-sm text-gray-600">Filtrado por fechas y cliente</p>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -608,94 +577,59 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
           </div>
         </div>
 
-        {/* Filtros en tiempo real */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Estado de Facturación */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Receipt className="h-4 w-4" />
-              Estado Facturación
-            </label>
-            <select
-              value={filters.estado_facturacion}
-              onChange={(e) => handleFilterChange('estado_facturacion', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-            >
-              <option value="">Todos los estados</option>
-              {estadosFacturacion.map((estado) => (
-                <option key={estado.value} value={estado.value}>{estado.label}</option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Factura al Cliente */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Factura Cliente
-            </label>
-            <select
-              value={filters.se_factura_cliente}
-              onChange={(e) => handleFilterChange('se_factura_cliente', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-            >
-              {opcionesFacturaCliente.map((opcion) => (
-                <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Estado Aprobación */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Aprobación
-            </label>
-            <select
-              value={filters.estado_aprobacion}
-              onChange={(e) => handleFilterChange('estado_aprobacion', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-            >
-              <option value="">Todos los estados</option>
-              {estadosAprobacion.map((estado) => (
-                <option key={estado.value} value={estado.value}>{estado.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Tipo de Gasto */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipo de Gasto
-            </label>
-            <select
-              value={filters.tipo_gasto}
-              onChange={(e) => handleFilterChange('tipo_gasto', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-            >
-              <option value="">Todos los tipos</option>
-              {tiposGasto.map((tipo) => (
-                <option key={tipo} value={tipo}>{tipo}</option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Número de Factura */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              N° Factura
+              <Calendar className="h-4 w-4" />
+              Fecha Inicio
             </label>
             <input
-              type="text"
-              value={filters.numero_factura}
-              onChange={(e) => handleFilterChange('numero_factura', e.target.value)}
+              type="date"
+              value={filters.fecha_inicio}
+              onChange={(e) => handleFilterChange('fecha_inicio', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-              placeholder="Buscar por número..."
             />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Fecha Fin
+            </label>
+            <input
+              type="date"
+              value={filters.fecha_fin}
+              onChange={(e) => handleFilterChange('fecha_fin', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Cliente
+            </label>
+            <select
+              value={filters.cliente}
+              onChange={(e) => handleFilterChange('cliente', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            >
+              <option value="">Todos los clientes</option>
+              {loadingClientes ? (
+                <option value="" disabled>
+                  Cargando clientes...
+                </option>
+              ) : (
+                clientesList.map((cliente, index) => (
+                  <option key={index} value={cliente}>
+                    {cliente}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
         </div>
 
-        {/* Contador de filtros activos */}
         {Object.values(filters).some(f => f && f !== '') && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="text-sm text-gray-600 flex items-center justify-between">
@@ -716,7 +650,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
         )}
       </div>
 
-      {/* Tabla de Gastos */}
       <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm border-collapse">
@@ -724,6 +657,9 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
               <tr className="bg-gray-100 border-b border-gray-300">
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   Código
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Cliente
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 whitespace-nowrap">
                   Tipo
@@ -757,14 +693,18 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                   key={gasto.id} 
                   className="border-b border-gray-200 hover:bg-blue-50"
                 >
-                  {/* Código */}
                   <td className="px-4 py-3">
                     <div className="font-mono text-xs text-gray-900 bg-gray-50 px-2 py-1 rounded">
                       {gasto.codigo_gasto}
                     </div>
                   </td>
 
-                  {/* Tipo */}
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">
+                      {gasto.cliente_nombre}
+                    </span>
+                  </td>
+
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium 
                       ${gasto.tipo_gasto === 'Estadía' ? 'bg-blue-100 text-blue-800 border border-blue-300' : 
@@ -776,28 +716,24 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                     </span>
                   </td>
 
-                  {/* Descripción */}
                   <td className="px-4 py-3">
                     <div className="text-gray-900 max-w-[200px] truncate" title={gasto.descripcion}>
                       {gasto.descripcion}
                     </div>
                   </td>
 
-                  {/* Fecha */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-gray-900 text-sm">
                       {formatFecha(gasto.fecha_gasto)}
                     </div>
                   </td>
 
-                  {/* Valor */}
                   <td className="px-4 py-3">
                     <div className={`font-semibold ${gasto.se_factura_cliente ? 'text-green-700' : 'text-red-700'}`}>
                       {formatMoneda(gasto.valor)}
                     </div>
                   </td>
 
-                  {/* Factura Cliente */}
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium 
                       ${gasto.se_factura_cliente ? 
@@ -808,7 +744,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                     </span>
                   </td>
 
-                  {/* Aprobación */}
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium 
                       ${estadosAprobacion.find(e => e.value === gasto.estado_aprobacion)?.color || 
@@ -818,7 +753,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                     </span>
                   </td>
 
-                  {/* Facturación */}
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
                       <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium 
@@ -835,7 +769,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                     </div>
                   </td>
 
-                  {/* Acciones */}
                   <td className="px-4 py-3">
                     <div className="flex items-center space-x-2">
                       <button
@@ -873,16 +806,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                         </>
                       )}
                       
-                      {/* {gasto.estado_facturacion === 'Pendiente' && gasto.se_factura_cliente && gasto.estado_aprobacion === 'aprobado' && (
-                        <button
-                          onClick={() => handleFacturar(gasto.id)}
-                          className="p-1 rounded text-green-600 hover:text-green-800 hover:bg-green-100"
-                          title="Facturar"
-                        >
-                          <Receipt className="h-4 w-4" />
-                        </button>
-                      )} */}
-                      
                       <button
                         onClick={() => handleDelete(gasto.id)}
                         className="p-1 rounded text-red-600 hover:text-red-800 hover:bg-red-100"
@@ -898,7 +821,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
           </table>
         </div>
 
-        {/* Sin resultados */}
         {gastos.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <Receipt className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -913,16 +835,10 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                 Limpiar filtros
               </Button>
             )}
-            {/* <div className="mt-4">
-              <Button onClick={handleCreate} variant="primary" icon={Plus}>
-                Registrar primer gasto
-              </Button>
-            </div> */}
           </div>
         )}
       </div>
 
-      {/* Paginación y registros por página */}
       {gastos.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
@@ -958,7 +874,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
         </div>
       )}
 
-      {/* Modal para crear/editar gasto */}
       <Modal 
         isOpen={showModal}
         onClose={handleCloseModal}
@@ -967,7 +882,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Tipo de Gasto */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Tipo de Gasto *
@@ -985,7 +899,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
               </select>
             </div>
 
-            {/* Valor */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Valor (S/.) *
@@ -1005,7 +918,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
               </div>
             </div>
 
-            {/* Fecha */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Fecha del Gasto *
@@ -1019,7 +931,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
               />
             </div>
 
-            {/* Estado Aprobación */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Estado de Aprobación
@@ -1035,7 +946,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
               </select>
             </div>
 
-            {/* Factura al Cliente */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Factura al Cliente
@@ -1062,7 +972,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
               </div>
             </div>
 
-            {/* Estado Facturación */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Estado de Facturación
@@ -1078,7 +987,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
               </select>
             </div>
 
-            {/* Número de Factura - Ahora siempre visible en edición */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Número de Factura
@@ -1098,7 +1006,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
               </p>
             </div>
 
-            {/* Descripción (full width) */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Descripción *
@@ -1114,7 +1021,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
             </div>
           </div>
 
-          {/* Botones */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
             <Button
               onClick={handleCloseModal}
@@ -1135,7 +1041,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
         </div>
       </Modal>
 
-      {/* Modal para detalles del gasto */}
       <Modal 
         isOpen={showDetalleModal}
         onClose={handleCloseModal}
@@ -1144,7 +1049,6 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
       >
         {gastoSeleccionado && (
           <div className="space-y-6">
-            {/* Información General */}
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-4 py-3 bg-blue-50 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -1250,19 +1154,10 @@ const GastosAdicionales = ({ fleteId, fleteCodigo }) => {
                       {gastoSeleccionado.usuario_registro}
                     </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 mb-1">
-                      Fecha Registro
-                    </label>
-                    <p className="text-sm text-gray-900">
-                      {formatFecha(gastoSeleccionado.fecha_registro)}
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Botón de cierre */}
             <div className="flex justify-end pt-4 border-t border-gray-200">
               <Button
                 onClick={handleCloseModal}

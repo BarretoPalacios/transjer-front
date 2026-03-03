@@ -33,13 +33,14 @@ export const gastosAdicionalesAPI = {
     if (filters.estado_aprobacion) params.append('estado_aprobacion', filters.estado_aprobacion);
     if (filters.usuario_registro) params.append('usuario_registro', filters.usuario_registro);
     if (filters.numero_factura) params.append('numero_factura', filters.numero_factura);
+    if (filters.cliente) params.append('cliente', filters.cliente);
     
     // Filtros de fecha
     if (filters.fecha_inicio) params.append('fecha_inicio', filters.fecha_inicio);
     if (filters.fecha_fin) params.append('fecha_fin', filters.fecha_fin);
 
     const response = await axiosInstance.get(`/gastos-adicionales/?${params.toString()}`);
-    
+    console.log(response)
     // Devuelve toda la respuesta paginada
     return {
       items: response.data.items || [],

@@ -208,7 +208,7 @@ const initialUrlData = getUrlParams();
 const calcularEstadisticas = useCallback(async () => {
   try {
     const stats = await facturacionGestionAPI.getEstadisticasDashboard();
-    
+    // console.log(stats)
     // Formatear los montos del backend (quitar comas y convertir a número)
     const formatNumber = (str) => parseFloat(str.replace(/,/g, '')) || 0;
     
