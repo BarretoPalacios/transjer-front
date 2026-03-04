@@ -206,8 +206,14 @@ export const fletesAPI = {
     return response.data;
   },
 
-  getPendientesFacturacion: async () => {
-    const response = await axiosInstance.get('/fletes/stats/pendientes-facturacion');
+  getPendientesFacturacion: async (filters={}) => {
+    const params = new URLSearchParams();
+
+    if (filters.nombre_cliente) params.append('nombre_cliente', filters.nombre_cliente);
+    if (filters.fecha_servicio_desde) params.append('fecha_servicio_desde', filters.fecha_servicio_desde);
+    if (filters.fecha_servicio_hasta) params.append('fecha_servicio_hasta', filters.fecha_servicio_hasta);
+
+    const response = await axiosInstance.get(`/fletes/stats/pendientes-facturacion?${params.toString()}`);
     return response.data;
   },
 
