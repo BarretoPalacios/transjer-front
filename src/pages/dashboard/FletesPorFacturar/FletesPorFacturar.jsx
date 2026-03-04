@@ -537,11 +537,19 @@ const handleSearchClick = () => {
       fecha_servicio_desde: "",
       fecha_servicio_hasta: "",
     });
+    cargarReportePendientes({
+      ...filters,
+      codigo_flete: "",
+      cliente: "",
+      fecha_servicio_desde: "",
+      fecha_servicio_hasta: "",
+    });
   }, []);
 
   const handleRefresh = useCallback(() => {
     fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
-  }, [fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
+    cargarReportePendientes(filters)
+  }, [cargarReportePendientes,fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   const handledownload = useCallback(async () => {
     try {
