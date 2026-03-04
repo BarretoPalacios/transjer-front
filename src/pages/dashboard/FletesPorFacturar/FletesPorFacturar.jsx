@@ -32,6 +32,7 @@ import {
   Users,
   Tag,
   Trash,
+  FilterIcon,
 } from "lucide-react";
 
 // Componentes comunes
@@ -303,11 +304,15 @@ const FletesPorFacturar = () => {
     }
   }, []);
 
-  const cargarReportePendientes = useCallback(async () => {
+  const cargarReportePendientes = useCallback(async (filter = {}) => {
     setLoadingReporte(true);
     try {
       // Asumiendo que fletesAPI es donde registraste la ruta '/stats/pendientes-facturacion'
-      const response = await fletesAPI.getPendientesFacturacion();
+      const response = await fletesAPI.getPendientesFacturacion({
+        nombre_cliente: filter.cliente,
+        fecha_servicio_desde: filter.fecha_servicio_desde,
+        fecha_servicio_hasta: filter.fecha_servicio_hasta,
+      });
       setReportePendientes(response || []);
     } catch (err) {
       console.error("Error cargando reporte de pendientes:", err);
@@ -317,36 +322,17 @@ const FletesPorFacturar = () => {
     }
   }, []);
 
-  // Efecto para búsqueda en tiempo real con debounce
-  useEffect(() => {
-    if (isInitialMount.current) {
-      return;
-    }
+const handleSearchClick = () => {
+  // 1. Resetear a página 1 en el estado
+  setPagination((prev) => ({
+    ...prev,
+    currentPage: 1,
+  }));
 
-    // Limpiar timeout anterior
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
 
-    // Crear nuevo timeout
-    const timeout = setTimeout(() => {
-      // Resetear a página 1 cuando cambian los filtros
-      setPagination((prev) => ({
-        ...prev,
-        currentPage: 1,
-      }));
-
-      // Llamar a fetchFletes con página 1
-      fetchFletes(1, pagination.itemsPerPage, filters);
-    }, 300); // 300ms de debounce
-
-    setSearchTimeout(timeout);
-
-    // Limpiar timeout al desmontar
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [filters]);
+  fetchFletes(1, pagination.itemsPerPage, filters);
+  cargarReportePendientes(filters);
+};
 
   // Efecto para cargar cuando cambia la página o itemsPerPage
   useEffect(() => {
@@ -391,25 +377,30 @@ const FletesPorFacturar = () => {
         fecha_servicio_desde: fechaDesde,
         fecha_servicio_hasta: fechaHasta
       });
+      cargarReportePendientes(
+        {
+          ...filters,
+        fecha_servicio_desde: fechaDesde,
+        fecha_servicio_hasta: fechaHasta
+        }
+      );
     } else {
       console.error('Parámetros mes/año inválidos:', mes, anio);
       // Si los parámetros son inválidos, cargar normal
       fetchFletes(1, pagination.itemsPerPage, filters);
+      cargarReportePendientes();
     }
   } else {
     // Si no hay parámetros, cargar normal
     fetchFletes(1, pagination.itemsPerPage, filters);
+    cargarReportePendientes();
   }
 }, []);
 
   // Cargar datos iniciales
   useEffect(() => {
-    // if (isInitialMount.current) {
-    //   fetchFletes(1, pagination.itemsPerPage, filters);
-    //   isInitialMount.current = false;
-    // }
     cargarClientes();
-    cargarReportePendientes();
+
   }, []);
 
   // Efecto para inicializar el formulario cuando se abre el modal de factura
@@ -534,6 +525,13 @@ const FletesPorFacturar = () => {
 
   const clearFilters = useCallback(() => {
     setFilters({
+      codigo_flete: "",
+      cliente: "",
+      fecha_servicio_desde: "",
+      fecha_servicio_hasta: "",
+    });
+    fetchFletes(1, pagination.itemsPerPage, {
+      ...filters,
       codigo_flete: "",
       cliente: "",
       fecha_servicio_desde: "",
@@ -1147,6 +1145,16 @@ const FletesPorFacturar = () => {
           </div>
 
           <div className="flex items-center space-x-2">
+            
+            <Button
+              onClick={handleSearchClick}
+              variant="primary"
+              size="small"
+              icon={FilterIcon}
+              isLoading={isLoading}
+            >
+              Filtrar
+            </Button>
             <Button
               onClick={handleRefresh}
               variant="secondary"
@@ -1169,6 +1177,7 @@ const FletesPorFacturar = () => {
             >
               Descargar Data
             </Button>
+
           </div>
         </div>
 
