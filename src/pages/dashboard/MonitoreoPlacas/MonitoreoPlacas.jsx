@@ -634,11 +634,13 @@ const MonitoreoPlacas = () => {
                       {formatearMonto(flete.monto_flete)}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {flete.pertenece_a_factura ? (
-                        <span className="text-green-600">Facturado</span>
-                      ) : (
-                        <span className="text-orange-600">Sin factura</span>
-                      )}
+                      {flete.estado_flete === "PENDIENTE" ? (
+  <span className="text-yellow-600 font-medium">Pendiente</span>
+) : flete.estado_flete === "VALORIZADO" && flete.pertenece_a_factura ? (
+  <span className="text-green-600 font-medium">Facturado</span>
+) : (
+  <span className="text-orange-600 font-medium">Sin factura</span>
+)}
                     </div>
                   </td>
 
