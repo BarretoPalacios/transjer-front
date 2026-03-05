@@ -140,7 +140,7 @@ const MonitoreoPlacas = () => {
   // Cargar placas desde la API
   const cargarPlacas = useCallback(async () => {
     try {
-      const response = await utilsAPI.getPlacasList();
+      const response = await utilsAPI.getPlacasListTranjer();
       setPlacas(response || []);
     } catch (err) {
       console.error("Error cargando placas:", err);

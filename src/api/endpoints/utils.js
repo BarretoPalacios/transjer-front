@@ -15,6 +15,11 @@ export const utilsAPI = {
     const response = await axiosInstance.get(`/utils/placas-list`);
     return response.data;
   },
+  getPlacasListTranjer: async () => {
+    const response = await axiosInstance.get(`/utils/placas-transjer`);
+    return response.data;
+  },
+  
 };
 
 export default utilsAPI;
