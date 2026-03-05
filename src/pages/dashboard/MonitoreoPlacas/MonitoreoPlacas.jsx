@@ -306,15 +306,13 @@ const MonitoreoPlacas = () => {
     try {
       setLoadingDownload(true);
 
-      const filtersForAPI = {};
+      const filtersForAPI = {
+         fecha_servicio_desde: filters.fecha_inicio,
+         fecha_servicio_hasta: filters.fecha_fin,
+         placa:filters.flota_placa
+      };
 
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value && value.trim() !== "") {
-          filtersForAPI[key] = value.trim();
-        }
-      });
-
-      const blob = await fletesAPI.exportFletesExcel(filtersForAPI);
+      const blob = await fletesAPI.exportAllFletesExcel(filtersForAPI);
 
       fletesAPI.downloadExcel(
         blob,
@@ -361,37 +359,6 @@ const MonitoreoPlacas = () => {
 
   return (
     <div className="">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Monitoreo de Fletes por Placa
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Visualización de fletes valorizados por placa y rango de fechas
-          </p>
-        </div>
-
-        {/* Botón de exportación */}
-        <button
-          onClick={handleExportarExcel}
-          disabled={loadingDownload}
-          className="mt-4 lg:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2 disabled:opacity-50"
-        >
-          {loadingDownload ? (
-            <>
-              <Loader className="h-4 w-4 animate-spin" />
-              Exportando...
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4" />
-              Exportar a Excel
-            </>
-          )}
-        </button>
-      </div>
-
       {/* Mensajes de éxito y error */}
       {successMessage && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -413,64 +380,72 @@ const MonitoreoPlacas = () => {
 
       {/* Tarjetas de métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-  {/* Total Venta Neta */}
-  <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
-    <div className="flex items-center justify-between mb-1">
-      <div className="p-1.5 bg-blue-100 rounded-md">
-        <DollarSign className="h-4 w-4 text-blue-600" />
-      </div>
-      <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">Total acumulado</span>
-    </div>
-    <div className="text-xl font-bold text-gray-900 leading-none">
-      {formatearMonto(metrics.monto_total_acumulado)}
-    </div>
-    <div className="text-xs text-gray-500 mt-1">
-      {metrics.total_fletes} fletes
-    </div>
-  </div>
+        {/* Total Venta Neta */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total acumulado
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.monto_total_acumulado)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {metrics.total_fletes} fletes
+          </div>
+        </div>
 
-  {/* Pendientes */}
-  <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
-    <div className="flex items-center justify-between mb-1">
-      <div className="p-1.5 bg-yellow-100 rounded-md">
-        <Clock className="h-4 w-4 text-yellow-600" />
-      </div>
-      <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">Por facturar</span>
-    </div>
-    <div className="text-xl font-bold text-gray-900 leading-none">
-      {metrics.total_pendientes}
-    </div>
-    <div className="text-xs text-gray-500 mt-1">Fletes pendientes</div>
-  </div>
+        {/* Pendientes */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-yellow-100 rounded-md">
+              <Clock className="h-4 w-4 text-yellow-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Por facturar
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.total_pendientes}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Fletes pendientes</div>
+        </div>
 
-  {/* Valorizados sin factura */}
-  <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
-    <div className="flex items-center justify-between mb-1">
-      <div className="p-1.5 bg-orange-100 rounded-md">
-        <FileX className="h-4 w-4 text-orange-600" />
-      </div>
-      <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">Sin factura</span>
-    </div>
-    <div className="text-xl font-bold text-gray-900 leading-none">
-      {metrics.valorizados_sin_factura}
-    </div>
-    <div className="text-xs text-gray-500 mt-1">Sin factura</div>
-  </div>
+        {/* Valorizados sin factura */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-orange-100 rounded-md">
+              <FileX className="h-4 w-4 text-orange-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Sin factura
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.valorizados_sin_factura}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Sin factura</div>
+        </div>
 
-  {/* Valorizados con factura */}
-  <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
-    <div className="flex items-center justify-between mb-1">
-      <div className="p-1.5 bg-green-100 rounded-md">
-        <FileCheck className="h-4 w-4 text-green-600" />
+        {/* Valorizados con factura */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-green-100 rounded-md">
+              <FileCheck className="h-4 w-4 text-green-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Con factura
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.valorizados_con_factura}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Con factura</div>
+        </div>
       </div>
-      <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">Con factura</span>
-    </div>
-    <div className="text-xl font-bold text-gray-900 leading-none">
-      {metrics.valorizados_con_factura}
-    </div>
-    <div className="text-xs text-gray-500 mt-1">Con factura</div>
-  </div>
-</div>
 
       {/* Filtros */}
       <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
@@ -495,6 +470,25 @@ const MonitoreoPlacas = () => {
 
             <Button onClick={clearFilters} variant="secondary" size="small">
               Limpiar Filtros
+            </Button>
+
+            <Button
+              onClick={handleExportarExcel}
+              disabled={loadingDownload}
+              variant="primary"
+              size="small"
+            >
+              {loadingDownload ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Exportar a Excel
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -611,7 +605,7 @@ const MonitoreoPlacas = () => {
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Cliente
-                </th> 
+                </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Origen
                 </th>
@@ -647,15 +641,12 @@ const MonitoreoPlacas = () => {
                       )}
                     </div>
                   </td>
-                  
+
                   <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
                     <div className="text-gray-900">
                       {formatFecha(flete?.servicio?.fecha_servicio)}
                     </div>
                   </td>
-
-
-                  
 
                   <td className="px-4 py-3 border-r border-gray-200">
                     <div className="font-medium text-gray-900">
@@ -683,7 +674,6 @@ const MonitoreoPlacas = () => {
                       </span>
                     </div>
                   </td>
-                  
                 </tr>
               ))}
             </tbody>
