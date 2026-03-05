@@ -387,7 +387,7 @@ const MonitoreoPlacas = () => {
               <DollarSign className="h-4 w-4 text-blue-600" />
             </div>
             <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
-              Total acumulado
+              Total Vendido (sin IGV)
             </span>
           </div>
           <div className="text-xl font-bold text-gray-900 leading-none">
@@ -624,9 +624,9 @@ const MonitoreoPlacas = () => {
                     <div className="font-medium text-gray-900">
                       {flete.servicio?.flota?.placa || "N/A"}
                     </div>
-                    {/* <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500">
                       Código: {flete.codigo_flete}
-                    </div> */}
+                    </div>
                   </td>
 
                   <td className="px-4 py-3 border-r border-gray-200">
