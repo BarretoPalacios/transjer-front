@@ -196,7 +196,7 @@ const MonitoreoPlacas = () => {
         }
 
         // Llamar a la API de fletes
-        const response = await monitoreoAPI.getPlacas(apiFilters);
+        const response = await monitoreoAPI.getFletes(apiFilters);
 
         setFletesData(response.items || []);
         setMetrics(

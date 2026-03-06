@@ -2,7 +2,7 @@ import axiosInstance from '../axiosConfig';
 
 export const monitoreoAPI = {
 
-    getPlacas: async (filters = {}) => {
+    getFletes: async (filters = {}) => {
     const params = new URLSearchParams();
 
     // Parámetros de paginación
@@ -50,6 +50,7 @@ export const monitoreoAPI = {
     // console.log(response)
     return response.data;
   },
+   
 }
 
 export const formatDateToISO = (fecha) => {
