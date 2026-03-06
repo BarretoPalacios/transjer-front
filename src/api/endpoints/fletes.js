@@ -119,6 +119,8 @@ export const fletesAPI = {
     const response = await axiosInstance.get(
       `/fletes/advanced/search?${params.toString()}`,
     );
+
+    
     return response.data;
   },
 

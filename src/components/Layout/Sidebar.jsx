@@ -356,22 +356,22 @@ const Sidebar = ({
             path: "/gerencia/monitoreo-placas",
             show: shouldShowSubItem({ id: "monitoreo-placas" }),
           },
-          {
-            id: "monitoreo-proveedores",
-            label: "Resumen de Proveedores",
-            icon: MonitorCheck,
-            path: "/gerencia/monitoreo-proveedores",
-            show: shouldShowSubItem({ id: "monitoreo-proveedores" }),
-          },
+          // {
+          //   id: "monitoreo-proveedores",
+          //   label: "Resumen de Proveedores",
+          //   icon: MonitorCheck,
+          //   path: "/gerencia/monitoreo-proveedores",
+          //   show: shouldShowSubItem({ id: "monitoreo-proveedores" }),
+          // },
           
           
-          {
-            id: "historial",
-            label: "Historial de Cambios",
-            path: "/gerencia/actividad",
-            icon: FileStack,
-            show: shouldShowSubItem({ id: "historial" }),
-          },
+          // {
+          //   id: "historial",
+          //   label: "Historial de Cambios",
+          //   path: "/gerencia/actividad",
+          //   icon: FileStack,
+          //   show: shouldShowSubItem({ id: "historial" }),
+          // },
         ].filter(item => item.show),
       },
     ].filter(item => item.show && (item.submenu ? item.submenu.length > 0 : true));

@@ -19,6 +19,10 @@ import {
   Truck as TruckIcon,
   Users,
   Tag,
+  DollarSignIcon,
+  Clock,
+  FileX,
+  FileCheck,
 } from "lucide-react";
 
 // Componentes comunes
@@ -34,6 +38,7 @@ const TodosLosFletes = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [fletes, setFletes] = useState([]);
+  const [stats,setStats]= useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState(null);
 
@@ -171,7 +176,7 @@ const TodosLosFletes = () => {
 
         if (response && response.items) {
           setFletes(response.items);
-
+          setStats(response.stats)
           setPagination({
             currentPage: page,
             itemsPerPage: itemsPerPage,
@@ -518,6 +523,66 @@ const TodosLosFletes = () => {
           </button>
         </div>
       )}
+
+  {/* tarjetas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+  {/* Monto Total */}
+  <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+    <div className="flex items-center justify-between mb-1">
+      <div className="p-1.5 bg-blue-50 rounded-lg">
+        <DollarSignIcon className="h-4 w-4 text-blue-600" />
+      </div>
+      <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Monto Total</span>
+    </div>
+    <div className="text-xl font-extrabold text-gray-900 leading-none">
+      {/* Usando el monto_total de tus stats */}
+      {new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(stats.monto_total)}
+    </div>
+    <p className="text-[11px] text-gray-500 mt-1">Venta neta acumulada</p>
+  </div>
+
+  {/* Pendientes */}
+  <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+    <div className="flex items-center justify-between mb-1">
+      <div className="p-1.5 bg-yellow-50 rounded-lg">
+        <Clock className="h-4 w-4 text-yellow-600" />
+      </div>
+      <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Estado</span>
+    </div>
+    <div className="text-xl font-extrabold text-gray-900 leading-none">
+      {stats.total_pendientes}
+    </div>
+    <p className="text-[11px] text-yellow-600 font-medium mt-1 italic">Pendientes</p>
+  </div>
+
+  {/* Valorizados Sin Factura */}
+  <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+    <div className="flex items-center justify-between mb-1">
+      <div className="p-1.5 bg-orange-50 rounded-lg">
+        <FileX className="h-4 w-4 text-orange-600" />
+      </div>
+      <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Por Gestionar</span>
+    </div>
+    <div className="text-xl font-extrabold text-gray-900 leading-none">
+      {stats.valorizados_sin_factura}
+    </div>
+    <p className="text-[11px] text-orange-600 font-medium mt-1">Sin Factura</p>
+  </div>
+
+  {/* Valorizados Con Factura */}
+  <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+    <div className="flex items-center justify-between mb-1">
+      <div className="p-1.5 bg-green-50 rounded-lg">
+        <FileCheck className="h-4 w-4 text-green-600" />
+      </div>
+      <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Completados</span>
+    </div>
+    <div className="text-xl font-extrabold text-gray-900 leading-none">
+      {stats.valorizados_con_factura}
+    </div>
+    <p className="text-[11px] text-green-600 font-medium mt-1">Facturados</p>
+  </div>
+</div>
 
       {/* Filtros */}
       <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
