@@ -46,10 +46,25 @@ export const monitoreoAPI = {
       params.append('fecha_creacion_hasta', formatDateToISO(filters.fecha_creacion_hasta));
     }
 
-    const response = await axiosInstance.get(`/monitoreo/placas?${params.toString()}`);
+    const response = await axiosInstance.get(`/monitoreo/fletes?${params.toString()}`);
     // console.log(response)
     return response.data;
   },
+
+  getMetricsClientes: async (filters = {}) =>{
+    const params = new URLSearchParams();
+
+    // Parámetros de paginación
+    const month = filters.month ;
+    const year = filters.year;
+    
+    params.append('month', month);
+    params.append('page_size', year);
+
+    const response = await axiosInstance.get(`/monitoreo/get_metrics_by_client?${params.toString()}`);
+    // console.log(response)
+    return response.data;
+  }
    
 }
 

@@ -708,6 +708,7 @@ import Pagination from "../../../components/common/Pagination/Pagination";
 import { monitoreoAPI } from "../../../api/endpoints/monitoreo";
 import utilsAPI from "../../../api/endpoints/utils";
 import { fletesAPI } from "../../../api/endpoints/fletes";
+import ReportesClientes from "./ReportesClientes";
 
 const formatFecha = (fecha) => {
   if (!fecha) return "N/A";
@@ -1058,6 +1059,10 @@ const MonitoreoClientes = () => {
           </div>
         </div>
       )}
+
+      <ReportesClientes />
+
+      <br />
 
       {/* Tarjetas de métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
@@ -1419,6 +1424,8 @@ const MonitoreoClientes = () => {
           />
         </div>
       )}
+
+      
     </div>
   );
 };
