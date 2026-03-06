@@ -334,7 +334,7 @@ const ReportesPlacas = () => {
                   {formatCurrency(totales.totalMonto)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Monto total facturado
+                  Monto total Vendido
                 </p>
               </div>
             </div>
