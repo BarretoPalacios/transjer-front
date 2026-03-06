@@ -64,7 +64,23 @@ export const monitoreoAPI = {
     const response = await axiosInstance.get(`/monitoreo/get_metrics_by_client?${params.toString()}`);
     // console.log(response)
     return response.data;
+  },
+  
+getMetricsPlacas: async (filters = {}) =>{
+    const params = new URLSearchParams();
+
+    // Parámetros de paginación
+    const month = filters.month ;
+    const year = filters.year;
+    
+    params.append('month', month);
+    params.append('page_size', year);
+
+    const response = await axiosInstance.get(`/monitoreo/get_metrics_by_specific_plates?${params.toString()}`);
+    // console.log(response)
+    return response.data;
   }
+
    
 }
 

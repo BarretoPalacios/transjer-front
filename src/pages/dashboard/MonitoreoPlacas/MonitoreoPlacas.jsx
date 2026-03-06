@@ -25,6 +25,7 @@ import Pagination from "../../../components/common/Pagination/Pagination";
 import { fletesAPI } from "../../../api/endpoints/fletes";
 import utilsAPI from "../../../api/endpoints/utils";
 import { monitoreoAPI } from "../../../api/endpoints/monitoreo";
+import ReportesPlacas from "./ReportesPlacas";
 
 const formatFecha = (fecha) => {
   if (!fecha) return "N/A";
@@ -377,6 +378,8 @@ const MonitoreoPlacas = () => {
           </div>
         </div>
       )}
+
+      <ReportesPlacas />
 
       {/* Tarjetas de métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
