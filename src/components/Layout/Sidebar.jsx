@@ -356,13 +356,13 @@ const Sidebar = ({
             path: "/gerencia/monitoreo-placas",
             show: shouldShowSubItem({ id: "monitoreo-placas" }),
           },
-          // {
-          //   id: "monitoreo-proveedores",
-          //   label: "Resumen de Proveedores",
-          //   icon: MonitorCheck,
-          //   path: "/gerencia/monitoreo-proveedores",
-          //   show: shouldShowSubItem({ id: "monitoreo-proveedores" }),
-          // },
+          {
+            id: "monitoreo-proveedores",
+            label: "Resumen de Proveedores",
+            icon: MonitorCheck,
+            path: "/gerencia/monitoreo-proveedores",
+            show: shouldShowSubItem({ id: "monitoreo-proveedores" }),
+          },
           
           
           // {

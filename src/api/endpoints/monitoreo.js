@@ -24,6 +24,7 @@ export const monitoreoAPI = {
 
     // === Filtros del Servicio Asociado ===
     if (filters.cliente) params.append('cliente', filters.cliente);
+    if (filters.proveedor) params.append('proveedor', filters.proveedor);
     if (filters.placa) params.append('placa', filters.placa);
     if (filters.conductor) params.append('conductor', filters.conductor);
     if (filters.tipo_servicio) params.append('tipo_servicio', filters.tipo_servicio);
@@ -59,7 +60,7 @@ export const monitoreoAPI = {
     const year = filters.year;
     
     params.append('month', month);
-    params.append('page_size', year);
+    params.append('year', year);
 
     const response = await axiosInstance.get(`/monitoreo/get_metrics_by_client?${params.toString()}`);
     // console.log(response)
@@ -74,12 +75,27 @@ getMetricsPlacas: async (filters = {}) =>{
     const year = filters.year;
     
     params.append('month', month);
-    params.append('page_size', year);
+    params.append('year', year);
 
     const response = await axiosInstance.get(`/monitoreo/get_metrics_by_specific_plates?${params.toString()}`);
     // console.log(response)
     return response.data;
-  }
+  },
+
+  getMetricsProveedores: async (filters = {}) =>{
+    const params = new URLSearchParams();
+
+    // Parámetros de paginación
+    const month = filters.month ;
+    const year = filters.year;
+    
+    params.append('month', month);
+    params.append('year', year);
+
+    const response = await axiosInstance.get(`/monitoreo/get_metrics_by_provider?${params.toString()}`);
+    // console.log(response)
+    return response.data;
+  },
 
    
 }

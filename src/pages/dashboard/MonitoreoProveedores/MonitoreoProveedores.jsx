@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Truck,
   Filter,
@@ -6,39 +6,54 @@ import {
   RefreshCw,
   X,
   CheckCircle,
-  Search,
-  Building,
   Download,
   Loader,
   MapPin,
-  User,
-  Package,
-  Car,
   FileText,
+  DollarSign,
   Clock,
-  Hash,
-  CalendarDays,
-  DollarSign
-} from 'lucide-react';
+  AlertCircle,
+  FileCheck,
+  FileX,
+  Users,
+} from "lucide-react";
 
 // Componentes comunes
-import Button from '../../../components/common/Button/Button';
-import Pagination from '../../../components/common/Pagination/Pagination';
+import Button from "../../../components/common/Button/Button";
+import Pagination from "../../../components/common/Pagination/Pagination";
 
 // API
-import { serviciosPrincipalesAPI } from '../../../api/endpoints/servicioPrincipal';
-import utilsAPI from '../../../api/endpoints/utils';
+import { fletesAPI } from "../../../api/endpoints/fletes";
+import utilsAPI from "../../../api/endpoints/utils";
+import { monitoreoAPI } from "../../../api/endpoints/monitoreo";
+import ReportesProveedores from "./ReportesProveedores";
+
+const formatFecha = (fecha) => {
+  if (!fecha) return "N/A";
+  try {
+    return new Date(fecha).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch (e) {
+    return fecha;
+  }
+};
 
 const MonitoreoProveedores = () => {
-  const [serviciosData, setServiciosData] = useState([]);
+  const [fletesData, setFletesData] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingDownload, setLoadingDownload] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState(null);
-  
-  // Estado para los montos por servicio
-  const [montos, setMontos] = useState({});
-  
+  const [metrics, setMetrics] = useState({
+    total_fletes: 0,
+    monto_total_acumulado: 0,
+    total_pendientes: 0,
+    valorizados_con_factura: 0,
+    valorizados_sin_factura: 0,
+  });
+
   // Estados de paginación
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -48,25 +63,42 @@ const MonitoreoProveedores = () => {
     hasNext: false,
     hasPrev: false,
   });
-  
+
   // Estados para filtros
   const [filters, setFilters] = useState({
-    fecha_inicio: '',
-    fecha_fin: '',
-    proveedor_nombre: ''
+    fecha_inicio: "",
+    fecha_fin: "",
+    proveedor: "",
+    mes: "", // Nuevo filtro de mes
   });
-  
-  // Estados para errores de validación
+
+  // Estados para errores
   const [errors, setErrors] = useState({
-    fecha_inicio: '',
-    fecha_fin: '',
-    rango_fechas: ''
+    fecha_inicio: "",
+    fecha_fin: "",
+    rango_fechas: "",
   });
-  
+
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
-  
+
   const itemsPerPageOptions = [10, 20, 30, 50, 100];
+
+  // Opciones de meses
+  const meses = [
+    { value: "01", label: "Enero" },
+    { value: "02", label: "Febrero" },
+    { value: "03", label: "Marzo" },
+    { value: "04", label: "Abril" },
+    { value: "05", label: "Mayo" },
+    { value: "06", label: "Junio" },
+    { value: "07", label: "Julio" },
+    { value: "08", label: "Agosto" },
+    { value: "09", label: "Septiembre" },
+    { value: "10", label: "Octubre" },
+    { value: "11", label: "Noviembre" },
+    { value: "12", label: "Diciembre" },
+  ];
 
   // Cargar proveedores al montar el componente
   useEffect(() => {
@@ -75,89 +107,106 @@ const MonitoreoProveedores = () => {
 
   // Efecto para búsqueda con debounce
   useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
     const timeout = setTimeout(() => {
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
-        currentPage: 1
+        currentPage: 1,
       }));
-      
-      fetchServiciosPrincipales(1, pagination.itemsPerPage, filters);
-    }, 500);
 
-    setSearchTimeout(timeout);
+      fetchFletes(1, pagination.itemsPerPage, filters);
+    }, 500);
 
     return () => {
       if (timeout) clearTimeout(timeout);
     };
-  }, [filters.fecha_inicio, filters.fecha_fin, filters.proveedor_nombre]);
+  }, [filters.fecha_inicio, filters.fecha_fin, filters.proveedor]);
 
-  // Cargar proveedores
+  // Efecto para actualizar rango de fechas cuando cambia el mes
+  useEffect(() => {
+    if (filters.mes) {
+      const year = new Date().getFullYear();
+      const fechaInicio = `${year}-${filters.mes}-01`;
+
+      // Calcular último día del mes
+      const lastDay = new Date(year, parseInt(filters.mes), 0).getDate();
+      const fechaFin = `${year}-${filters.mes}-${lastDay}`;
+
+      setFilters((prev) => ({
+        ...prev,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+      }));
+    }
+  }, [filters.mes]);
+
+  // Cargar proveedores desde la API
   const cargarProveedores = useCallback(async () => {
     try {
-      const response = await utilsAPI.getProveedoresList();
+      
+      const response = await utilsAPI.getProveedoresList(); 
       setProveedores(response || []);
     } catch (err) {
-      console.error('Error cargando proveedores:', err);
-      setError('Error al cargar la lista de proveedores');
+      console.error("Error cargando proveedores:", err);
+      setError("Error al cargar la lista de proveedores");
     }
   }, []);
 
-  // Función principal para cargar servicios principales
-  const fetchServiciosPrincipales = useCallback(
-    async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
+  // Función principal para cargar fletes
+  const fetchFletes = useCallback(
+    async (
+      page = 1,
+      itemsPerPage = pagination.itemsPerPage,
+      filtersToUse = filters,
+    ) => {
       setIsLoading(true);
       setError(null);
-      setSuccessMessage(null);
-      setErrors({
-        fecha_inicio: '',
-        fecha_fin: '',
-        rango_fechas: ''
-      });
-      
+
       // Validar fechas
-      const validationErrors = {};
-      
       if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin) {
         if (filtersToUse.fecha_inicio > filtersToUse.fecha_fin) {
-          validationErrors.rango_fechas = 'La fecha de inicio no puede ser mayor a la fecha de fin';
+          setErrors((prev) => ({
+            ...prev,
+            rango_fechas:
+              "La fecha de inicio no puede ser mayor a la fecha de fin",
+          }));
+          setIsLoading(false);
+          return;
         }
       }
-      
-      if (Object.keys(validationErrors).length > 0) {
-        setErrors(validationErrors);
-        setIsLoading(false);
-        return;
-      }
-      
+
       try {
         // Preparar filtros para API
         const apiFilters = {
           page: page,
-          page_size: itemsPerPage
+          page_size: itemsPerPage,
         };
-        
-        // Solo enviar filtros que tengan valor
+
         if (filtersToUse.fecha_inicio) {
-          apiFilters.fecha_inicio = filtersToUse.fecha_inicio;
+          apiFilters.fecha_servicio_desde = filtersToUse.fecha_inicio;
         }
-        
+
         if (filtersToUse.fecha_fin) {
-          apiFilters.fecha_fin = filtersToUse.fecha_fin;
+          apiFilters.fecha_servicio_hasta = filtersToUse.fecha_fin;
         }
-        
-        if (filtersToUse.proveedor_nombre && filtersToUse.proveedor_nombre.trim() !== '') {
-          apiFilters.proveedor_nombre = filtersToUse.proveedor_nombre.trim();
+
+        if (filtersToUse.proveedor && filtersToUse.proveedor.trim() !== "") {
+          apiFilters.proveedor = filtersToUse.proveedor.trim(); // Cambiado de placa a proveedor
         }
-        
-        // Llamar a la API de servicios principales
-        const response = await serviciosPrincipalesAPI.getAllServiciosPrincipales(apiFilters);
-        
-        setServiciosData(response.data || []);
-        
+
+        // Llamar a la API de fletes
+        const response = await monitoreoAPI.getFletes(apiFilters);
+
+        setFletesData(response.items || []);
+        setMetrics(
+          response.metrics || {
+            total_fletes: 0,
+            monto_total_acumulado: 0,
+            total_pendientes: 0,
+            valorizados_con_factura: 0,
+            valorizados_sin_factura: 0,
+          },
+        );
+
         setPagination({
           currentPage: response.pagination.page,
           itemsPerPage: response.pagination.page_size,
@@ -166,170 +215,141 @@ const MonitoreoProveedores = () => {
           hasNext: response.pagination.has_next,
           hasPrev: response.pagination.has_prev,
         });
-        
       } catch (err) {
-        setError('Error al cargar los servicios: ' + (err.message || 'Error desconocido'));
+        setError(
+          "Error al cargar los fletes: " + (err.message || "Error desconocido"),
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
-    
-    // Limpiar errores específicos
-    if (key === 'fecha_inicio' || key === 'fecha_fin') {
-      setErrors(prev => ({
+
+    // Si cambia mes, limpiar fechas manuales
+    if (key === "mes") {
+      setFilters((prev) => ({
         ...prev,
-        [key]: '',
-        rango_fechas: ''
+        fecha_inicio: "",
+        fecha_fin: "",
+      }));
+    }
+
+    // Limpiar errores
+    if (key === "fecha_inicio" || key === "fecha_fin") {
+      setErrors((prev) => ({
+        ...prev,
+        [key]: "",
+        rango_fechas: "",
       }));
     }
   }, []);
 
-  // Handler para seleccionar fecha automáticamente
-  const handleSelectToday = useCallback((field) => {
-    const today = new Date().toISOString().split('T')[0];
-    handleFilterChange(field, today);
-  }, [handleFilterChange]);
+  // Handler para seleccionar fecha manual
+  const handleDateChange = useCallback((key, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+      mes: "", // Limpiar selección de mes cuando se selecciona fecha manual
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [key]: "",
+      rango_fechas: "",
+    }));
+  }, []);
 
   const clearFilters = useCallback(() => {
     setFilters({
-      fecha_inicio: '',
-      fecha_fin: '',
-      proveedor_nombre: ''
+      fecha_inicio: "",
+      fecha_fin: "",
+      proveedor: "",
+      mes: "",
     });
     setErrors({
-      fecha_inicio: '',
-      fecha_fin: '',
-      rango_fechas: ''
+      fecha_inicio: "",
+      fecha_fin: "",
+      rango_fechas: "",
     });
   }, []);
 
   const handleRefresh = useCallback(() => {
-    fetchServiciosPrincipales(pagination.currentPage, pagination.itemsPerPage, filters);
-  }, [fetchServiciosPrincipales, pagination.currentPage, pagination.itemsPerPage, filters]);
+    fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
+  }, [fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   const handlePageChange = useCallback(
     (newPage) => {
-      fetchServiciosPrincipales(newPage, pagination.itemsPerPage, filters);
+      fetchFletes(newPage, pagination.itemsPerPage, filters);
     },
-    [fetchServiciosPrincipales, pagination.itemsPerPage, filters]
+    [fetchFletes, pagination.itemsPerPage, filters],
   );
 
   const handleItemsPerPageChange = useCallback(
     (newItemsPerPage) => {
-      fetchServiciosPrincipales(1, newItemsPerPage, filters);
+      fetchFletes(1, newItemsPerPage, filters);
     },
-    [fetchServiciosPrincipales, filters]
+    [fetchFletes, filters],
   );
-
-  // Handler para cambio de monto
-  const handleMontoChange = useCallback((servicioId, value) => {
-    setMontos(prev => ({
-      ...prev,
-      [servicioId]: value
-    }));
-  }, []);
-
-  // Handler para enviar monto (solo lógica, no envía a API aún)
-  const handleEnviarMonto = useCallback((servicioId, e) => {
-    e.stopPropagation();
-    const monto = montos[servicioId];
-    console.log('Enviar monto para servicio:', servicioId, 'Monto:', monto);
-    // Aquí iría la llamada a la API
-  }, [montos]);
 
   // Exportar a Excel
   const handleExportarExcel = useCallback(async () => {
     try {
       setLoadingDownload(true);
-      
-      const filtersForAPI = {};
-      
-      // Solo enviar filtros que tengan valor
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value && value.trim() !== '') {
-          filtersForAPI[key] = value.trim();
-        }
-      });
-      
-      const blob = await serviciosPrincipalesAPI.exportServiciosExcel(filtersForAPI);
-      
-      // Usar el método downloadExcel de la API
-      serviciosPrincipalesAPI.downloadExcel(
-        blob, 
-        `servicios_principales_${new Date().toISOString().split('T')[0]}.xlsx`
+
+      const filtersForAPI = {
+         fecha_servicio_desde: filters.fecha_inicio,
+         fecha_servicio_hasta: filters.fecha_fin,
+         proveedor_nombre: filters.proveedor // Cambiado de placa a proveedor
+      };
+
+      const blob = await fletesAPI.exportAllFletesExcel(filtersForAPI);
+
+      fletesAPI.downloadExcel(
+        blob,
+        `monitoreo_fletes_proveedores_${new Date().toISOString().split("T")[0]}.xlsx`,
       );
-      
-      setSuccessMessage('Exportación completada exitosamente');
+
+      setSuccessMessage("Exportación completada exitosamente");
       setTimeout(() => setSuccessMessage(null), 3000);
-      
     } catch (err) {
-      setError('Error al exportar: ' + err.message);
-      console.error('Error exporting servicios:', err);
+      setError("Error al exportar: " + err.message);
     } finally {
       setLoadingDownload(false);
     }
   }, [filters]);
 
-  // Funciones auxiliares para estados y badges
-  const getEstadoIcon = (estado) => {
-    const iconMap = {
-      'Programado': Clock,
-      'En Proceso': Truck,
-      'Completado': CheckCircle,
-      'Cancelado': X
-    };
-    return iconMap[estado] || Clock;
-  };
-
-  const getEstadoBadgeClass = (estado) => {
-    const classMap = {
-      'Programado': 'bg-yellow-100 text-yellow-800',
-      'En Proceso': 'bg-blue-100 text-blue-800',
-      'Completado': 'bg-green-100 text-green-800',
-      'Cancelado': 'bg-red-100 text-red-800'
-    };
-    return classMap[estado] || 'bg-gray-100 text-gray-800';
-  };
-
-  const puedeCambiarEstado = (servicio) => {
-    return servicio.estado === 'Programado' || servicio.estado === 'En Proceso';
-  };
-
-  // Handlers para acciones
-  const handleRowClick = (servicio) => {
-    console.log('Fila clickeada:', servicio);
-  };
-
-  const handleAbrirCambioEstado = (servicio, e) => {
-    e.stopPropagation();
-    console.log('Cambiar estado:', servicio);
-  };
-
-  const handleCreate = () => {
-    console.log('Crear nuevo servicio');
-  };
-
   const formatearFecha = (fechaStr) => {
-  if (!fechaStr) return "N/A";
-  // Si viene como objeto de Mongo, extraemos el string
-  const date = typeof fechaStr === 'object' ? fechaStr.$date : fechaStr;
-  
-  // Dividimos "2026-02-03..." por el guion y tomamos solo los primeros 3 elementos
-  const [year, month, day] = date.split('T')[0].split('-');
-  return `${day}/${month}/${year}`;
-};
+    if (!fechaStr) return "N/A";
+    const date = typeof fechaStr === "object" ? fechaStr.$date : fechaStr;
+    const [year, month, day] = date.split("T")[0].split("-");
+    return `${day}/${month}/${year}`;
+  };
 
-  // Mostrar loading solo en carga inicial
-  if (isLoading && serviciosData.length === 0) {
+  const formatearMonto = (monto) => {
+    return new Intl.NumberFormat("es-PE", {
+      style: "currency",
+      currency: "PEN",
+      minimumFractionDigits: 2,
+    }).format(monto || 0);
+  };
+
+  // Obtener nombre del proveedor
+  const getNombreProveedor = (flete) => {
+    // Aquí deberías obtener el proveedor según la estructura de tus datos
+    // Por ejemplo, si el proveedor está en flete.servicio?.proveedor?.nombre
+    return flete.servicio?.proveedor?.nombre || "N/A";
+  };
+
+  // Loading inicial
+  if (isLoading && fletesData.length === 0) {
     return (
       <div className="p-4">
         <div className="animate-pulse">
@@ -344,53 +364,13 @@ const MonitoreoProveedores = () => {
 
   return (
     <div className="">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Monitoreo de Proveedores
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Visualización y seguimiento de servicios por proveedor y rango de fechas
-          </p>
-        </div>
-        
-        {/* Botón de exportación */}
-        <button
-          onClick={handleExportarExcel}
-          disabled={loadingDownload}
-          className="mt-4 lg:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2 disabled:opacity-50"
-        >
-          {loadingDownload ? (
-            <>
-              <Loader className="h-4 w-4 animate-spin" />
-              Exportando...
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4" />
-              Exportar a Excel
-            </>
-          )}
-        </button>
-      </div>
-
       {/* Mensajes de éxito y error */}
       {successMessage && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
           <div className="flex items-center text-green-700">
             <CheckCircle className="h-5 w-5 mr-2" />
-            <div>
-              <span className="font-medium">Éxito:</span>
-              <span className="ml-2">{successMessage}</span>
-            </div>
+            <span className="font-medium">{successMessage}</span>
           </div>
-          <button 
-            onClick={() => setSuccessMessage(null)}
-            className="mt-2 text-sm text-green-600 hover:text-green-800"
-          >
-            Cerrar
-          </button>
         </div>
       )}
 
@@ -398,19 +378,81 @@ const MonitoreoProveedores = () => {
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center text-red-700">
             <X className="h-5 w-5 mr-2" />
-            <div>
-              <span className="font-medium">Error:</span>
-              <span className="ml-2">{error}</span>
-            </div>
+            <span className="font-medium">{error}</span>
           </div>
-          <button 
-            onClick={() => setError(null)}
-            className="mt-2 text-sm text-red-600 hover:text-red-800"
-          >
-            Cerrar
-          </button>
         </div>
       )}
+
+      <ReportesProveedores />
+
+      {/* Tarjetas de métricas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+        {/* Total Venta Neta */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total Vendido (sin IGV)
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.monto_total_acumulado)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {metrics.total_fletes} fletes
+          </div>
+        </div>
+
+        {/* Pendientes */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-yellow-100 rounded-md">
+              <Clock className="h-4 w-4 text-yellow-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Por facturar
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.total_pendientes}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Fletes pendientes</div>
+        </div>
+
+        {/* Valorizados sin factura */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-orange-100 rounded-md">
+              <FileX className="h-4 w-4 text-orange-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Sin factura
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.valorizados_sin_factura}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Sin factura</div>
+        </div>
+
+        {/* Valorizados con factura */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-green-100 rounded-md">
+              <FileCheck className="h-4 w-4 text-green-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Con factura
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.valorizados_con_factura}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Con factura</div>
+        </div>
+      </div>
 
       {/* Filtros */}
       <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
@@ -420,9 +462,8 @@ const MonitoreoProveedores = () => {
               <Filter className="h-5 w-5 text-blue-600" />
               Filtros de Búsqueda
             </h3>
-            <p className="text-sm text-gray-600">Filtrado en tiempo real</p>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <Button
               onClick={handleRefresh}
@@ -434,94 +475,105 @@ const MonitoreoProveedores = () => {
               Actualizar
             </Button>
 
+            <Button onClick={clearFilters} variant="secondary" size="small">
+              Limpiar Filtros
+            </Button>
+
             <Button
-              onClick={clearFilters}
-              variant="secondary"
+              onClick={handleExportarExcel}
+              disabled={loadingDownload}
+              variant="primary"
               size="small"
             >
-              Limpiar Filtros
+              {loadingDownload ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Exportar a Excel
+                </>
+              )}
             </Button>
           </div>
         </div>
 
         {/* Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Proveedor - Ahora es un select */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Mes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Building className="h-4 w-4" />
-              Proveedor
+              <Calendar className="h-4 w-4" />
+              Mes
             </label>
             <select
-              value={filters.proveedor_nombre}
-              onChange={(e) => handleFilterChange('proveedor_nombre', e.target.value)}
+              value={filters.mes}
+              onChange={(e) => handleFilterChange("mes", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
             >
-              <option value="">Todos los proveedores</option>
-              {proveedores.map((proveedor, index) => (
-                <option key={index} value={proveedor}>
-                  {proveedor}
+              <option value="">Seleccionar mes</option>
+              {meses.map((mes) => (
+                <option key={mes.value} value={mes.value}>
+                  {mes.label}
                 </option>
               ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              Seleccione un proveedor para filtrar
+              Seleccione un mes para rango automático
             </p>
+          </div>
+
+          {/* Proveedor - Cambiado de Placa a Proveedor */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Proveedor
+            </label>
+            <select
+              value={filters.proveedor}
+              onChange={(e) =>
+                handleFilterChange("proveedor", e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+            >
+              <option value="">Todos los proveedores</option>
+              {proveedores.map((proveedor, index) => (
+                <option key={index} value={proveedor.id || proveedor}>
+                  {proveedor.nombre || proveedor}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Fecha Inicio */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Fecha Inicio Servicio
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha Inicio
             </label>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={filters.fecha_inicio}
-                onChange={(e) => handleFilterChange('fecha_inicio', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                max={filters.fecha_fin || new Date().toISOString().split('T')[0]}
-              />
-              <button
-                onClick={() => handleSelectToday('fecha_inicio')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300 whitespace-nowrap"
-                type="button"
-              >
-                Hoy
-              </button>
-            </div>
-            {errors.fecha_inicio && (
-              <p className="text-xs text-red-600 mt-1">{errors.fecha_inicio}</p>
-            )}
+            <input
+              type="date"
+              value={filters.fecha_inicio}
+              onChange={(e) => handleDateChange("fecha_inicio", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              max={filters.fecha_fin || new Date().toISOString().split("T")[0]}
+            />
           </div>
 
           {/* Fecha Fin */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Fecha Fin Servicio
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha Fin
             </label>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={filters.fecha_fin}
-                onChange={(e) => handleFilterChange('fecha_fin', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                min={filters.fecha_inicio}
-                max={new Date().toISOString().split('T')[0]}
-              />
-              <button
-                onClick={() => handleSelectToday('fecha_fin')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 border border-gray-300 whitespace-nowrap"
-                type="button"
-              >
-                Hoy
-              </button>
-            </div>
-            {errors.fecha_fin && (
-              <p className="text-xs text-red-600 mt-1">{errors.fecha_fin}</p>
-            )}
+            <input
+              type="date"
+              value={filters.fecha_fin}
+              onChange={(e) => handleDateChange("fecha_fin", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              min={filters.fecha_inicio}
+              max={new Date().toISOString().split("T")[0]}
+            />
           </div>
         </div>
 
@@ -531,330 +583,133 @@ const MonitoreoProveedores = () => {
             <p className="text-sm text-red-600">{errors.rango_fechas}</p>
           </div>
         )}
-
-        {/* Contador de filtros activos */}
-        {Object.values(filters).some(f => f) && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600 flex items-center justify-between">
-              <span>
-                Filtros activos: 
-                <span className="font-medium text-blue-600 ml-2">
-                  {Object.values(filters).filter(f => f).length}
-                </span>
-              </span>
-              <button
-                onClick={clearFilters}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                Limpiar todos los filtros
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Información de registros */}
-      {serviciosData.length > 0 && (
-        <div className="m-4 text-sm text-gray-600 text-center">
-          Mostrando {serviciosData.length} de {pagination.totalItems} registros
-          {filters.proveedor_nombre && ' · Filtrado por proveedor'}
-          {(filters.fecha_inicio || filters.fecha_fin) && ' · Filtrado por rango de fechas'}
+      {fletesData.length > 0 && (
+        <div className="mb-4 text-sm text-gray-600 text-center">
+          Mostrando {fletesData.length} de {pagination.totalItems} fletes
+          {filters.proveedor && " · Filtrado por proveedor"}
+          {(filters.fecha_inicio || filters.fecha_fin) &&
+            " · Filtrado por rango de fechas"}
         </div>
       )}
 
-      {/* Tabla de Servicios */}
+      {/* Tabla de Fletes */}
       <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-xs border-collapse">
+          <table className="min-w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b border-gray-300">
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <Hash className="h-3 w-3" />
-                    Código
-                  </div>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Proveedor
                 </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <CalendarDays className="h-3 w-3" />
-                    Fecha de Servicio
-                  </div>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Monto
                 </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    Cliente / Cuenta
-                  </div>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Fecha de Servicio
                 </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <Package className="h-3 w-3" />
-                    Tipo Servicio
-                  </div>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Cliente
                 </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    Origen
-                  </div>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Origen
                 </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    Destino
-                  </div>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700">
+                  Destino
                 </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <Car className="h-3 w-3" />
-                    Placa 
-                  </div>
-                </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    Conductor
-                  </div>
-                </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <Package className="h-3 w-3" />
-                    Capacidad
-                  </div>
-                </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <FileText className="h-3 w-3" />
-                    GIA's
-                  </div>
-                </th>
-                <th className="py-2 px-3 text-left font-semibold text-gray-700 border-r border-gray-300 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Estado
-                  </div>
-                </th>
-                {/* <th className="py-2 px-3 text-left font-semibold text-gray-700 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <DollarSign className="h-3 w-3" />
-                    Monto
-                  </div>
-                </th> */}
               </tr>
             </thead>
             <tbody>
-              {serviciosData.map((servicio) => {
-                const EstadoIcon = getEstadoIcon(servicio.estado);
-                const puedeCambiar = puedeCambiarEstado(servicio);
-                
-                return (
-                  <tr 
-                    key={servicio.id} 
-                    className="border-b border-gray-200 hover:bg-blue-50 cursor-pointer"
-                    onClick={() => handleRowClick(servicio)}
-                  >
-                    {/* Código */}
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      <div className="font-medium text-gray-900">
-                        {servicio.codigo_servicio_principal || 'N/A'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {servicio.zona || 'Sin zona'}
-                      </div>
-                    </td>
+              {fletesData.map((flete) => (
+                <tr
+                  key={flete.id}
+                  className="border-b border-gray-200 hover:bg-blue-50"
+                >
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {getNombreProveedor(flete)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Código: {flete.codigo_flete}
+                    </div>
+                  </td>
 
-                    {/* Fecha */}
-                    <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">
-                       F. Servicio: {formatearFecha(servicio.fecha_servicio)}
-                      </div>
-                      <div className="font-medium text-gray-900">
-                       F. Salida: {formatearFecha(servicio.fecha_salida)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                       Mes: {servicio.mes || 'N/A'} 
-                      </div>
-                      <div className="text-xs text-gray-500">
-                       H. Cita: {servicio.hora_cita?.slice(0, 5) || 'Sin hora'}
-                      </div>
-                    </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {formatearMonto(flete.monto_flete)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {flete.estado_flete === "PENDIENTE" ? (
+                        <span className="text-yellow-600 font-medium">Pendiente</span>
+                      ) : flete.estado_flete === "VALORIZADO" && flete.pertenece_a_factura ? (
+                        <span className="text-green-600 font-medium">Facturado</span>
+                      ) : (
+                        <span className="text-orange-600 font-medium">Sin factura</span>
+                      )}
+                    </div>
+                  </td>
 
-                    {/* Cliente */}
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      <div className="font-medium text-gray-900">
-                        {servicio.cliente?.nombre || 'N/A'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Cuenta: {servicio.cuenta?.nombre || servicio.cuenta?.numero || 'N/A'}
-                      </div>
-                    </td>
+                  <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
+                    <div className="text-gray-900">
+                      {formatFecha(flete?.servicio?.fecha_servicio)}
+                    </div>
+                  </td>
 
-                    {/* Tipo Servicio */}
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      <div className="font-medium text-gray-900">
-                        {servicio.tipo_servicio || 'N/A'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Modalidad: {servicio.modalidad_servicio || 'N/A'}
-                      </div>
-                    </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {flete.servicio?.cliente?.nombre || "N/A"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      RUC: {flete.servicio?.cliente?.ruc || ""}
+                    </div>
+                  </td>
 
-                    {/* Origen/Destino */}
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      <div className="text-sm text-gray-900 truncate max-w-[150px]">
-                        {servicio.origen?.split(',')[0] || 'N/A'}
-                      </div>
-                      
-                    </td>
-                    <td className="px-3 py-2 border-r border-gray-200">    
-                      <div className="text-sm text-gray-900 truncate max-w-[150px]">
-                        {servicio.destino?.split(',')[0] || 'N/A'}
-                      </div>
-                    </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
+                      <span className="text-gray-900">
+                        {flete.servicio?.origen?.split(",")[0] || "N/A"}
+                      </span>
+                    </div>
+                  </td>
 
-                    {/* Vehículo */}
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      <div className="font-medium text-gray-900">
-                        {servicio.flota?.placa || 'N/A'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {servicio.flota?.tipo_vehiculo || 'Sin tipo'}
-                      </div>
-                    </td>
-
-                    {/* Conductor */}
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      <div className="font-medium text-gray-900">
-                        {Array.isArray(servicio.conductor) 
-                          ? (servicio.conductor[0]?.nombre || servicio.conductor[0]?.nombres_completos || 'N/A')
-                          : (servicio.conductor?.nombre || servicio.conductor?.nombres_completos || 'N/A')}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Aux: {Array.isArray(servicio.auxiliar) 
-                          ? (servicio.auxiliar[0]?.nombres_completos || 'Sin auxiliar')
-                          : (servicio.auxiliar?.nombres_completos || 'Sin auxiliar')}
-                      </div>
-                    </td>
-
-                    {/* Capacidad */}
-                    <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="text-center">
-                          <div className="font-medium text-gray-900">
-                            {servicio.m3 || '0'}
-                          </div>
-                          <div className="text-xs text-gray-500">m³</div>
-                        </div>
-                        <div className="text-gray-300">/</div>
-                        <div className="text-center">
-                          <div className="font-medium text-gray-900">
-                            {servicio.tn || '0'}
-                          </div>
-                          <div className="text-xs text-gray-500">TN</div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* GIA's */}
-                    <td className="px-3 py-2 border-r border-gray-200">
-                      <div className="text-xs">
-                        <div className="flex items-center gap-1">
-                          <span className="text-gray-500">RR:</span>
-                          <span className="font-medium">{servicio.gia_rr || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-gray-500">RT:</span>
-                          <span className="font-medium">{servicio.gia_rt || 'N/A'}</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Estado con botón para cambiar */}
-                    <td className="px-3 py-2 border-r border-gray-200" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex flex-col items-start gap-1">
-                        {/* Badge de estado */}
-                        <div className={`flex items-center px-2 py-1 rounded ${getEstadoBadgeClass(servicio.estado)}`}>
-                          <EstadoIcon className={`h-3 w-3 mr-1 ${
-                            servicio.estado === 'Programado' ? 'text-yellow-600' :
-                            servicio.estado === 'Completado' ? 'text-green-600' :
-                            servicio.estado === 'Cancelado' ? 'text-red-600' :
-                            'text-blue-600'
-                          }`} />
-                          <span className="text-xs font-medium">{servicio.estado}</span>
-                        </div>
-                        
-                        {/* Botón para cambiar estado */}
-                        {puedeCambiar && (
-                          <button
-                            onClick={(e) => handleAbrirCambioEstado(servicio, e)}
-                            className="text-xs text-white font-medium flex items-center bg-blue-500 p-2 rounded hover:underline"
-                            title="Cambiar estado"
-                          >
-                            <Clock className="h-3 w-3 mr-1" />
-                            Cambiar estado
-                          </button>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Monto - Input y botón */}
-                    {/* <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-1 min-w-[140px]">
-                        <div className="relative flex-1">
-                          <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500">S/</span>
-                          <input
-                            type="number"
-                            value={montos[servicio.id] || ''}
-                            onChange={(e) => handleMontoChange(servicio.id, e.target.value)}
-                            placeholder="0.00"
-                            className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                            step="0.01"
-                            min="0"
-                          />
-                        </div>
-                        <button
-                          onClick={(e) => handleEnviarMonto(servicio.id, e)}
-                          className="px-2 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition whitespace-nowrap"
-                        >
-                          Enviar
-                        </button>
-                      </div>
-                    </td> */}
-                  </tr>
-                );
-              })}
+                  <td className="px-4 py-3">
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
+                      <span className="text-gray-900">
+                        {flete.servicio?.destino?.split(",")[0] || "N/A"}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
         {/* Sin resultados */}
-        {serviciosData.length === 0 && !isLoading && (
+        {fletesData.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No se encontraron servicios</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No se encontraron fletes
+            </h3>
             <p className="text-gray-600 mb-6">
-              {Object.values(filters).some(f => f && f.trim() !== '')
-                ? 'Intenta ajustar los filtros de búsqueda'
-                : 'No hay servicios registrados en el sistema'}
+              {Object.values(filters).some((f) => f && f.trim() !== "")
+                ? "Intenta ajustar los filtros de búsqueda"
+                : "No hay fletes valorizados en el sistema"}
             </p>
-            <div className="flex justify-center space-x-3">
-              <Button onClick={clearFilters} size="small">
-                Limpiar filtros
-              </Button>
-              <Button
-                onClick={handleCreate}
-                variant="secondary"
-                size="small"
-              >
-                Registrar primer servicio
-              </Button>
-            </div>
+            <Button onClick={clearFilters} size="small">
+              Limpiar filtros
+            </Button>
           </div>
         )}
       </div>
 
-      {/* Paginación y registros por página */}
-      {serviciosData.length > 0 && (
+      {/* Paginación */}
+      {fletesData.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <span className="text-sm text-gray-600">Mostrar</span>
@@ -883,13 +738,11 @@ const MonitoreoProveedores = () => {
             }
             endIndex={Math.min(
               pagination.currentPage * pagination.itemsPerPage,
-              pagination.totalItems
+              pagination.totalItems,
             )}
           />
         </div>
       )}
-
-      
     </div>
   );
 };

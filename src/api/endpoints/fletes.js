@@ -345,6 +345,8 @@ export const fletesAPI = {
       params.append("pertenece_a_factura", filters.pertenece_a_factura);
     if (filters.cliente_nombre)
       params.append("cliente_nombre", filters.cliente_nombre);
+    if (filters.proveedor_nombre)
+      params.append("proveedor_nombre", filters.proveedor_nombre);
     if (filters.placa)
       params.append("placa", filters.placa);
     if (filters.fecha_servicio_desde)
