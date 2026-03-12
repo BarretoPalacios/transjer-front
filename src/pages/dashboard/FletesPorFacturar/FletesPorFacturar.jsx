@@ -412,6 +412,8 @@ const handleSearchClick = () => {
         return total + (flete ? parseFloat(flete.monto_flete || 0) : 0);
       }, 0);
 
+      const montoTotalConIGV = montoTotal * 1.18;
+
       // Generar secuencia para número de factura
       const fecha = new Date();
       const year = fecha.getFullYear();
@@ -442,7 +444,7 @@ const handleSearchClick = () => {
         numero_factura: numeroSugerido,
         fecha_emision: fechaEmision,
         fecha_vencimiento: fechaVencimiento,
-        monto_total: montoTotal.toFixed(2),
+        monto_total: montoTotalConIGV.toFixed(2),
         moneda: "PEN",
         descripcion:
           selectedFletes.length === 1
@@ -2682,6 +2684,7 @@ const handleSearchClick = () => {
                 onChange={(e) =>
                   handleFacturaFormChange("moneda", e.target.value)
                 }
+                disabled={true}
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
                 <option value="PEN">Soles (PEN)</option>
@@ -2690,7 +2693,7 @@ const handleSearchClick = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Monto Total *
+                Monto Total (Incluye IGV 18%) *
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-2 text-gray-500">
@@ -2701,6 +2704,7 @@ const handleSearchClick = () => {
                   step="0.01"
                   min="0"
                   value={facturaForm.monto_total}
+                  disabled={true}
                   onChange={(e) =>
                     handleFacturaFormChange("monto_total", e.target.value)
                   }
@@ -2721,6 +2725,10 @@ const handleSearchClick = () => {
                 Suma automática de fletes: {totalMontoSeleccionado.toFixed(2)}{" "}
                 {facturaForm.moneda === "PEN" ? "S/" : "$"}
               </p>
+               <p className="mt-1 text-xs text-gray-500">
+      Monto base sin IGV: S/ {(totalMontoSeleccionado).toFixed(2)} | 
+      Monto con IGV (18%): S/ {(totalMontoSeleccionado * 1.18).toFixed(2)}
+    </p>
             </div>
 
             <div>
