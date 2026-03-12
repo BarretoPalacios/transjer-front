@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import { monitoreoAPI } from '../../../api/endpoints/monitoreo';
-import { Loader, Truck, DollarSign, BarChart, Grid } from 'lucide-react';
+import { Loader, Truck, DollarSign, BarChart, Grid, Calendar } from 'lucide-react';
 
 const ReportesPlacas = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [useMonthFilter, setUseMonthFilter] = useState(false);
   const [filters, setFilters] = useState({
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear()
+    month: '',
+    year: '',
+    start_date: '',
+    end_date: ''
   });
 
   // Refs para los gráficos
@@ -33,7 +36,25 @@ const ReportesPlacas = () => {
     { value: 12, label: 'Diciembre' }
   ];
 
-  const years = [2024, 2025, 2026];
+  const years = [2026, 2027, 2028, 2029, 2030];
+
+  // Función para obtener el primer y último día del mes
+  const getMonthDateRange = (year, month) => {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0); // Esto da el último día del mes
+    
+    const formatDate = (date) => {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    return {
+      start_date: formatDate(startDate),
+      end_date: formatDate(endDate)
+    };
+  };
 
   // Función para generar colores
   const getColor = (index) => {
@@ -44,14 +65,23 @@ const ReportesPlacas = () => {
     return colors[index % colors.length];
   };
 
+  // Efecto para actualizar fechas cuando cambia el mes/año
+  useEffect(() => {
+    if (useMonthFilter && filters.month && filters.year) {
+      const { start_date, end_date } = getMonthDateRange(parseInt(filters.year), parseInt(filters.month));
+      setFilters(prev => ({
+        ...prev,
+        start_date,
+        end_date
+      }));
+    }
+  }, [filters.month, filters.year, useMonthFilter]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await monitoreoAPI.getMetricsPlacas({
-        month: filters.month,
-        year: filters.year
-      });
+      const response = await monitoreoAPI.getMetricsPlacas(filters);
       setData(response);
     } catch (err) {
       console.error('Error al obtener reporte de placas:', err);
@@ -61,17 +91,24 @@ const ReportesPlacas = () => {
     }
   };
 
+  // Cargar datos al inicio (con filtros vacíos)
   useEffect(() => {
     fetchData();
-  }, [filters.month, filters.year]);
+  }, [filters]);
 
   // Efecto para crear/actualizar gráficos
   useEffect(() => {
-    if (loading || error || !data || !data.detalle.length) return;
+    if (loading || error || !data || !data.detalle || !data.detalle.length) return;
 
     // Destruir gráficos anteriores
-    if (chartMontoInstance.current) chartMontoInstance.current.destroy();
-    if (chartCantidadInstance.current) chartCantidadInstance.current.destroy();
+    if (chartMontoInstance.current) {
+      chartMontoInstance.current.destroy();
+      chartMontoInstance.current = null;
+    }
+    if (chartCantidadInstance.current) {
+      chartCantidadInstance.current.destroy();
+      chartCantidadInstance.current = null;
+    }
 
     // Preparar datos para gráficos
     const placas = data.detalle.map(item => item.placa);
@@ -168,17 +205,48 @@ const ReportesPlacas = () => {
     }
 
     return () => {
-      if (chartMontoInstance.current) chartMontoInstance.current.destroy();
-      if (chartCantidadInstance.current) chartCantidadInstance.current.destroy();
+      if (chartMontoInstance.current) {
+        chartMontoInstance.current.destroy();
+        chartMontoInstance.current = null;
+      }
+      if (chartCantidadInstance.current) {
+        chartCantidadInstance.current.destroy();
+        chartCantidadInstance.current = null;
+      }
     };
   }, [data, loading, error]);
 
-  const handleFilterChange = (key, value) => {
+  const handleMonthChange = (key, value) => {
+    setUseMonthFilter(true);
     setFilters(prev => ({
       ...prev,
-      [key]: parseInt(value)
+      [key]: value ? parseInt(value) : ''
     }));
   };
+
+  const handleDateChange = (key, value) => {
+    setUseMonthFilter(false);
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      // Limpiar mes y año cuando se usan fechas personalizadas
+      month: '',
+      year: ''
+    }));
+  };
+
+  const handleShowFullPeriod = () => {
+    setUseMonthFilter(false);
+    // Enviar todos los filtros vacíos
+    setFilters({
+      month: '',
+      year: '',
+      start_date: '',
+      end_date: ''
+    });
+  };
+
+
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-PE', {
@@ -190,7 +258,7 @@ const ReportesPlacas = () => {
 
   // Calcular totales
   const calcularTotales = () => {
-    if (!data || !data.detalle.length) {
+    if (!data || !data.detalle || !data.detalle.length) {
       return { totalFletes: 0, totalMonto: 0 };
     }
     
@@ -200,7 +268,7 @@ const ReportesPlacas = () => {
     return { totalFletes, totalMonto };
   };
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="flex justify-center items-center h-96">
         <div className="text-center">
@@ -240,9 +308,10 @@ const ReportesPlacas = () => {
               <label className="text-sm font-medium text-gray-700">Mes:</label>
               <select
                 value={filters.month}
-                onChange={(e) => handleFilterChange('month', e.target.value)}
+                onChange={(e) => handleMonthChange('month', e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value="">Todos los meses</option>
                 {months.map(month => (
                   <option key={month.value} value={month.value}>
                     {month.label}
@@ -255,9 +324,10 @@ const ReportesPlacas = () => {
               <label className="text-sm font-medium text-gray-700">Año:</label>
               <select
                 value={filters.year}
-                onChange={(e) => handleFilterChange('year', e.target.value)}
+                onChange={(e) => handleMonthChange('year', e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value="">Todos los años</option>
                 {years.map(year => (
                   <option key={year} value={year}>
                     {year}
@@ -266,12 +336,63 @@ const ReportesPlacas = () => {
               </select>
             </div>
 
+            <div className="h-6 border-l border-gray-300"></div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Fecha inicio:</label>
+              <input
+                type="date"
+                value={filters.start_date}
+                onChange={(e) => handleDateChange('start_date', e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Fecha fin:</label>
+              <input
+                type="date"
+                value={filters.end_date}
+                onChange={(e) => handleDateChange('end_date', e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
             <button
-              onClick={fetchData}
+              onClick={handleShowFullPeriod}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium"
+            >
+              Mostrar período completo
+            </button>
+
+            {/* <button
+              onClick={handleApplyFilters}
               className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
             >
-              Actualizar
-            </button>
+              Aplicar filtros
+            </button> */}
+          </div>
+
+          {/* Indicador de filtro activo */}
+          <div className="mt-3 flex items-center gap-2 text-xs">
+            <Calendar className="h-3 w-3 text-gray-400" />
+            {filters.start_date && filters.end_date ? (
+              <span className="text-gray-600">
+                Mostrando datos desde {new Date(filters.start_date).toLocaleDateString()} hasta {new Date(filters.end_date).toLocaleDateString()}
+              </span>
+            ) : !filters.start_date && !filters.end_date && !filters.month && !filters.year ? (
+              <span className="text-gray-600">
+                Mostrando período completo (todos los datos)
+              </span>
+            ) : filters.month && filters.year ? (
+              <span className="text-gray-600">
+                Mostrando datos de {months.find(m => m.value === parseInt(filters.month))?.label} {filters.year}
+              </span>
+            ) : (
+              <span className="text-gray-600">
+                Filtros personalizados aplicados
+              </span>
+            )}
           </div>
         </div>
 
@@ -282,7 +403,7 @@ const ReportesPlacas = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-100 text-sm">Período</p>
-                  <p className="text-2xl font-bold">{data.periodo}</p>
+                  <p className="text-2xl font-bold">{data.periodo || 'Todos los datos'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-blue-100 text-sm">Grupo</p>
@@ -301,7 +422,7 @@ const ReportesPlacas = () => {
                   <span className="text-xs text-gray-400">Total</span>
                 </div>
                 <p className="text-xl font-bold text-gray-800">
-                  {data.detalle.length}
+                  {data.detalle?.length || 0}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Placas activas
@@ -340,7 +461,7 @@ const ReportesPlacas = () => {
             </div>
 
             {/* Gráficos */}
-            {data.detalle.length > 0 ? (
+            {data.detalle && data.detalle.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Gráfico de Montos por Placa */}
@@ -430,7 +551,12 @@ const ReportesPlacas = () => {
                   No hay datos para el período seleccionado
                 </h3>
                 <p className="text-gray-500">
-                  {months[filters.month-1]?.label} {filters.year}
+                  {filters.start_date && filters.end_date 
+                    ? `Desde ${new Date(filters.start_date).toLocaleDateString()} hasta ${new Date(filters.end_date).toLocaleDateString()}`
+                    : filters.month && filters.year
+                    ? `${months.find(m => m.value === parseInt(filters.month))?.label} ${filters.year}`
+                    : 'Sin filtros de fecha - Período completo'
+                  }
                 </p>
               </div>
             )}

@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import { monitoreoAPI } from '../../../api/endpoints/monitoreo';
-import { Loader, Users, DollarSign, PieChart, BarChart } from 'lucide-react';
+import { Loader, Users, DollarSign, PieChart, BarChart, Calendar } from 'lucide-react';
 
 const ReportesClientes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [useMonthFilter, setUseMonthFilter] = useState(false);
   const [filters, setFilters] = useState({
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear()
+    month: '',
+    year: '',
+    start_date: '',
+    end_date: ''
   });
 
   // Refs para los gráficos
@@ -33,7 +36,38 @@ const ReportesClientes = () => {
     { value: 12, label: 'Diciembre' }
   ];
 
-  const years = [2024, 2025, 2026];
+  // Generar años del 2026 al 2030
+  const years = [2026, 2027, 2028, 2029, 2030];
+
+  // Función para obtener el primer y último día del mes
+  const getMonthDateRange = (year, month) => {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0); // Esto da el último día del mes
+    
+    const formatDate = (date) => {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    return {
+      start_date: formatDate(startDate),
+      end_date: formatDate(endDate)
+    };
+  };
+
+  // Efecto para actualizar fechas cuando cambia el mes/año
+  useEffect(() => {
+    if (useMonthFilter && filters.month && filters.year) {
+      const { start_date, end_date } = getMonthDateRange(parseInt(filters.year), parseInt(filters.month));
+      setFilters(prev => ({
+        ...prev,
+        start_date,
+        end_date
+      }));
+    }  
+  }, [filters.month, filters.year, useMonthFilter]);
 
   // Función para generar colores
   const getColor = (index) => {
@@ -48,10 +82,9 @@ const ReportesClientes = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await monitoreoAPI.getMetricsClientes({
-        month: filters.month,
-        year: filters.year
-      });
+      
+      // Pasar todos los filtros directamente (pueden estar vacíos)
+      const response = await monitoreoAPI.getMetricsClientes(filters);
       setData(response);
     } catch (err) {
       console.error('Error al obtener reporte de clientes:', err);
@@ -61,17 +94,24 @@ const ReportesClientes = () => {
     }
   };
 
+  // Cargar datos al inicio (con filtros vacíos)
   useEffect(() => {
-    fetchData();
-  }, [filters.month, filters.year]);
+    fetchData(); 
+  }, [filters]);
 
   // Efecto para crear/actualizar gráficos
   useEffect(() => {
-    if (loading || error || !data || !data.detalle_clientes.length) return;
+    if (loading || error || !data || !data.detalle_clientes || !data.detalle_clientes.length) return;
 
     // Destruir gráficos anteriores
-    if (chartMontoInstance.current) chartMontoInstance.current.destroy();
-    if (chartFacturacionInstance.current) chartFacturacionInstance.current.destroy();
+    if (chartMontoInstance.current) {
+      chartMontoInstance.current.destroy();
+      chartMontoInstance.current = null;
+    }
+    if (chartFacturacionInstance.current) {
+      chartFacturacionInstance.current.destroy();
+      chartFacturacionInstance.current = null;
+    }
 
     // Preparar datos para gráficos
     const clientes = data.detalle_clientes.map(c => {
@@ -192,17 +232,48 @@ const ReportesClientes = () => {
     }
 
     return () => {
-      if (chartMontoInstance.current) chartMontoInstance.current.destroy();
-      if (chartFacturacionInstance.current) chartFacturacionInstance.current.destroy();
+      if (chartMontoInstance.current) {
+        chartMontoInstance.current.destroy();
+        chartMontoInstance.current = null;
+      }
+      if (chartFacturacionInstance.current) {
+        chartFacturacionInstance.current.destroy();
+        chartFacturacionInstance.current = null;
+      }
     };
   }, [data, loading, error]);
 
-  const handleFilterChange = (key, value) => {
+  const handleMonthChange = (key, value) => {
+    setUseMonthFilter(true);
     setFilters(prev => ({
       ...prev,
-      [key]: parseInt(value)
+      [key]: value ? parseInt(value) : ''
     }));
   };
+
+  const handleDateChange = (key, value) => {
+    setUseMonthFilter(false);
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      // Limpiar mes y año cuando se usan fechas personalizadas
+      month: '',
+      year: ''
+    }));
+  };
+
+  const handleShowFullPeriod = () => {
+    setUseMonthFilter(false);
+    // Enviar todos los filtros vacíos
+    setFilters({
+      month: '',
+      year: '',
+      start_date: '',
+      end_date: ''
+    });
+  };
+
+
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-PE', {
@@ -212,7 +283,7 @@ const ReportesClientes = () => {
     }).format(amount || 0);
   };
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="flex justify-center items-center h-96">
         <div className="text-center">
@@ -250,9 +321,10 @@ const ReportesClientes = () => {
               <label className="text-sm font-medium text-gray-700">Mes:</label>
               <select
                 value={filters.month}
-                onChange={(e) => handleFilterChange('month', e.target.value)}
+                onChange={(e) => handleMonthChange('month', e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value="">Todos los meses</option>
                 {months.map(month => (
                   <option key={month.value} value={month.value}>
                     {month.label}
@@ -265,9 +337,10 @@ const ReportesClientes = () => {
               <label className="text-sm font-medium text-gray-700">Año:</label>
               <select
                 value={filters.year}
-                onChange={(e) => handleFilterChange('year', e.target.value)}
+                onChange={(e) => handleMonthChange('year', e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value="">Todos los años</option>
                 {years.map(year => (
                   <option key={year} value={year}>
                     {year}
@@ -276,12 +349,58 @@ const ReportesClientes = () => {
               </select>
             </div>
 
+            <div className="h-6 border-l border-gray-300"></div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Fecha inicio:</label>
+              <input
+                type="date"
+                value={filters.start_date}
+                onChange={(e) => handleDateChange('start_date', e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Fecha fin:</label>
+              <input
+                type="date"
+                value={filters.end_date}
+                onChange={(e) => handleDateChange('end_date', e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
             <button
-              onClick={fetchData}
-              className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+              onClick={handleShowFullPeriod}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium"
             >
-              Actualizar
+              Mostrar período completo
             </button>
+
+            {/*  */}
+          </div>
+
+          {/* Indicador de filtro activo */}
+          <div className="mt-3 flex items-center gap-2 text-xs">
+            <Calendar className="h-3 w-3 text-gray-400" />
+            {filters.start_date && filters.end_date ? (
+              <span className="text-gray-600">
+                Mostrando datos desde {new Date(filters.start_date).toLocaleDateString()} hasta {new Date(filters.end_date).toLocaleDateString()}
+              </span>
+            ) : !filters.start_date && !filters.end_date && !filters.month && !filters.year ? (
+              <span className="text-gray-600">
+                Mostrando período completo (todos los datos)
+              </span>
+            ) : filters.month && filters.year ? (
+              <span className="text-gray-600">
+                Mostrando datos de {months.find(m => m.value === parseInt(filters.month))?.label} {filters.year}
+              </span>
+            ) : (
+              <span className="text-gray-600">
+                Filtros personalizados aplicados
+              </span>
+            )}
           </div>
         </div>
 
@@ -292,80 +411,17 @@ const ReportesClientes = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-100 text-sm">Período</p>
-                  <p className="text-2xl font-bold">{data.periodo}</p>
+                  <p className="text-2xl font-bold">{data.periodo || 'Todos los datos'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-blue-100 text-sm">Total período</p>
-                  <p className="text-2xl font-bold">{formatCurrency(data.resumen.monto_total_periodo)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(data.resumen?.monto_total_periodo || 0)}</p>
                 </div>
               </div>
             </div>
 
-            {/* Tarjetas de resumen */}
-            {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <span className="text-xs text-gray-400">Total</span>
-                </div>
-                <p className="text-xl font-bold text-gray-800">
-                  {formatCurrency(data.resumen.monto_total_periodo)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {data.resumen.cantidad_total_fletes} fletes
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Users className="h-5 w-5 text-green-600" />
-                  </div>
-                  <span className="text-xs text-gray-400">Clientes</span>
-                </div>
-                <p className="text-xl font-bold text-gray-800">
-                  {data.detalle_clientes.length}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Clientes activos
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <span className="text-green-600 font-bold text-sm">✓</span>
-                  </div>
-                  <span className="text-xs text-gray-400">Facturados</span>
-                </div>
-                <p className="text-xl font-bold text-gray-800">
-                  {data.detalle_clientes.reduce((sum, c) => sum + c.facturados, 0)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Con factura
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <span className="text-yellow-600 font-bold text-sm">⏳</span>
-                  </div>
-                  <span className="text-xs text-gray-400">Pendientes</span>
-                </div>
-                <p className="text-xl font-bold text-gray-800">
-                  {data.detalle_clientes.reduce((sum, c) => sum + c.pendientes, 0)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Por facturar
-                </p>
-              </div>
-            </div> */}
-
             {/* Gráficos */}
-            {data.detalle_clientes.length > 0 ? (
+            {data.detalle_clientes && data.detalle_clientes.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Gráfico de Montos por Cliente */}
@@ -376,7 +432,7 @@ const ReportesClientes = () => {
                         Montos por Cliente
                       </h4>
                       <span className="text-xs text-gray-400">
-                        Total: {formatCurrency(data.resumen.monto_total_periodo)}
+                        Total: {formatCurrency(data.resumen?.monto_total_periodo || 0)}
                       </span>
                     </div>
                     <div className="relative h-80">
@@ -384,60 +440,38 @@ const ReportesClientes = () => {
                     </div>
                   </div>
 
-                  {/* Gráfico de Facturación */}
-                  {/* <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-700 flex items-center gap-2">
-                        <PieChart className="h-4 w-4 text-green-600" />
-                        Estado de Facturación
-                      </h4>
-                      <span className="text-xs text-gray-400">
-                        Facturados vs Pendientes
-                      </span>
-                    </div>
-                    <div className="relative h-80">
-                      <canvas ref={chartFacturacionRef}></canvas>
-                    </div>
-                  </div> */}
-
                   <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="px-5 py-4 border-b border-gray-100">
-                    <h4 className="font-semibold text-gray-700">Detalle por Cliente</h4>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-5 py-3 text-left font-medium text-gray-600">Cliente</th>
-                          <th className="px-5 py-3 text-right font-medium text-gray-600">Fletes</th>
-                          <th className="px-5 py-3 text-right font-medium text-gray-600">Monto</th>
-                          {/* <th className="px-5 py-3 text-center font-medium text-gray-600">Pendientes</th>
-                          <th className="px-5 py-3 text-center font-medium text-gray-600">Facturados</th> */}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {data.detalle_clientes.map((cliente, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-5 py-3 font-medium text-gray-900">
-                              {cliente.cliente}
-                            </td>
-                            <td className="px-5 py-3 text-right text-gray-700">
-                              {cliente.total_fletes}
-                            </td>
-                            <td className="px-5 py-3 text-right font-medium text-blue-600">
-                              {formatCurrency(cliente.monto_total)}
-                            </td>
-                            
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <h4 className="font-semibold text-gray-700">Detalle por Cliente</h4>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-5 py-3 text-left font-medium text-gray-600">Cliente</th>
+                            <th className="px-5 py-3 text-right font-medium text-gray-600">Fletes</th>
+                            <th className="px-5 py-3 text-right font-medium text-gray-600">Monto</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {data.detalle_clientes.map((cliente, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-5 py-3 font-medium text-gray-900">
+                                {cliente.cliente}
+                              </td>
+                              <td className="px-5 py-3 text-right text-gray-700">
+                                {cliente.total_fletes}
+                              </td>
+                              <td className="px-5 py-3 text-right font-medium text-blue-600">
+                                {formatCurrency(cliente.monto_total)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
-                </div>
-
-                {/* Tabla de detalle */}
-                
               </>
             ) : (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
@@ -446,7 +480,12 @@ const ReportesClientes = () => {
                   No hay datos para el período seleccionado
                 </h3>
                 <p className="text-gray-500">
-                  {months[filters.month-1]?.label} {filters.year}
+                  {filters.start_date && filters.end_date 
+                    ? `Desde ${new Date(filters.start_date).toLocaleDateString()} hasta ${new Date(filters.end_date).toLocaleDateString()}`
+                    : filters.month && filters.year
+                    ? `${months.find(m => m.value === parseInt(filters.month))?.label} ${filters.year}`
+                    : 'Sin filtros de fecha - Período completo'
+                  }
                 </p>
               </div>
             )}
