@@ -1,47 +1,111 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Chart from 'chart.js/auto';
-import { monitoreoAPI } from '../../../api/endpoints/monitoreo';
-import { Loader, Truck, DollarSign, BarChart, Grid, Calendar } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from "react";
+import {
+  Truck,
+  Filter,
+  Calendar,
+  RefreshCw,
+  X,
+  CheckCircle,
+  Download,
+  Loader,
+  MapPin,
+  DollarSign,
+  Clock,
+  FileCheck,
+  FileX,
+} from "lucide-react";
 
-const ReportesPlacas = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
-  const [useMonthFilter, setUseMonthFilter] = useState(false);
-  const [filters, setFilters] = useState({
-    month: '',
-    year: '',
-    start_date: '',
-    end_date: ''
+// Componentes comunes
+import Button from "../../../components/common/Button/Button";
+import Pagination from "../../../components/common/Pagination/Pagination";
+
+// API
+import { fletesAPI } from "../../../api/endpoints/fletes";
+import utilsAPI from "../../../api/endpoints/utils";
+import { monitoreoAPI } from "../../../api/endpoints/monitoreo";
+import ReportesPlacas from "./ReportesPlacas";
+
+const formatFecha = (fecha) => {
+  if (!fecha) return "N/A";
+  try {
+    return new Date(fecha).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch (e) {
+    return fecha;
+  }
+};
+
+const MonitoreoPlacas = () => {
+  const [fletesData, setFletesData] = useState([]);
+  const [placas, setPlacas] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingDownload, setLoadingDownload] = useState(false);
+  const [metrics, setMetrics] = useState({
+    total_fletes: 0,
+    monto_total_acumulado: 0,
+    total_pendientes: 0,
+    valorizados_con_factura: 0,
+    valorizados_sin_factura: 0,
   });
 
-  // Refs para los gráficos
-  const chartMontoRef = useRef(null);
-  const chartCantidadRef = useRef(null);
-  const chartMontoInstance = useRef(null);
-  const chartCantidadInstance = useRef(null);
+  // Estados de paginación
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
 
-  const months = [
-    { value: 1, label: 'Enero' },
-    { value: 2, label: 'Febrero' },
-    { value: 3, label: 'Marzo' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Mayo' },
-    { value: 6, label: 'Junio' },
-    { value: 7, label: 'Julio' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Setiembre' },
-    { value: 10, label: 'Octubre' },
-    { value: 11, label: 'Noviembre' },
-    { value: 12, label: 'Diciembre' }
+  // Estados para filtros
+  const [useMonthFilter, setUseMonthFilter] = useState(false);
+  const [filters, setFilters] = useState({
+    month: "",
+    year: "",
+    start_date: "",
+    end_date: "",
+    flota_placa: "",
+  });
+
+  // Estados para errores
+  const [errors, setErrors] = useState({
+    fecha_inicio: "",
+    fecha_fin: "",
+    rango_fechas: "",
+  });
+
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  const itemsPerPageOptions = [10, 20, 30, 50, 100];
+
+  // Opciones de meses
+  const meses = [
+    { value: "01", label: "Enero" },
+    { value: "02", label: "Febrero" },
+    { value: "03", label: "Marzo" },
+    { value: "04", label: "Abril" },
+    { value: "05", label: "Mayo" },
+    { value: "06", label: "Junio" },
+    { value: "07", label: "Julio" },
+    { value: "08", label: "Agosto" },
+    { value: "09", label: "Septiembre" },
+    { value: "10", label: "Octubre" },
+    { value: "11", label: "Noviembre" },
+    { value: "12", label: "Diciembre" },
   ];
 
+  // Años disponibles
   const years = [2026, 2027, 2028, 2029, 2030];
 
   // Función para obtener el primer y último día del mes
   const getMonthDateRange = (year, month) => {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0); // Esto da el último día del mes
+    const startDate = new Date(year, parseInt(month) - 1, 1);
+    const endDate = new Date(year, parseInt(month), 0);
     
     const formatDate = (date) => {
       const yyyy = date.getFullYear();
@@ -56,19 +120,15 @@ const ReportesPlacas = () => {
     };
   };
 
-  // Función para generar colores
-  const getColor = (index) => {
-    const colors = [
-      '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', 
-      '#ef4444', '#14b8a6', '#f97316', '#6366f1', '#06b6d4'
-    ];
-    return colors[index % colors.length];
-  };
+  // Cargar placas al montar el componente
+  useEffect(() => {
+    cargarPlacas();
+  }, []);
 
   // Efecto para actualizar fechas cuando cambia el mes/año
   useEffect(() => {
     if (useMonthFilter && filters.month && filters.year) {
-      const { start_date, end_date } = getMonthDateRange(parseInt(filters.year), parseInt(filters.month));
+      const { start_date, end_date } = getMonthDateRange(filters.year, filters.month);
       setFilters(prev => ({
         ...prev,
         start_date,
@@ -77,495 +137,684 @@ const ReportesPlacas = () => {
     }
   }, [filters.month, filters.year, useMonthFilter]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await monitoreoAPI.getMetricsPlacas(filters);
-      setData(response);
-    } catch (err) {
-      console.error('Error al obtener reporte de placas:', err);
-      setError('No se pudo cargar el reporte. Intente nuevamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Cargar datos al inicio (con filtros vacíos)
+  // Efecto para búsqueda con debounce (tiempo real)
   useEffect(() => {
-    fetchData();
-  }, [filters]);
+    const timeout = setTimeout(() => {
+      setPagination((prev) => ({
+        ...prev,
+        currentPage: 1,
+      }));
 
-  // Efecto para crear/actualizar gráficos
-  useEffect(() => {
-    if (loading || error || !data || !data.detalle || !data.detalle.length) return;
-
-    // Destruir gráficos anteriores
-    if (chartMontoInstance.current) {
-      chartMontoInstance.current.destroy();
-      chartMontoInstance.current = null;
-    }
-    if (chartCantidadInstance.current) {
-      chartCantidadInstance.current.destroy();
-      chartCantidadInstance.current = null;
-    }
-
-    // Preparar datos para gráficos
-    const placas = data.detalle.map(item => item.placa);
-    const montos = data.detalle.map(item => item.monto_total);
-    const cantidades = data.detalle.map(item => item.cantidad_fletes);
-
-    // Gráfico de Montos por Placa (Barras)
-    if (chartMontoRef.current) {
-      chartMontoInstance.current = new Chart(chartMontoRef.current, {
-        type: 'bar',
-        data: {
-          labels: placas,
-          datasets: [{
-            label: 'Monto Total (S/)',
-            data: montos,
-            backgroundColor: montos.map((_, index) => getColor(index)),
-            borderRadius: 5,
-            barPercentage: 0.6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(0, 0, 0, 0.05)' },
-              ticks: {
-                callback: (value) => 'S/ ' + value.toLocaleString()
-              }
-            },
-            x: {
-              grid: { display: false },
-              ticks: {
-                font: { size: 11, weight: 'bold' }
-              }
-            }
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (context) => `Monto: S/ ${context.raw.toLocaleString()}`
-              }
-            }
-          }
-        }
-      });
-    }
-
-    // Gráfico de Cantidad de Fletes por Placa
-    if (chartCantidadRef.current) {
-      chartCantidadInstance.current = new Chart(chartCantidadRef.current, {
-        type: 'bar',
-        data: {
-          labels: placas,
-          datasets: [{
-            label: 'Cantidad de Fletes',
-            data: cantidades,
-            backgroundColor: '#3b82f6',
-            borderRadius: 5,
-            barPercentage: 0.6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(0, 0, 0, 0.05)' },
-              ticks: {
-                stepSize: 1,
-                callback: (value) => value + ' fletes'
-              }
-            },
-            x: {
-              grid: { display: false },
-              ticks: {
-                font: { size: 11, weight: 'bold' }
-              }
-            }
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (context) => `Cantidad: ${context.raw} fletes`
-              }
-            }
-          }
-        }
-      });
-    }
+      fetchFletes(1, pagination.itemsPerPage, filters);
+    }, 500);
 
     return () => {
-      if (chartMontoInstance.current) {
-        chartMontoInstance.current.destroy();
-        chartMontoInstance.current = null;
-      }
-      if (chartCantidadInstance.current) {
-        chartCantidadInstance.current.destroy();
-        chartCantidadInstance.current = null;
-      }
+      if (timeout) clearTimeout(timeout);
     };
-  }, [data, loading, error]);
+  }, [filters.start_date, filters.end_date, filters.flota_placa, filters.month, filters.year]);
 
+  // Cargar placas desde la API
+  const cargarPlacas = useCallback(async () => {
+    try {
+      const response = await utilsAPI.getPlacasListTranjer();
+      setPlacas(response || []);
+    } catch (err) {
+      console.error("Error cargando placas:", err);
+      setError("Error al cargar la lista de placas");
+    }
+  }, []);
+
+  // Función principal para cargar fletes
+  const fetchFletes = useCallback(
+    async (
+      page = 1,
+      itemsPerPage = pagination.itemsPerPage,
+      filtersToUse = filters,
+    ) => {
+      setIsLoading(true);
+      setError(null);
+
+      // Validar fechas
+      if (filtersToUse.start_date && filtersToUse.end_date) {
+        if (filtersToUse.start_date > filtersToUse.end_date) {
+          setErrors((prev) => ({
+            ...prev,
+            rango_fechas:
+              "La fecha de inicio no puede ser mayor a la fecha de fin",
+          }));
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      try {
+        // Preparar filtros para API
+        const apiFilters = {
+          page: page,
+          page_size: itemsPerPage,
+        };
+
+        if (filtersToUse.start_date) {
+          apiFilters.fecha_servicio_desde = filtersToUse.start_date;
+        }
+
+        if (filtersToUse.end_date) {
+          apiFilters.fecha_servicio_hasta = filtersToUse.end_date;
+        }
+
+        if (
+          filtersToUse.flota_placa &&
+          filtersToUse.flota_placa.trim() !== ""
+        ) {
+          apiFilters.placa = filtersToUse.flota_placa.trim();
+        }
+
+        // Llamar a la API de fletes
+        const response = await monitoreoAPI.getFletes(apiFilters);
+
+        setFletesData(response.items || []);
+        setMetrics(
+          response.metrics || {
+            total_fletes: 0,
+            monto_total_acumulado: 0,
+            total_pendientes: 0,
+            valorizados_con_factura: 0,
+            valorizados_sin_factura: 0,
+          },
+        );
+
+        setPagination({
+          currentPage: response.pagination.page,
+          itemsPerPage: response.pagination.page_size,
+          totalItems: response.pagination.total,
+          totalPages: response.pagination.total_pages,
+          hasNext: response.pagination.has_next,
+          hasPrev: response.pagination.has_prev,
+        });
+      } catch (err) {
+        setError(
+          "Error al cargar los fletes: " + (err.message || "Error desconocido"),
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Handler para filtro de mes/año
   const handleMonthChange = (key, value) => {
     setUseMonthFilter(true);
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [key]: value ? parseInt(value) : ''
+      [key]: value,
+    }));
+    
+    // Limpiar errores
+    setErrors((prev) => ({
+      ...prev,
+      rango_fechas: "",
     }));
   };
 
+  // Handler para filtro de placa
+  const handlePlacaChange = (value) => {
+    setFilters((prev) => ({
+      ...prev,
+      flota_placa: value,
+    }));
+  };
+
+  // Handler para fechas manuales
   const handleDateChange = (key, value) => {
     setUseMonthFilter(false);
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [key]: value,
-      // Limpiar mes y año cuando se usan fechas personalizadas
-      month: '',
-      year: ''
+      month: "", // Limpiar selección de mes
+      year: "",
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [key]: "",
+      rango_fechas: "",
     }));
   };
 
   const handleShowFullPeriod = () => {
     setUseMonthFilter(false);
-    // Enviar todos los filtros vacíos
     setFilters({
-      month: '',
-      year: '',
-      start_date: '',
-      end_date: ''
+      month: "",
+      year: "",
+      start_date: "",
+      end_date: "",
+      flota_placa: "",
+    });
+    setErrors({
+      fecha_inicio: "",
+      fecha_fin: "",
+      rango_fechas: "",
     });
   };
 
+  const clearFilters = useCallback(() => {
+    setUseMonthFilter(false);
+    setFilters({
+      month: "",
+      year: "",
+      start_date: "",
+      end_date: "",
+      flota_placa: "",
+    });
+    setErrors({
+      fecha_inicio: "",
+      fecha_fin: "",
+      rango_fechas: "",
+    });
+  }, []);
 
+  const handleRefresh = useCallback(() => {
+    fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
+  }, [fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN',
-      minimumFractionDigits: 2
-    }).format(amount || 0);
-  };
+  const handlePageChange = useCallback(
+    (newPage) => {
+      fetchFletes(newPage, pagination.itemsPerPage, filters);
+    },
+    [fetchFletes, pagination.itemsPerPage, filters],
+  );
 
-  // Calcular totales
-  const calcularTotales = () => {
-    if (!data || !data.detalle || !data.detalle.length) {
-      return { totalFletes: 0, totalMonto: 0 };
+  const handleItemsPerPageChange = useCallback(
+    (newItemsPerPage) => {
+      fetchFletes(1, newItemsPerPage, filters);
+    },
+    [fetchFletes, filters],
+  );
+
+  // Exportar a Excel
+  const handleExportarExcel = useCallback(async () => {
+    try {
+      setLoadingDownload(true);
+
+      const filtersForAPI = {
+        fecha_servicio_desde: filters.start_date,
+        fecha_servicio_hasta: filters.end_date,
+        placa: filters.flota_placa
+      };
+
+      const blob = await fletesAPI.exportAllFletesExcel(filtersForAPI);
+
+      fletesAPI.downloadExcel(
+        blob,
+        `monitoreo_fletes_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
+
+      setSuccessMessage("Exportación completada exitosamente");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError("Error al exportar: " + err.message);
+    } finally {
+      setLoadingDownload(false);
     }
-    
-    const totalFletes = data.detalle.reduce((sum, item) => sum + item.cantidad_fletes, 0);
-    const totalMonto = data.detalle.reduce((sum, item) => sum + item.monto_total, 0);
-    
-    return { totalFletes, totalMonto };
+  }, [filters]);
+
+  const formatearMonto = (monto) => {
+    return new Intl.NumberFormat("es-PE", {
+      style: "currency",
+      currency: "PEN",
+      minimumFractionDigits: 2,
+    }).format(monto || 0);
   };
 
-  if (loading && !data) {
+  // Loading inicial
+  if (isLoading && fletesData.length === 0) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <div className="text-center">
-          <Loader className="h-10 w-10 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-3 text-gray-600">Cargando reporte de placas...</p>
+      <div className="p-4">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
         </div>
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <div className="text-center bg-red-50 p-6 rounded-lg border border-red-200">
-          <div className="text-red-500 text-4xl mb-3">⚠️</div>
-          <p className="text-gray-800 font-medium mb-3">{error}</p>
-          <button 
-            onClick={fetchData}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const totales = calcularTotales();
 
   return (
-    <div className="bg-gray-50 font-sans">
-      <main className="mx-auto space-y-6">
-        {/* Filtros */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Mes:</label>
-              <select
-                value={filters.month}
-                onChange={(e) => handleMonthChange('month', e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Todos los meses</option>
-                {months.map(month => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Año:</label>
-              <select
-                value={filters.year}
-                onChange={(e) => handleMonthChange('year', e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Todos los años</option>
-                {years.map(year => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="h-6 border-l border-gray-300"></div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Fecha inicio:</label>
-              <input
-                type="date"
-                value={filters.start_date}
-                onChange={(e) => handleDateChange('start_date', e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Fecha fin:</label>
-              <input
-                type="date"
-                value={filters.end_date}
-                onChange={(e) => handleDateChange('end_date', e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <button
-              onClick={handleShowFullPeriod}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium"
-            >
-              Mostrar período completo
-            </button>
-
-            {/* <button
-              onClick={handleApplyFilters}
-              className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-            >
-              Aplicar filtros
-            </button> */}
+    <div className="">
+      {/* Mensajes de éxito y error */}
+      {successMessage && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center text-green-700">
+            <CheckCircle className="h-5 w-5 mr-2" />
+            <span className="font-medium">{successMessage}</span>
           </div>
+        </div>
+      )}
 
-          {/* Indicador de filtro activo */}
-          <div className="mt-3 flex items-center gap-2 text-xs">
-            <Calendar className="h-3 w-3 text-gray-400" />
-            {filters.start_date && filters.end_date ? (
-              <span className="text-gray-600">
-                Mostrando datos desde {new Date(filters.start_date).toLocaleDateString()} hasta {new Date(filters.end_date).toLocaleDateString()}
-              </span>
-            ) : !filters.start_date && !filters.end_date && !filters.month && !filters.year ? (
-              <span className="text-gray-600">
-                Mostrando período completo (todos los datos)
-              </span>
-            ) : filters.month && filters.year ? (
-              <span className="text-gray-600">
-                Mostrando datos de {months.find(m => m.value === parseInt(filters.month))?.label} {filters.year}
-              </span>
-            ) : (
-              <span className="text-gray-600">
-                Filtros personalizados aplicados
-              </span>
-            )}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center text-red-700">
+            <X className="h-5 w-5 mr-2" />
+            <span className="font-medium">{error}</span>
+          </div>
+        </div>
+      )}
+
+      <ReportesPlacas />
+
+      {/* Tarjetas de métricas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+        {/* Total Venta Neta */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total Vendido (sin IGV)
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.monto_total_acumulado)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {metrics.total_fletes} fletes
           </div>
         </div>
 
-        {data && (
-          <>
-            {/* Encabezado del período */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-sm p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-sm">Período</p>
-                  <p className="text-2xl font-bold">{data.periodo || 'Todos los datos'}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-blue-100 text-sm">Grupo</p>
-                  <p className="text-2xl font-bold">{data.grupo}</p>
-                </div>
-              </div>
+        {/* Pendientes */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-yellow-100 rounded-md">
+              <Clock className="h-4 w-4 text-yellow-600" />
             </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Por facturar
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.total_pendientes}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Fletes pendientes</div>
+        </div>
 
-            {/* Tarjetas de resumen */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Truck className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <span className="text-xs text-gray-400">Total</span>
-                </div>
-                <p className="text-xl font-bold text-gray-800">
-                  {data.detalle?.length || 0}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Placas activas
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Grid className="h-5 w-5 text-green-600" />
-                  </div>
-                  <span className="text-xs text-gray-400">Fletes</span>
-                </div>
-                <p className="text-xl font-bold text-gray-800">
-                  {totales.totalFletes}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Total de fletes realizados
-                </p>
-              </div>
-
-              <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-yellow-600" />
-                  </div>
-                  <span className="text-xs text-gray-400">Monto</span>
-                </div>
-                <p className="text-xl font-bold text-gray-800">
-                  {formatCurrency(totales.totalMonto)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Monto total Vendido
-                </p>
-              </div>
+        {/* Valorizados sin factura */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-orange-100 rounded-md">
+              <FileX className="h-4 w-4 text-orange-600" />
             </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Sin factura
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.valorizados_sin_factura}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Sin factura</div>
+        </div>
 
-            {/* Gráficos */}
-            {data.detalle && data.detalle.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Gráfico de Montos por Placa */}
-                  <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-700 flex items-center gap-2">
-                        <BarChart className="h-4 w-4 text-blue-600" />
-                        Montos por Placa
-                      </h4>
-                      <span className="text-xs text-gray-400">
-                        Total: {formatCurrency(totales.totalMonto)}
-                      </span>
-                    </div>
-                    <div className="relative h-80">
-                      <canvas ref={chartMontoRef}></canvas>
-                    </div>
-                  </div>
+        {/* Valorizados con factura */}
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-green-100 rounded-md">
+              <FileCheck className="h-4 w-4 text-green-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Con factura
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {metrics.valorizados_con_factura}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Con factura</div>
+        </div>
+      </div>
 
-                  {/* Gráfico de Cantidad de Fletes por Placa */}
-                  <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-700 flex items-center gap-2">
-                        <Grid className="h-4 w-4 text-green-600" />
-                        Fletes por Placa
-                      </h4>
-                      <span className="text-xs text-gray-400">
-                        Total: {totales.totalFletes} fletes
-                      </span>
-                    </div>
-                    <div className="relative h-80">
-                      <canvas ref={chartCantidadRef}></canvas>
-                    </div>
-                  </div>
-                </div>
+      {/* Filtros */}
+      <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Filter className="h-5 w-5 text-blue-600" />
+              Filtros de Búsqueda
+            </h3>
+          </div>
 
-                {/* Tabla de detalle */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="px-5 py-4 border-b border-gray-100">
-                    <h4 className="font-semibold text-gray-700">Detalle por Placa</h4>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-5 py-3 text-left font-medium text-gray-600">Placa</th>
-                          <th className="px-5 py-3 text-right font-medium text-gray-600">Cantidad de Fletes</th>
-                          <th className="px-5 py-3 text-right font-medium text-gray-600">Monto Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {data.detalle.map((item, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-5 py-3 font-medium text-gray-900">
-                              <span className="inline-flex items-center gap-2">
-                                <Truck className="h-4 w-4 text-gray-400" />
-                                {item.placa}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-right text-gray-700">
-                              {item.cantidad_fletes} {item.cantidad_fletes === 1 ? 'flete' : 'fletes'}
-                            </td>
-                            <td className="px-5 py-3 text-right font-medium text-blue-600">
-                              {formatCurrency(item.monto_total)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="bg-gray-50 border-t border-gray-200">
-                        <tr>
-                          <td className="px-5 py-3 font-semibold text-gray-700">Totales</td>
-                          <td className="px-5 py-3 text-right font-semibold text-gray-700">
-                            {totales.totalFletes}
-                          </td>
-                          <td className="px-5 py-3 text-right font-semibold text-blue-600">
-                            {formatCurrency(totales.totalMonto)}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-                <Truck className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  No hay datos para el período seleccionado
-                </h3>
-                <p className="text-gray-500">
-                  {filters.start_date && filters.end_date 
-                    ? `Desde ${new Date(filters.start_date).toLocaleDateString()} hasta ${new Date(filters.end_date).toLocaleDateString()}`
-                    : filters.month && filters.year
-                    ? `${months.find(m => m.value === parseInt(filters.month))?.label} ${filters.year}`
-                    : 'Sin filtros de fecha - Período completo'
-                  }
-                </p>
-              </div>
-            )}
-          </>
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={handleRefresh}
+              variant="secondary"
+              size="small"
+              icon={RefreshCw}
+              isLoading={isLoading}
+            >
+              Actualizar
+            </Button>
+
+            <Button onClick={clearFilters} variant="secondary" size="small">
+              Limpiar Filtros
+            </Button>
+
+            <Button
+              onClick={handleExportarExcel}
+              disabled={loadingDownload}
+              variant="primary"
+              size="small"
+            >
+              {loadingDownload ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Exportar a Excel
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Filtros */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* Mes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Mes
+            </label>
+            <select
+              value={filters.month}
+              onChange={(e) => handleMonthChange("month", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+            >
+              <option value="">Todos los meses</option>
+              {meses.map((mes) => (
+                <option key={mes.value} value={mes.value}>
+                  {mes.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Año */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Año
+            </label>
+            <select
+              value={filters.year}
+              onChange={(e) => handleMonthChange("year", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+            >
+              <option value="">Todos los años</option>
+              {years.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Placa */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              Placa
+            </label>
+            <select
+              value={filters.flota_placa}
+              onChange={(e) => handlePlacaChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+            >
+              <option value="">Todas las placas</option>
+              {placas.map((placa, index) => (
+                <option key={index} value={placa}>
+                  {placa}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Fecha Inicio */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha Inicio
+            </label>
+            <input
+              type="date"
+              value={filters.start_date}
+              onChange={(e) => handleDateChange("start_date", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              max={filters.end_date || new Date().toISOString().split("T")[0]}
+            />
+          </div>
+
+          {/* Fecha Fin */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha Fin
+            </label>
+            <input
+              type="date"
+              value={filters.end_date}
+              onChange={(e) => handleDateChange("end_date", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              min={filters.start_date}
+              max={new Date().toISOString().split("T")[0]}
+            />
+          </div>
+        </div>
+
+        {/* Botón de período completo */}
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={handleShowFullPeriod}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium"
+          >
+            Mostrar período completo
+          </button>
+        </div>
+
+        {/* Indicador de filtro activo */}
+        <div className="mt-3 flex items-center gap-2 text-xs">
+          <Calendar className="h-3 w-3 text-gray-400" />
+          {filters.start_date && filters.end_date ? (
+            <span className="text-gray-600">
+              Mostrando datos desde {new Date(filters.start_date).toLocaleDateString()} hasta {new Date(filters.end_date).toLocaleDateString()}
+              {filters.flota_placa && ` · Placa: ${filters.flota_placa}`}
+            </span>
+          ) : !filters.start_date && !filters.end_date && !filters.month && !filters.year ? (
+            <span className="text-gray-600">
+              Mostrando período completo (todos los datos)
+              {filters.flota_placa && ` · Placa: ${filters.flota_placa}`}
+            </span>
+          ) : filters.month && filters.year ? (
+            <span className="text-gray-600">
+              Mostrando datos de {meses.find(m => m.value === filters.month)?.label} {filters.year}
+              {filters.flota_placa && ` · Placa: ${filters.flota_placa}`}
+            </span>
+          ) : (
+            <span className="text-gray-600">
+              Filtros personalizados aplicados
+              {filters.flota_placa && ` · Placa: ${filters.flota_placa}`}
+            </span>
+          )}
+        </div>
+
+        {/* Error de rango de fechas */}
+        {errors.rango_fechas && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+            <p className="text-sm text-red-600">{errors.rango_fechas}</p>
+          </div>
         )}
-      </main>
-      <br />
+      </div>
+
+      {/* Información de registros */}
+      {fletesData.length > 0 && (
+        <div className="mb-4 text-sm text-gray-600 text-center">
+          Mostrando {fletesData.length} de {pagination.totalItems} fletes
+          {filters.flota_placa && " · Filtrado por placa"}
+          {(filters.start_date || filters.end_date) &&
+            " · Filtrado por rango de fechas"}
+        </div>
+      )}
+
+      {/* Tabla de Fletes */}
+      <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-100 border-b border-gray-300">
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Placa
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Monto
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Fecha de Servicio
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Cliente
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Origen
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700">
+                  Destino
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {fletesData.map((flete) => (
+                <tr
+                  key={flete.id}
+                  className="border-b border-gray-200 hover:bg-blue-50"
+                >
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {flete.servicio?.flota?.placa || "N/A"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Código: {flete.codigo_flete}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {formatearMonto(flete.monto_flete)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {flete.estado_flete === "PENDIENTE" ? (
+                        <span className="text-yellow-600 font-medium">Pendiente</span>
+                      ) : flete.estado_flete === "VALORIZADO" && flete.pertenece_a_factura ? (
+                        <span className="text-green-600 font-medium">Facturado</span>
+                      ) : (
+                        <span className="text-orange-600 font-medium">Sin factura</span>
+                      )}
+                    </div>
+                  </td>
+
+                  <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
+                    <div className="text-gray-900">
+                      {formatFecha(flete?.servicio?.fecha_servicio)}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {flete.servicio?.cliente?.nombre || "N/A"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      RUC: {flete.servicio?.cliente?.ruc || ""}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
+                      <span className="text-gray-900">
+                        {flete.servicio?.origen?.split(",")[0] || "N/A"}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
+                      <span className="text-gray-900">
+                        {flete.servicio?.destino?.split(",")[0] || "N/A"}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Sin resultados */}
+        {fletesData.length === 0 && !isLoading && (
+          <div className="text-center py-12">
+            <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No se encontraron fletes
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {Object.values(filters).some((f) => f && f.toString().trim() !== "")
+                ? "Intenta ajustar los filtros de búsqueda"
+                : "No hay fletes valorizados en el sistema"}
+            </p>
+            <Button onClick={clearFilters} size="small">
+              Limpiar filtros
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Paginación */}
+      {fletesData.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
+          <div className="flex items-center space-x-4 mb-4 sm:mb-0">
+            <span className="text-sm text-gray-600">Mostrar</span>
+            <select
+              className="border border-gray-300 rounded px-3 py-1 text-sm"
+              value={pagination.itemsPerPage}
+              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+            >
+              {itemsPerPageOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <span className="text-sm text-gray-600">registros por página</span>
+          </div>
+
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            itemsPerPage={pagination.itemsPerPage}
+            onPageChange={handlePageChange}
+            startIndex={
+              (pagination.currentPage - 1) * pagination.itemsPerPage + 1
+            }
+            endIndex={Math.min(
+              pagination.currentPage * pagination.itemsPerPage,
+              pagination.totalItems,
+            )}
+          />
+        </div>
+      )}
     </div>
   );
 };
 
-export default ReportesPlacas;
+export default MonitoreoPlacas;

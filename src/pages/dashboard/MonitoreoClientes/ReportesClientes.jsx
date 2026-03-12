@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import { monitoreoAPI } from '../../../api/endpoints/monitoreo';
-import { Loader, Users, DollarSign, PieChart, BarChart, Calendar } from 'lucide-react';
+import { Loader, Users, BarChart, Calendar } from 'lucide-react';
 
 const ReportesClientes = () => {
   const [loading, setLoading] = useState(true);
@@ -17,9 +17,7 @@ const ReportesClientes = () => {
 
   // Refs para los gráficos
   const chartMontoRef = useRef(null);
-  const chartFacturacionRef = useRef(null);
   const chartMontoInstance = useRef(null);
-  const chartFacturacionInstance = useRef(null);
 
   const months = [
     { value: 1, label: 'Enero' },
@@ -36,13 +34,12 @@ const ReportesClientes = () => {
     { value: 12, label: 'Diciembre' }
   ];
 
-  // Generar años del 2026 al 2030
   const years = [2026, 2027, 2028, 2029, 2030];
 
   // Función para obtener el primer y último día del mes
   const getMonthDateRange = (year, month) => {
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0); // Esto da el último día del mes
+    const endDate = new Date(year, month, 0);
     
     const formatDate = (date) => {
       const yyyy = date.getFullYear();
@@ -57,18 +54,6 @@ const ReportesClientes = () => {
     };
   };
 
-  // Efecto para actualizar fechas cuando cambia el mes/año
-  useEffect(() => {
-    if (useMonthFilter && filters.month && filters.year) {
-      const { start_date, end_date } = getMonthDateRange(parseInt(filters.year), parseInt(filters.month));
-      setFilters(prev => ({
-        ...prev,
-        start_date,
-        end_date
-      }));
-    }  
-  }, [filters.month, filters.year, useMonthFilter]);
-
   // Función para generar colores
   const getColor = (index) => {
     const colors = [
@@ -78,12 +63,22 @@ const ReportesClientes = () => {
     return colors[index % colors.length];
   };
 
+  // Efecto para actualizar fechas cuando cambia el mes/año
+  useEffect(() => {
+    if (useMonthFilter && filters.month && filters.year) {
+      const { start_date, end_date } = getMonthDateRange(parseInt(filters.year), parseInt(filters.month));
+      setFilters(prev => ({
+        ...prev,
+        start_date,
+        end_date
+      }));
+    }
+  }, [filters.month, filters.year, useMonthFilter]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Pasar todos los filtros directamente (pueden estar vacíos)
       const response = await monitoreoAPI.getMetricsClientes(filters);
       setData(response);
     } catch (err) {
@@ -94,10 +89,10 @@ const ReportesClientes = () => {
     }
   };
 
-  // Cargar datos al inicio (con filtros vacíos)
+  // Efecto para cargar datos cuando cambian los filtros (tiempo real)
   useEffect(() => {
-    fetchData(); 
-  }, [filters]);
+    fetchData();
+  }, [filters.start_date, filters.end_date, filters.month, filters.year]);
 
   // Efecto para crear/actualizar gráficos
   useEffect(() => {
@@ -108,21 +103,14 @@ const ReportesClientes = () => {
       chartMontoInstance.current.destroy();
       chartMontoInstance.current = null;
     }
-    if (chartFacturacionInstance.current) {
-      chartFacturacionInstance.current.destroy();
-      chartFacturacionInstance.current = null;
-    }
 
     // Preparar datos para gráficos
     const clientes = data.detalle_clientes.map(c => {
-      // Acortar nombres largos
       const nombre = c.cliente;
       return nombre.length > 20 ? nombre.substring(0, 18) + '...' : nombre;
     });
     
     const montos = data.detalle_clientes.map(c => c.monto_total);
-    const pendientes = data.detalle_clientes.map(c => c.pendientes);
-    const facturados = data.detalle_clientes.map(c => c.facturados);
 
     // Gráfico de Montos por Cliente (Barras)
     if (chartMontoRef.current) {
@@ -170,75 +158,10 @@ const ReportesClientes = () => {
       });
     }
 
-    // Gráfico de Facturación (Apilado)
-    if (chartFacturacionRef.current) {
-      chartFacturacionInstance.current = new Chart(chartFacturacionRef.current, {
-        type: 'bar',
-        data: {
-          labels: clientes,
-          datasets: [
-            {
-              label: 'Facturados',
-              data: facturados,
-              backgroundColor: '#10b981',
-              borderRadius: 5
-            },
-            {
-              label: 'Pendientes',
-              data: pendientes,
-              backgroundColor: '#f59e0b',
-              borderRadius: 5
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: { color: 'rgba(0, 0, 0, 0.05)' },
-              stacked: true,
-              ticks: { stepSize: 1 }
-            },
-            x: {
-              grid: { display: false },
-              stacked: true,
-              ticks: {
-                maxRotation: 45,
-                minRotation: 45,
-                font: { size: 10 }
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                usePointStyle: true,
-                boxWidth: 8,
-                padding: 15,
-                font: { size: 11 }
-              }
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => `${context.dataset.label}: ${context.raw} fletes`
-              }
-            }
-          }
-        }
-      });
-    }
-
     return () => {
       if (chartMontoInstance.current) {
         chartMontoInstance.current.destroy();
         chartMontoInstance.current = null;
-      }
-      if (chartFacturacionInstance.current) {
-        chartFacturacionInstance.current.destroy();
-        chartFacturacionInstance.current = null;
       }
     };
   }, [data, loading, error]);
@@ -256,7 +179,6 @@ const ReportesClientes = () => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
-      // Limpiar mes y año cuando se usan fechas personalizadas
       month: '',
       year: ''
     }));
@@ -264,7 +186,6 @@ const ReportesClientes = () => {
 
   const handleShowFullPeriod = () => {
     setUseMonthFilter(false);
-    // Enviar todos los filtros vacíos
     setFilters({
       month: '',
       year: '',
@@ -272,8 +193,6 @@ const ReportesClientes = () => {
       end_date: ''
     });
   };
-
-
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-PE', {
@@ -377,8 +296,6 @@ const ReportesClientes = () => {
             >
               Mostrar período completo
             </button>
-
-            {/*  */}
           </div>
 
           {/* Indicador de filtro activo */}
