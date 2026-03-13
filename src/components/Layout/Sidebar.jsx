@@ -134,6 +134,7 @@ const Sidebar = ({
       "monitoreo-placas": ["gerencia", "view"],
       "monitoreo-proveedores": ["gerencia", "view"],
       "monitoreo-clientes": ["gerencia", "view"],
+      "rentabilidad-fletes":["gerencia", "view"],
       "analiticas": ["gerencia", "view"],
       "historial": ["gerencia", "view"],
     };
@@ -362,6 +363,14 @@ const Sidebar = ({
             icon: MonitorCheck,
             path: "/gerencia/monitoreo-proveedores",
             show: shouldShowSubItem({ id: "monitoreo-proveedores" }),
+          },
+          
+          {
+            id: "rentabilidad-fletes",
+            label: "Rentabilidad de Fletes",
+            icon: MonitorCheck,
+            path: "/gerencia/rentabilidad-fletes",
+            show: shouldShowSubItem({ id: "rentabilidad-fletes" }),
           },
           
           

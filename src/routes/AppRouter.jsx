@@ -35,6 +35,7 @@ import MonitoreoClientes from "../pages/dashboard/MonitoreoClientes/MonitoreoCli
 import DetalleGestion from "../pages/dashboard/GerenciaMonitoreo/DetalleGestion";
 import TodosLosFletes from "../pages/dashboard/TodosLosFletes/TodosLosFletes";
 import ReportesPrincipales from "../pages/dashboard/Servicios/ReportesPrincipales";
+import Rentabilidad from "../pages/dashboard/Rentabilidad/Rentabilidad";
 
 const AppRouter = () => {
   return (
@@ -238,6 +239,12 @@ const AppRouter = () => {
           <Route path="gerencia/monitoreo-clientes" element={
             <ProtectedRoute requirePermission={['gerencia', 'view']}>
               <MonitoreoClientes />
+            </ProtectedRoute>
+          } />
+
+          <Route path="gerencia/rentabilidad-fletes" element={
+            <ProtectedRoute requirePermission={['gerencia', 'view']}>
+              <Rentabilidad />
             </ProtectedRoute>
           } />
 

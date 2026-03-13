@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from "react";
 import {
   Users,
@@ -15,6 +14,9 @@ import {
   FileCheck,
   FileX,
   Building2,
+  Package,
+  TrendingUp,
+  Save
 } from "lucide-react";
 
 // Componentes comunes
@@ -25,7 +27,6 @@ import Pagination from "../../../components/common/Pagination/Pagination";
 import { monitoreoAPI } from "../../../api/endpoints/monitoreo";
 import utilsAPI from "../../../api/endpoints/utils";
 import { fletesAPI } from "../../../api/endpoints/fletes";
-import ReportesClientes from "./ReportesClientes";
 
 const formatFecha = (fecha) => {
   if (!fecha) return "N/A";
@@ -40,8 +41,17 @@ const formatFecha = (fecha) => {
   }
 };
 
-const MonitoreoClientes = () => {
-  const [clientesData, setClientesData] = useState([]);
+const Rentabilidad = () => {
+  const [activeTab, setActiveTab] = useState("sin-gasto"); // "sin-gasto" o "con-gasto"
+  
+  // Estados para fletes sin gasto
+  const [fletesSinGasto, setFletesSinGasto] = useState([]);
+  const [gastoInput, setGastoInput] = useState({});
+  const [guardandoGasto, setGuardandoGasto] = useState({});
+  
+  // Estados para fletes con gasto
+  const [fletesConGasto, setFletesConGasto] = useState([]);
+  
   const [clientesList, setClientesList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingDownload, setLoadingDownload] = useState(false);
@@ -67,7 +77,7 @@ const MonitoreoClientes = () => {
   const [filters, setFilters] = useState({
     fecha_inicio: "",
     fecha_fin: "",
-    cliente_id: "", // Cambiado de flota_placa a cliente_id
+    cliente_id: "",
     mes: "",
   });
 
@@ -112,13 +122,17 @@ const MonitoreoClientes = () => {
         currentPage: 1,
       }));
 
-      fetchClientes(1, pagination.itemsPerPage, filters);
+      if (activeTab === "sin-gasto") {
+        fetchFletesSinGasto(1, pagination.itemsPerPage, filters);
+      } else {
+        fetchFletesConGasto(1, pagination.itemsPerPage, filters);
+      }
     }, 500);
 
     return () => {
       if (timeout) clearTimeout(timeout);
     };
-  }, [filters.fecha_inicio, filters.fecha_fin, filters.cliente_id]);
+  }, [filters.fecha_inicio, filters.fecha_fin, filters.cliente_id, activeTab]);
 
   // Efecto para actualizar rango de fechas cuando cambia el mes
   useEffect(() => {
@@ -140,7 +154,7 @@ const MonitoreoClientes = () => {
   // Cargar lista de clientes desde la API
   const cargarClientesList = useCallback(async () => {
     try {
-      const response = await utilsAPI.getClientesList(); // Usando getClientesList
+      const response = await utilsAPI.getClientesList();
       setClientesList(response || []);
     } catch (err) {
       console.error("Error cargando lista de clientes:", err);
@@ -148,23 +162,17 @@ const MonitoreoClientes = () => {
     }
   }, []);
 
-  // Función principal para cargar datos de clientes
-  const fetchClientes = useCallback(
-    async (
-      page = 1,
-      itemsPerPage = pagination.itemsPerPage,
-      filtersToUse = filters,
-    ) => {
+  // Función para cargar fletes SIN gasto
+  const fetchFletesSinGasto = useCallback(
+    async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
       setIsLoading(true);
       setError(null);
 
-      // Validar fechas
       if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin) {
         if (filtersToUse.fecha_inicio > filtersToUse.fecha_fin) {
           setErrors((prev) => ({
             ...prev,
-            rango_fechas:
-              "La fecha de inicio no puede ser mayor a la fecha de fin",
+            rango_fechas: "La fecha de inicio no puede ser mayor a la fecha de fin",
           }));
           setIsLoading(false);
           return;
@@ -172,10 +180,10 @@ const MonitoreoClientes = () => {
       }
 
       try {
-        // Preparar filtros para API
         const apiFilters = {
           page: page,
           page_size: itemsPerPage,
+          con_gasto: false, // Filtro para fletes sin gasto
         };
 
         if (filtersToUse.fecha_inicio) {
@@ -190,10 +198,9 @@ const MonitoreoClientes = () => {
           apiFilters.cliente = filtersToUse.cliente_id.trim();
         }
 
-        // Llamar a la API de monitoreo para clientes
-        const response = await monitoreoAPI.getFletes(apiFilters); // Cambiado a getClientes
+        const response = await monitoreoAPI.getFletes(apiFilters);
 
-        setClientesData(response.items || []);
+        setFletesSinGasto(response.items || []);
         setMetrics(
           response.metrics || {
             total_clientes: 0,
@@ -201,7 +208,7 @@ const MonitoreoClientes = () => {
             total_pendientes: 0,
             facturados: 0,
             no_facturados: 0,
-          },
+          }
         );
 
         setPagination({
@@ -213,15 +220,126 @@ const MonitoreoClientes = () => {
           hasPrev: response.pagination.has_prev,
         });
       } catch (err) {
-        setError(
-          "Error al cargar los datos de clientes: " + (err.message || "Error desconocido"),
-        );
+        setError("Error al cargar los fletes sin gasto: " + (err.message || "Error desconocido"));
       } finally {
         setIsLoading(false);
       }
     },
-    [],
+    []
   );
+
+  // Función para cargar fletes CON gasto
+  const fetchFletesConGasto = useCallback(
+    async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
+      setIsLoading(true);
+      setError(null);
+
+      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin) {
+        if (filtersToUse.fecha_inicio > filtersToUse.fecha_fin) {
+          setErrors((prev) => ({
+            ...prev,
+            rango_fechas: "La fecha de inicio no puede ser mayor a la fecha de fin",
+          }));
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      try {
+        const apiFilters = {
+          page: page,
+          page_size: itemsPerPage,
+          con_gasto: true, // Filtro para fletes con gasto
+        };
+
+        if (filtersToUse.fecha_inicio) {
+          apiFilters.fecha_servicio_desde = filtersToUse.fecha_inicio;
+        }
+
+        if (filtersToUse.fecha_fin) {
+          apiFilters.fecha_servicio_hasta = filtersToUse.fecha_fin;
+        }
+
+        if (filtersToUse.cliente_id && filtersToUse.cliente_id.trim() !== "") {
+          apiFilters.cliente = filtersToUse.cliente_id.trim();
+        }
+
+        const response = await monitoreoAPI.getFletes(apiFilters);
+
+        setFletesConGasto(response.items || []);
+        setMetrics(
+          response.metrics || {
+            total_clientes: 0,
+            monto_total_acumulado: 0,
+            total_pendientes: 0,
+            facturados: 0,
+            no_facturados: 0,
+          }
+        );
+
+        setPagination({
+          currentPage: response.pagination.page,
+          itemsPerPage: response.pagination.page_size,
+          totalItems: response.pagination.total,
+          totalPages: response.pagination.total_pages,
+          hasNext: response.pagination.has_next,
+          hasPrev: response.pagination.has_prev,
+        });
+      } catch (err) {
+        setError("Error al cargar los fletes con gasto: " + (err.message || "Error desconocido"));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  // Función para guardar gasto
+  const handleGuardarGasto = useCallback(async (fleteId) => {
+    const monto = gastoInput[fleteId];
+    
+    if (!monto || parseFloat(monto) <= 0) {
+      setError("Ingrese un monto válido");
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    setGuardandoGasto(prev => ({ ...prev, [fleteId]: true }));
+
+    try {
+      // Aquí iría la llamada a la API para guardar el gasto
+      // await fletesAPI.registrarGasto(fleteId, { monto: parseFloat(monto) });
+      console.log(fleteId,monto) 
+      // Simular llamada API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setSuccessMessage(`Gasto de S/ ${parseFloat(monto).toFixed(2)} registrado correctamente`);
+      
+      // Limpiar input
+      setGastoInput(prev => {
+        const newInput = { ...prev };
+        delete newInput[fleteId];
+        return newInput;
+      });
+      
+      // Recargar datos
+      fetchFletesSinGasto(pagination.currentPage, pagination.itemsPerPage, filters);
+      
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError("Error al registrar el gasto: " + err.message);
+    } finally {
+      setGuardandoGasto(prev => ({ ...prev, [fleteId]: false }));
+    }
+  }, [gastoInput, fetchFletesSinGasto, pagination.currentPage, pagination.itemsPerPage, filters]);
+
+  // Manejar tecla Enter en input de gasto
+  const handleKeyPress = useCallback((e, fleteId) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleGuardarGasto(fleteId);
+    }
+  }, [handleGuardarGasto]);
 
   // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
@@ -277,22 +395,39 @@ const MonitoreoClientes = () => {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    fetchClientes(pagination.currentPage, pagination.itemsPerPage, filters);
-  }, [fetchClientes, pagination.currentPage, pagination.itemsPerPage, filters]);
+    if (activeTab === "sin-gasto") {
+      fetchFletesSinGasto(pagination.currentPage, pagination.itemsPerPage, filters);
+    } else {
+      fetchFletesConGasto(pagination.currentPage, pagination.itemsPerPage, filters);
+    }
+  }, [activeTab, fetchFletesSinGasto, fetchFletesConGasto, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   const handlePageChange = useCallback(
     (newPage) => {
-      fetchClientes(newPage, pagination.itemsPerPage, filters);
+      if (activeTab === "sin-gasto") {
+        fetchFletesSinGasto(newPage, pagination.itemsPerPage, filters);
+      } else {
+        fetchFletesConGasto(newPage, pagination.itemsPerPage, filters);
+      }
     },
-    [fetchClientes, pagination.itemsPerPage, filters],
+    [activeTab, fetchFletesSinGasto, fetchFletesConGasto, pagination.itemsPerPage, filters],
   );
 
   const handleItemsPerPageChange = useCallback(
     (newItemsPerPage) => {
-      fetchClientes(1, newItemsPerPage, filters);
+      if (activeTab === "sin-gasto") {
+        fetchFletesSinGasto(1, newItemsPerPage, filters);
+      } else {
+        fetchFletesConGasto(1, newItemsPerPage, filters);
+      }
     },
-    [fetchClientes, filters],
+    [activeTab, fetchFletesSinGasto, fetchFletesConGasto, filters],
   );
+
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  }, []);
 
   // Exportar a Excel
   const handleExportarExcel = useCallback(async () => {
@@ -303,16 +438,15 @@ const MonitoreoClientes = () => {
         fecha_servicio_desde: filters.fecha_inicio,
         fecha_servicio_hasta: filters.fecha_fin,
         cliente_nombre: filters.cliente_id,
+        con_gasto: activeTab === "con-gasto",
       };
 
-      // Asumiendo que existe un endpoint para exportar datos de clientes
       const blob = await fletesAPI.exportAllFletesExcel(filtersForAPI);
 
-      // Función para descargar el archivo
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `monitoreo_clientes_${new Date().toISOString().split("T")[0]}.xlsx`);
+      link.setAttribute('download', `rentabilidad_fletes_${activeTab}_${new Date().toISOString().split("T")[0]}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -325,7 +459,7 @@ const MonitoreoClientes = () => {
     } finally {
       setLoadingDownload(false);
     }
-  }, [filters]);
+  }, [filters, activeTab]);
 
   const formatearMonto = (monto) => {
     return new Intl.NumberFormat("es-PE", {
@@ -342,8 +476,10 @@ const MonitoreoClientes = () => {
     return cliente?.nombre || cliente?.label || clienteId;
   };
 
+  const currentData = activeTab === "sin-gasto" ? fletesSinGasto : fletesConGasto;
+
   // Loading inicial
-  if (isLoading && clientesData.length === 0) {
+  if (isLoading && currentData.length === 0) {
     return (
       <div className="p-4">
         <div className="animate-pulse">
@@ -377,9 +513,37 @@ const MonitoreoClientes = () => {
         </div>
       )}
 
-      <ReportesClientes />
-
-      <br />
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex -mb-px space-x-8">
+          <button
+            onClick={() => handleTabChange("sin-gasto")}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === "sin-gasto"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }
+            `}
+          >
+            <Package className="h-5 w-5" />
+            Fletes SIN gasto
+          </button>
+          <button
+            onClick={() => handleTabChange("con-gasto")}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
+              ${activeTab === "con-gasto"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }
+            `}
+          >
+            <TrendingUp className="h-5 w-5" />
+            Fletes CON gasto
+          </button>
+        </nav>
+      </div>
 
       {/* Tarjetas de métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
@@ -397,7 +561,7 @@ const MonitoreoClientes = () => {
             {formatearMonto(metrics.monto_total_acumulado)}
           </div>
           <div className="text-xs text-gray-500 mt-1">
-             {metrics.total_fletes} fletess
+            {metrics.total_fletes} fletes
           </div>
         </div>
 
@@ -444,7 +608,7 @@ const MonitoreoClientes = () => {
             </span>
           </div>
           <div className="text-xl font-bold text-gray-900 leading-none">
-             {metrics.valorizados_con_factura}
+            {metrics.valorizados_con_factura}
           </div>
           <div className="text-xs text-gray-500 mt-1">Con factura</div>
         </div>
@@ -580,23 +744,26 @@ const MonitoreoClientes = () => {
       </div>
 
       {/* Información de registros */}
-      {clientesData.length > 0 && (
+      {currentData.length > 0 && (
         <div className="mb-4 text-sm text-gray-600 text-center">
-          Mostrando {clientesData.length} de {pagination.totalItems} registros de clientes
+          Mostrando {currentData.length} de {pagination.totalItems} registros
           {filters.cliente_id && " · Filtrado por cliente"}
           {(filters.fecha_inicio || filters.fecha_fin) &&
             " · Filtrado por rango de fechas"}
+          <span className="font-medium ml-2">
+            {activeTab === "sin-gasto" ? "SIN gasto" : "CON gasto"}
+          </span>
         </div>
       )}
 
-      {/* Tabla de Clientes */}
+      {/* Tabla de Fletes */}
       <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b border-gray-300">
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
-                   Cliente
+                  Cliente
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Monto
@@ -604,100 +771,129 @@ const MonitoreoClientes = () => {
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Fecha de Servicio
                 </th>
-              
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Origen
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Destino
-                </th> 
-                <th className="py-3 px-4 text-left font-semibold text-gray-700">
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Placa
-                </th> 
+                </th>
+                {activeTab === "sin-gasto" && (
+                  <th className="py-3 px-4 text-left font-semibold text-gray-700">
+                    Registrar Gasto
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
-                          {clientesData.map((flete) => (
-                            <tr
-                              key={flete.id}
-                              className="border-b border-gray-200 hover:bg-blue-50"
-                            >
-                              <td className="px-4 py-3 border-r border-gray-200">
-                                <div className="font-medium text-gray-900">
-                                  {flete.servicio?.cliente?.nombre || "N/A"}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  RUC: {flete.servicio?.cliente?.ruc || ""}
-                                </div>
-                              </td>
-                              
-            
-                              <td className="px-4 py-3 border-r border-gray-200">
-                                <div className="font-medium text-gray-900">
-                                  {formatearMonto(flete.monto_flete)}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {flete.estado_flete === "PENDIENTE" ? (
-              <span className="text-yellow-600 font-medium">Pendiente</span>
-            ) : flete.estado_flete === "VALORIZADO" && flete.pertenece_a_factura ? (
-              <span className="text-green-600 font-medium">Facturado</span>
-            ) : (
-              <span className="text-orange-600 font-medium">Sin factura</span>
-            )}
-                                </div>
-                              </td>
-            
-                              <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
-                                <div className="text-gray-900">
-                                  {formatFecha(flete?.servicio?.fecha_servicio)}
-                                </div>
-                              </td>
-            
-                              
-            
-                              <td className="px-4 py-3 border-r border-gray-200">
-                                <div className="flex items-start gap-1">
-                                  <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
-                                  <span className="text-gray-900">
-                                    {flete.servicio?.origen?.split(",")[0] || "N/A"}
-                                  </span>
-                                </div>
-                              </td>
-            
-                              <td className="px-4 py-3">
-                                <div className="flex items-start gap-1">
-                                  <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
-                                  <span className="text-gray-900">
-                                    {flete.servicio?.destino?.split(",")[0] || "N/A"}
-                                  </span>
-                                </div>
-                              </td>
+              {currentData.map((flete) => (
+                <tr
+                  key={flete.id}
+                  className="border-b border-gray-200 hover:bg-blue-50"
+                >
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {flete.servicio?.cliente?.nombre || "N/A"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      RUC: {flete.servicio?.cliente?.ruc || ""}
+                    </div>
+                  </td>
 
-                              <td className="px-4 py-3 border-r border-gray-200">
-                                <div className="font-medium text-gray-900">
-                                  {flete.servicio?.flota?.placa || "N/A"}
-                                </div>
-                                {/* <div className="text-xs text-gray-500">
-                                  Código: {flete.codigo_flete}
-                                </div> */}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {formatearMonto(flete.monto_flete)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {flete.estado_flete === "PENDIENTE" ? (
+                        <span className="text-yellow-600 font-medium">Pendiente</span>
+                      ) : flete.estado_flete === "VALORIZADO" && flete.pertenece_a_factura ? (
+                        <span className="text-green-600 font-medium">Facturado</span>
+                      ) : (
+                        <span className="text-orange-600 font-medium">Sin factura</span>
+                      )}
+                    </div>
+                  </td>
+
+                  <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
+                    <div className="text-gray-900">
+                      {formatFecha(flete?.servicio?.fecha_servicio)}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
+                      <span className="text-gray-900">
+                        {flete.servicio?.origen?.split(",")[0] || "N/A"}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
+                      <span className="text-gray-900">
+                        {flete.servicio?.destino?.split(",")[0] || "N/A"}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {flete.servicio?.flota?.placa || "N/A"}
+                    </div>
+                  </td>
+
+                  {activeTab === "sin-gasto" && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={gastoInput[flete.id] || ""}
+                          onChange={(e) => setGastoInput(prev => ({
+                            ...prev,
+                            [flete.id]: e.target.value
+                          }))}
+                          onKeyPress={(e) => handleKeyPress(e, flete.id)}
+                          placeholder="Monto"
+                          className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          disabled={guardandoGasto[flete.id]}
+                        />
+                        <Button
+                          onClick={() => handleGuardarGasto(flete.id)}
+                          size="small"
+                          variant="primary"
+                          icon={Save}
+                          disabled={guardandoGasto[flete.id] || !gastoInput[flete.id]}
+                          isLoading={guardandoGasto[flete.id]}
+                        >
+                          Guardar
+                        </Button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
 
         {/* Sin resultados */}
-        {clientesData.length === 0 && !isLoading && (
+        {currentData.length === 0 && !isLoading && (
           <div className="text-center py-12">
-            <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No se encontraron registros de clientes
+              No se encontraron registros
             </h3>
             <p className="text-gray-600 mb-6">
               {Object.values(filters).some((f) => f && f.trim() !== "")
                 ? "Intenta ajustar los filtros de búsqueda"
-                : "No hay datos de clientes en el sistema"}
+                : `No hay fletes ${activeTab === "sin-gasto" ? "sin gasto" : "con gasto"} registrados`}
             </p>
             <Button onClick={clearFilters} size="small">
               Limpiar filtros
@@ -707,7 +903,7 @@ const MonitoreoClientes = () => {
       </div>
 
       {/* Paginación */}
-      {clientesData.length > 0 && (
+      {currentData.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
           <div className="flex items-center space-x-4 mb-4 sm:mb-0">
             <span className="text-sm text-gray-600">Mostrar</span>
@@ -741,10 +937,8 @@ const MonitoreoClientes = () => {
           />
         </div>
       )}
-
-      
     </div>
   );
 };
 
-export default MonitoreoClientes;
+export default Rentabilidad;
