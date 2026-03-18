@@ -49,6 +49,9 @@ import utilsAPI from "../../../api/endpoints/utils";
 const FletesPorFacturar = () => {
   const navigate = useNavigate();
 
+  const [montosSeleccionados, setMontosSeleccionados] = useState({});
+
+  const [detallesSeleccionados, setDetallesSeleccionados] = useState({});
   // Estados principales
   const [fletes, setFletes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -322,17 +325,16 @@ const FletesPorFacturar = () => {
     }
   }, []);
 
-const handleSearchClick = () => {
-  // 1. Resetear a página 1 en el estado
-  setPagination((prev) => ({
-    ...prev,
-    currentPage: 1,
-  }));
+  const handleSearchClick = () => {
+    // 1. Resetear a página 1 en el estado
+    setPagination((prev) => ({
+      ...prev,
+      currentPage: 1,
+    }));
 
-
-  fetchFletes(1, pagination.itemsPerPage, filters);
-  cargarReportePendientes(filters);
-};
+    fetchFletes(1, pagination.itemsPerPage, filters);
+    cargarReportePendientes(filters);
+  };
 
   // Efecto para cargar cuando cambia la página o itemsPerPage
   useEffect(() => {
@@ -342,77 +344,75 @@ const handleSearchClick = () => {
   }, [pagination.currentPage, pagination.itemsPerPage]);
 
   useEffect(() => {
-  // Obtener parámetros de la URL
-  const searchParams = new URLSearchParams(window.location.search);
-  const mes = searchParams.get('mes');
-  const anio = searchParams.get('anio');
-  
-  // Si hay parámetros mes y año en la URL
-  if (mes && anio) {
-    // Validar que mes sea un número entre 1-12
-    const mesNum = parseInt(mes, 10);
-    const anioNum = parseInt(anio, 10);
-    
-    if (!isNaN(mesNum) && mesNum >= 1 && mesNum <= 12 && !isNaN(anioNum)) {
-      // Calcular fecha desde (primer día del mes)
-      const fechaDesde = `${anioNum}-${mesNum.toString().padStart(2, '0')}-01`;
-      
-      // Calcular fecha hasta (último día del mes)
-      // Crear una fecha para el primer día del siguiente mes y restar 1 día
-      const ultimoDia = new Date(anioNum, mesNum, 0).getDate(); // 0 = último día del mes anterior
-      const fechaHasta = `${anioNum}-${mesNum.toString().padStart(2, '0')}-${ultimoDia.toString().padStart(2, '0')}`;
-      
-      
-      // Actualizar los filtros
-      setFilters(prev => ({
-        ...prev,
-        fecha_servicio_desde: fechaDesde,
-        fecha_servicio_hasta: fechaHasta
-      }));
-      
-      // Forzar una carga inmediata con los nuevos filtros
-      // Esto evita el debounce para la carga inicial
-      fetchFletes(1, pagination.itemsPerPage, {
-        ...filters,
-        fecha_servicio_desde: fechaDesde,
-        fecha_servicio_hasta: fechaHasta
-      });
-      cargarReportePendientes(
-        {
+    // Obtener parámetros de la URL
+    const searchParams = new URLSearchParams(window.location.search);
+    const mes = searchParams.get("mes");
+    const anio = searchParams.get("anio");
+
+    // Si hay parámetros mes y año en la URL
+    if (mes && anio) {
+      // Validar que mes sea un número entre 1-12
+      const mesNum = parseInt(mes, 10);
+      const anioNum = parseInt(anio, 10);
+
+      if (!isNaN(mesNum) && mesNum >= 1 && mesNum <= 12 && !isNaN(anioNum)) {
+        // Calcular fecha desde (primer día del mes)
+        const fechaDesde = `${anioNum}-${mesNum.toString().padStart(2, "0")}-01`;
+
+        // Calcular fecha hasta (último día del mes)
+        // Crear una fecha para el primer día del siguiente mes y restar 1 día
+        const ultimoDia = new Date(anioNum, mesNum, 0).getDate(); // 0 = último día del mes anterior
+        const fechaHasta = `${anioNum}-${mesNum.toString().padStart(2, "0")}-${ultimoDia.toString().padStart(2, "0")}`;
+
+        // Actualizar los filtros
+        setFilters((prev) => ({
+          ...prev,
+          fecha_servicio_desde: fechaDesde,
+          fecha_servicio_hasta: fechaHasta,
+        }));
+
+        // Forzar una carga inmediata con los nuevos filtros
+        // Esto evita el debounce para la carga inicial
+        fetchFletes(1, pagination.itemsPerPage, {
           ...filters,
-        fecha_servicio_desde: fechaDesde,
-        fecha_servicio_hasta: fechaHasta
-        }
-      );
+          fecha_servicio_desde: fechaDesde,
+          fecha_servicio_hasta: fechaHasta,
+        });
+        cargarReportePendientes({
+          ...filters,
+          fecha_servicio_desde: fechaDesde,
+          fecha_servicio_hasta: fechaHasta,
+        });
+      } else {
+        console.error("Parámetros mes/año inválidos:", mes, anio);
+        // Si los parámetros son inválidos, cargar normal
+        fetchFletes(1, pagination.itemsPerPage, filters);
+        cargarReportePendientes();
+      }
     } else {
-      console.error('Parámetros mes/año inválidos:', mes, anio);
-      // Si los parámetros son inválidos, cargar normal
+      // Si no hay parámetros, cargar normal
       fetchFletes(1, pagination.itemsPerPage, filters);
       cargarReportePendientes();
     }
-  } else {
-    // Si no hay parámetros, cargar normal
-    fetchFletes(1, pagination.itemsPerPage, filters);
-    cargarReportePendientes();
-  }
-}, []);
+  }, []);
 
   // Cargar datos iniciales
   useEffect(() => {
     cargarClientes();
-
   }, []);
 
   // Efecto para inicializar el formulario cuando se abre el modal de factura
   useEffect(() => {
     if (showFacturaModal && selectedFletes.length > 0) {
       // Calcular monto total
-      const montoTotal = selectedFletes.reduce((total, id) => {
-        const flete = fletes.find((f) => f.id === id);
-        return total + (flete ? parseFloat(flete.monto_flete || 0) : 0);
-      }, 0);
+      const montoTotal = Object.values(montosSeleccionados).reduce(
+        (total, monto) => total + monto,
+        0,
+      );
 
       const montoTotalConIGV = montoTotal * 1.18;
+
+      console.log(montoTotal, montoTotalConIGV, montosSeleccionados);
 
       // Generar secuencia para número de factura
       const fecha = new Date();
@@ -452,7 +452,7 @@ const handleSearchClick = () => {
             : `Factura por ${selectedFletes.length} fletes`,
       });
     }
-  }, [showFacturaModal, selectedFletes, fletes]);
+  }, [showFacturaModal, selectedFletes, fletes, montosSeleccionados]);
 
   const handleDeleteFleteClick = useCallback((flete, e) => {
     if (e) e.stopPropagation();
@@ -546,12 +546,20 @@ const handleSearchClick = () => {
       fecha_servicio_desde: "",
       fecha_servicio_hasta: "",
     });
+    setMontosSeleccionados({});
+    setDetallesSeleccionados({});
   }, []);
 
   const handleRefresh = useCallback(() => {
     fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
-    cargarReportePendientes(filters)
-  }, [cargarReportePendientes,fetchFletes, pagination.currentPage, pagination.itemsPerPage, filters]);
+    cargarReportePendientes(filters);
+  }, [
+    cargarReportePendientes,
+    fetchFletes,
+    pagination.currentPage,
+    pagination.itemsPerPage,
+    filters,
+  ]);
 
   const handledownload = useCallback(async () => {
     try {
@@ -580,15 +588,31 @@ const handleSearchClick = () => {
 
   // Manejar selección individual
   const handleSelectFlete = useCallback(
-    (id, e) => {
+    (id, e, monto, flete) => {
       e.stopPropagation();
       if (selectedFletes.includes(id)) {
         setSelectedFletes(selectedFletes.filter((fleteId) => fleteId !== id));
+        const newMontos = { ...montosSeleccionados };
+        delete newMontos[id];
+        setMontosSeleccionados(newMontos);
+        setDetallesSeleccionados((prev) => {
+          const newDetalles = { ...prev };
+          delete newDetalles[id];
+          return newDetalles;
+        });
       } else {
         setSelectedFletes([...selectedFletes, id]);
+        setMontosSeleccionados({
+          ...montosSeleccionados,
+          [id]: parseFloat(monto || 0),
+        });
+        setDetallesSeleccionados((prev) => ({
+          ...prev,
+          [id]: flete,
+        }));
       }
     },
-    [selectedFletes],
+    [selectedFletes, montosSeleccionados, fletes],
   );
 
   // Manejar selección todos
@@ -596,9 +620,29 @@ const handleSearchClick = () => {
     if (selectedFletes.length === fletes.length) {
       setSelectedFletes([]);
     } else {
-      setSelectedFletes(fletes.map((flete) => flete.id));
+      const nuevosIds = [...selectedFletes];
+      const nuevosMontos = { ...montosSeleccionados };
+      const nuevosDetalles = { ...detallesSeleccionados };
+
+      fletes.forEach((flete) => {
+        if (!nuevosIds.includes(flete.id)) {
+          nuevosIds.push(flete.id);
+          nuevosMontos[flete.id] = parseFloat(flete.monto_flete || 0);
+          nuevosDetalles[flete.id] = flete; // Guardamos el objeto completo
+        }
+      });
+
+      setSelectedFletes(nuevosIds);
+      setMontosSeleccionados(nuevosMontos);
+      setDetallesSeleccionados(nuevosDetalles);
     }
-  }, [selectedFletes, fletes]);
+  }, [
+    selectedFletes,
+    fletes,
+    montosSeleccionados,
+    fletes,
+    detallesSeleccionados,
+  ]);
 
   // Abrir modal de factura
   const handleCreateInvoice = useCallback(() => {
@@ -824,6 +868,8 @@ const handleSearchClick = () => {
 
       handleCloseFacturaModal();
       setSelectedFletes([]);
+      setMontosSeleccionados({});
+      setDetallesSeleccionados({});
       fetchFletes(pagination.currentPage, pagination.itemsPerPage, filters);
     } catch (err) {
       setError("Error al crear la factura: " + err.message);
@@ -1022,10 +1068,10 @@ const handleSearchClick = () => {
   };
 
   // Calcular monto total de fletes seleccionados
-  const totalMontoSeleccionado = selectedFletes.reduce((total, id) => {
-    const flete = fletes.find((f) => f.id === id);
-    return total + (flete ? parseFloat(flete.monto_flete || 0) : 0);
-  }, 0);
+  const totalMontoSeleccionado = Object.values(montosSeleccionados).reduce(
+    (total, monto) => total + (parseFloat(monto) || 0),
+    0,
+  );
 
   // Funciones para manejar eliminación de gastos
   const handleDeleteGastoClick = useCallback((gasto, e) => {
@@ -1155,7 +1201,6 @@ const handleSearchClick = () => {
           </div>
 
           <div className="flex items-center space-x-2">
-            
             <Button
               onClick={handleSearchClick}
               variant="primary"
@@ -1187,72 +1232,71 @@ const handleSearchClick = () => {
             >
               Descargar Data
             </Button>
-
           </div>
         </div>
 
         {/* Filtros en tiempo real */}
 
         <div className="flex flex-wrap items-end gap-4">
-  {/* Filtro: Cliente */}
-  <div className="flex-1 min-w-[200px]">
-    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-      <User className="h-4 w-4" />
-      Cliente
-    </label>
-    <select
-      value={filters.cliente}
-      onChange={(e) => handleFilterChange("cliente", e.target.value)}
-      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-      disabled={loadingClientes}
-    >
-      <option value="">Todos los clientes</option>
-      {loadingClientes ? (
-        <option value="" disabled>
-          Cargando clientes...
-        </option>
-      ) : (
-        clientesList.map((cliente, index) => (
-          <option key={index} value={cliente}>
-            {cliente}
-          </option>
-        ))
-      )}
-    </select>
-  </div>
+          {/* Filtro: Cliente */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Cliente
+            </label>
+            <select
+              value={filters.cliente}
+              onChange={(e) => handleFilterChange("cliente", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              disabled={loadingClientes}
+            >
+              <option value="">Todos los clientes</option>
+              {loadingClientes ? (
+                <option value="" disabled>
+                  Cargando clientes...
+                </option>
+              ) : (
+                clientesList.map((cliente, index) => (
+                  <option key={index} value={cliente}>
+                    {cliente}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
 
-  {/* Filtro: Fecha Desde */}
-  <div className="flex-1 min-w-[150px]">
-    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-      <Calendar className="h-4 w-4" />
-      Fecha Servicio Desde
-    </label>
-    <input
-      type="date"
-      value={filters.fecha_servicio_desde}
-      onChange={(e) =>
-        handleFilterChange("fecha_servicio_desde", e.target.value)
-      }
-      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-    />
-  </div>
+          {/* Filtro: Fecha Desde */}
+          <div className="flex-1 min-w-[150px]">
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Fecha Servicio Desde
+            </label>
+            <input
+              type="date"
+              value={filters.fecha_servicio_desde}
+              onChange={(e) =>
+                handleFilterChange("fecha_servicio_desde", e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            />
+          </div>
 
-  {/* Filtro: Fecha Hasta */}
-  <div className="flex-1 min-w-[150px]">
-    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-      <Calendar className="h-4 w-4" />
-      Fecha Servicio Hasta
-    </label>
-    <input
-      type="date"
-      value={filters.fecha_servicio_hasta}
-      onChange={(e) =>
-        handleFilterChange("fecha_servicio_hasta", e.target.value)
-      }
-      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-    />
-  </div>
-</div>
+          {/* Filtro: Fecha Hasta */}
+          <div className="flex-1 min-w-[150px]">
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Fecha Servicio Hasta
+            </label>
+            <input
+              type="date"
+              value={filters.fecha_servicio_hasta}
+              onChange={(e) =>
+                handleFilterChange("fecha_servicio_hasta", e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+            />
+          </div>
+        </div>
 
         {Object.values(filters).some((f) => f.trim() !== "") && (
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -1420,7 +1464,14 @@ const handleSearchClick = () => {
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={(e) => handleSelectFlete(flete.id, e)}
+                            onChange={(e) =>
+                              handleSelectFlete(
+                                flete.id,
+                                e,
+                                flete.monto_flete,
+                                flete,
+                              )
+                            }
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             onClick={(e) => e.stopPropagation()}
                           />
@@ -2569,15 +2620,18 @@ const handleSearchClick = () => {
                 </thead>
                 <tbody>
                   {selectedFletes.map((id) => {
-                    const flete = fletes.find((f) => f.id === id);
-                    if (!flete) return null;
+                    // Buscamos en nuestra "memoria local" de fletes guardados
+                    const fleteInfo = detallesSeleccionados[id];
+                    const montoIndividual = montosSeleccionados[id] || 0;
+
+                    if (!fleteInfo) return null;
 
                     return (
                       <tr key={id} className="border-b border-gray-100">
-                        <td className="py-2">{flete.codigo_flete}</td>
-                        <td className="py-2">{flete.codigo_servicio}</td>
+                        <td className="py-2">{fleteInfo.codigo_flete}</td>
+                        <td className="py-2">{fleteInfo.codigo_servicio}</td>
                         <td className="py-2">
-                          S/. {parseFloat(flete.monto_flete || 0).toFixed(2)}
+                          S/. {montoIndividual.toFixed(2)}
                         </td>
                       </tr>
                     );
@@ -2725,10 +2779,11 @@ const handleSearchClick = () => {
                 Suma automática de fletes: {totalMontoSeleccionado.toFixed(2)}{" "}
                 {facturaForm.moneda === "PEN" ? "S/" : "$"}
               </p>
-               <p className="mt-1 text-xs text-gray-500">
-      Monto base sin IGV: S/ {(totalMontoSeleccionado).toFixed(2)} | 
-      Monto con IGV (18%): S/ {(totalMontoSeleccionado * 1.18).toFixed(2)}
-    </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Monto base sin IGV: S/ {totalMontoSeleccionado.toFixed(2)} |
+                Monto con IGV (18%): S/{" "}
+                {(totalMontoSeleccionado * 1.18).toFixed(2)}
+              </p>
             </div>
 
             <div>
