@@ -16,7 +16,7 @@ import {
   Building2,
   Package,
   TrendingUp,
-  Save
+  Save,
 } from "lucide-react";
 
 // Componentes comunes
@@ -43,15 +43,15 @@ const formatFecha = (fecha) => {
 
 const Rentabilidad = () => {
   const [activeTab, setActiveTab] = useState("sin-gasto"); // "sin-gasto" o "con-gasto"
-  
+
   // Estados para fletes sin gasto
   const [fletesSinGasto, setFletesSinGasto] = useState([]);
   const [gastoInput, setGastoInput] = useState({});
   const [guardandoGasto, setGuardandoGasto] = useState({});
-  
+
   // Estados para fletes con gasto
   const [fletesConGasto, setFletesConGasto] = useState([]);
-  
+
   const [clientesList, setClientesList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingDownload, setLoadingDownload] = useState(false);
@@ -61,6 +61,7 @@ const Rentabilidad = () => {
     total_pendientes: 0,
     facturados: 0,
     no_facturados: 0,
+    monto_total_rentabilidad:0,
   });
 
   // Estados de paginación
@@ -164,7 +165,11 @@ const Rentabilidad = () => {
 
   // Función para cargar fletes SIN gasto
   const fetchFletesSinGasto = useCallback(
-    async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
+    async (
+      page = 1,
+      itemsPerPage = pagination.itemsPerPage,
+      filtersToUse = filters,
+    ) => {
       setIsLoading(true);
       setError(null);
 
@@ -172,7 +177,8 @@ const Rentabilidad = () => {
         if (filtersToUse.fecha_inicio > filtersToUse.fecha_fin) {
           setErrors((prev) => ({
             ...prev,
-            rango_fechas: "La fecha de inicio no puede ser mayor a la fecha de fin",
+            rango_fechas:
+              "La fecha de inicio no puede ser mayor a la fecha de fin",
           }));
           setIsLoading(false);
           return;
@@ -183,7 +189,7 @@ const Rentabilidad = () => {
         const apiFilters = {
           page: page,
           page_size: itemsPerPage,
-          con_gasto: false, // Filtro para fletes sin gasto
+          solo_con_inversion: false,
         };
 
         if (filtersToUse.fecha_inicio) {
@@ -208,7 +214,9 @@ const Rentabilidad = () => {
             total_pendientes: 0,
             facturados: 0,
             no_facturados: 0,
-          }
+            monto_inversion_total: 0,
+            monto_total_rentabilidad:0
+          },
         );
 
         setPagination({
@@ -220,17 +228,24 @@ const Rentabilidad = () => {
           hasPrev: response.pagination.has_prev,
         });
       } catch (err) {
-        setError("Error al cargar los fletes sin gasto: " + (err.message || "Error desconocido"));
+        setError(
+          "Error al cargar los fletes sin gasto: " +
+            (err.message || "Error desconocido"),
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   // Función para cargar fletes CON gasto
   const fetchFletesConGasto = useCallback(
-    async (page = 1, itemsPerPage = pagination.itemsPerPage, filtersToUse = filters) => {
+    async (
+      page = 1,
+      itemsPerPage = pagination.itemsPerPage,
+      filtersToUse = filters,
+    ) => {
       setIsLoading(true);
       setError(null);
 
@@ -238,7 +253,8 @@ const Rentabilidad = () => {
         if (filtersToUse.fecha_inicio > filtersToUse.fecha_fin) {
           setErrors((prev) => ({
             ...prev,
-            rango_fechas: "La fecha de inicio no puede ser mayor a la fecha de fin",
+            rango_fechas:
+              "La fecha de inicio no puede ser mayor a la fecha de fin",
           }));
           setIsLoading(false);
           return;
@@ -249,7 +265,7 @@ const Rentabilidad = () => {
         const apiFilters = {
           page: page,
           page_size: itemsPerPage,
-          con_gasto: true, // Filtro para fletes con gasto
+          solo_con_inversion: true,
         };
 
         if (filtersToUse.fecha_inicio) {
@@ -274,7 +290,9 @@ const Rentabilidad = () => {
             total_pendientes: 0,
             facturados: 0,
             no_facturados: 0,
-          }
+            monto_inversion_total: 0,
+            monto_total_rentabilidad:0
+          },
         );
 
         setPagination({
@@ -286,60 +304,77 @@ const Rentabilidad = () => {
           hasPrev: response.pagination.has_prev,
         });
       } catch (err) {
-        setError("Error al cargar los fletes con gasto: " + (err.message || "Error desconocido"));
+        setError(
+          "Error al cargar los fletes con gasto: " +
+            (err.message || "Error desconocido"),
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   // Función para guardar gasto
-  const handleGuardarGasto = useCallback(async (fleteId) => {
-    const monto = gastoInput[fleteId];
-    
-    if (!monto || parseFloat(monto) <= 0) {
-      setError("Ingrese un monto válido");
-      setTimeout(() => setError(null), 3000);
-      return;
-    }
+  const handleGuardarGasto = useCallback(
+    async (fleteId) => {
+      const monto = gastoInput[fleteId];
 
-    setGuardandoGasto(prev => ({ ...prev, [fleteId]: true }));
+      if (!monto || parseFloat(monto) <= 0) {
+        setError("Ingrese un monto válido");
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
 
-    try {
-      // Aquí iría la llamada a la API para guardar el gasto
-      // await fletesAPI.registrarGasto(fleteId, { monto: parseFloat(monto) });
-      console.log(fleteId,monto) 
-      // Simular llamada API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setSuccessMessage(`Gasto de S/ ${parseFloat(monto).toFixed(2)} registrado correctamente`);
-      
-      // Limpiar input
-      setGastoInput(prev => {
-        const newInput = { ...prev };
-        delete newInput[fleteId];
-        return newInput;
-      });
-      
-      // Recargar datos
-      fetchFletesSinGasto(pagination.currentPage, pagination.itemsPerPage, filters);
-      
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError("Error al registrar el gasto: " + err.message);
-    } finally {
-      setGuardandoGasto(prev => ({ ...prev, [fleteId]: false }));
-    }
-  }, [gastoInput, fetchFletesSinGasto, pagination.currentPage, pagination.itemsPerPage, filters]);
+      setGuardandoGasto((prev) => ({ ...prev, [fleteId]: true }));
+
+      try {
+        const res = await monitoreoAPI.registrarGastoInversion(fleteId, monto);
+        if (res.status === "success") {
+          setSuccessMessage(
+            `Gasto de S/ ${parseFloat(monto).toFixed(2)} registrado correctamente`,
+          );
+        }
+        // Limpiar input
+        setGastoInput((prev) => {
+          const newInput = { ...prev };
+          delete newInput[fleteId];
+          return newInput;
+        });
+
+        // Recargar datos
+        fetchFletesSinGasto(
+          pagination.currentPage,
+          pagination.itemsPerPage,
+          filters,
+        );
+
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } catch (err) {
+        setError("Error al registrar el gasto: " + err.message);
+      } finally {
+        setGuardandoGasto((prev) => ({ ...prev, [fleteId]: false }));
+      }
+    },
+    [
+      gastoInput,
+      fetchFletesSinGasto,
+      pagination.currentPage,
+      pagination.itemsPerPage,
+      filters,
+    ],
+  );
 
   // Manejar tecla Enter en input de gasto
-  const handleKeyPress = useCallback((e, fleteId) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleGuardarGasto(fleteId);
-    }
-  }, [handleGuardarGasto]);
+  const handleKeyPress = useCallback(
+    (e, fleteId) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleGuardarGasto(fleteId);
+      }
+    },
+    [handleGuardarGasto],
+  );
 
   // Handler para actualizar filtros
   const handleFilterChange = useCallback((key, value) => {
@@ -396,11 +431,26 @@ const Rentabilidad = () => {
 
   const handleRefresh = useCallback(() => {
     if (activeTab === "sin-gasto") {
-      fetchFletesSinGasto(pagination.currentPage, pagination.itemsPerPage, filters);
+      fetchFletesSinGasto(
+        pagination.currentPage,
+        pagination.itemsPerPage,
+        filters,
+      );
     } else {
-      fetchFletesConGasto(pagination.currentPage, pagination.itemsPerPage, filters);
+      fetchFletesConGasto(
+        pagination.currentPage,
+        pagination.itemsPerPage,
+        filters,
+      );
     }
-  }, [activeTab, fetchFletesSinGasto, fetchFletesConGasto, pagination.currentPage, pagination.itemsPerPage, filters]);
+  }, [
+    activeTab,
+    fetchFletesSinGasto,
+    fetchFletesConGasto,
+    pagination.currentPage,
+    pagination.itemsPerPage,
+    filters,
+  ]);
 
   const handlePageChange = useCallback(
     (newPage) => {
@@ -410,7 +460,13 @@ const Rentabilidad = () => {
         fetchFletesConGasto(newPage, pagination.itemsPerPage, filters);
       }
     },
-    [activeTab, fetchFletesSinGasto, fetchFletesConGasto, pagination.itemsPerPage, filters],
+    [
+      activeTab,
+      fetchFletesSinGasto,
+      fetchFletesConGasto,
+      pagination.itemsPerPage,
+      filters,
+    ],
   );
 
   const handleItemsPerPageChange = useCallback(
@@ -426,7 +482,7 @@ const Rentabilidad = () => {
 
   const handleTabChange = useCallback((tab) => {
     setActiveTab(tab);
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
   }, []);
 
   // Exportar a Excel
@@ -444,9 +500,12 @@ const Rentabilidad = () => {
       const blob = await fletesAPI.exportAllFletesExcel(filtersForAPI);
 
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `rentabilidad_fletes_${activeTab}_${new Date().toISOString().split("T")[0]}.xlsx`);
+      link.setAttribute(
+        "download",
+        `rentabilidad_fletes_${activeTab}_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -472,11 +531,14 @@ const Rentabilidad = () => {
   // Obtener nombre del cliente por ID
   const getNombreCliente = (clienteId) => {
     if (!clienteId) return "N/A";
-    const cliente = clientesList.find(c => c.id === clienteId || c.value === clienteId);
+    const cliente = clientesList.find(
+      (c) => c.id === clienteId || c.value === clienteId,
+    );
     return cliente?.nombre || cliente?.label || clienteId;
   };
 
-  const currentData = activeTab === "sin-gasto" ? fletesSinGasto : fletesConGasto;
+  const currentData =
+    activeTab === "sin-gasto" ? fletesSinGasto : fletesConGasto;
 
   // Loading inicial
   if (isLoading && currentData.length === 0) {
@@ -520,9 +582,10 @@ const Rentabilidad = () => {
             onClick={() => handleTabChange("sin-gasto")}
             className={`
               py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
-              ${activeTab === "sin-gasto"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              ${
+                activeTab === "sin-gasto"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }
             `}
           >
@@ -533,9 +596,10 @@ const Rentabilidad = () => {
             onClick={() => handleTabChange("con-gasto")}
             className={`
               py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
-              ${activeTab === "con-gasto"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              ${
+                activeTab === "con-gasto"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }
             `}
           >
@@ -546,7 +610,7 @@ const Rentabilidad = () => {
       </div>
 
       {/* Tarjetas de métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-2 mb-6">
         {/* Total Venta Neta */}
         <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
           <div className="flex items-center justify-between mb-1">
@@ -563,6 +627,36 @@ const Rentabilidad = () => {
           <div className="text-xs text-gray-500 mt-1">
             {metrics.total_fletes} fletes
           </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total Invertido
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.monto_inversion_total)}
+          </div>
+          
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total De Rentabilidad
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.monto_total_rentabilidad)}
+          </div>
+          
         </div>
 
         {/* Pendientes */}
@@ -765,9 +859,7 @@ const Rentabilidad = () => {
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Cliente
                 </th>
-                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
-                  Monto
-                </th>
+                
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Fecha de Servicio
                 </th>
@@ -779,6 +871,15 @@ const Rentabilidad = () => {
                 </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Placa
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Servicio
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Monto
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Inversión
                 </th>
                 {activeTab === "sin-gasto" && (
                   <th className="py-3 px-4 text-left font-semibold text-gray-700">
@@ -802,20 +903,7 @@ const Rentabilidad = () => {
                     </div>
                   </td>
 
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="font-medium text-gray-900">
-                      {formatearMonto(flete.monto_flete)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {flete.estado_flete === "PENDIENTE" ? (
-                        <span className="text-yellow-600 font-medium">Pendiente</span>
-                      ) : flete.estado_flete === "VALORIZADO" && flete.pertenece_a_factura ? (
-                        <span className="text-green-600 font-medium">Facturado</span>
-                      ) : (
-                        <span className="text-orange-600 font-medium">Sin factura</span>
-                      )}
-                    </div>
-                  </td>
+                  
 
                   <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
                     <div className="text-gray-900">
@@ -847,6 +935,41 @@ const Rentabilidad = () => {
                     </div>
                   </td>
 
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {flete.servicio?.tipo_servicio || "N/A"}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {flete.servicio?.modalidad_servicio || ""}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {formatearMonto(flete.monto_flete)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {flete.estado_flete === "PENDIENTE" ? (
+                        <span className="text-yellow-600 font-medium">
+                          Pendiente
+                        </span>
+                      ) : flete.estado_flete === "VALORIZADO" &&
+                        flete.pertenece_a_factura ? (
+                        <span className="text-green-600 font-medium">
+                          Facturado
+                        </span>
+                      ) : (
+                        <span className="text-orange-600 font-medium">
+                          Sin factura
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 border-r border-gray-200 text-right text-gray-900 font-medium">
+  {flete.monto_inversion > 0 ? `S/ ${flete.monto_inversion.toFixed(2)}` : "No Ingresado"}
+</td>  
+
                   {activeTab === "sin-gasto" && (
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -855,10 +978,12 @@ const Rentabilidad = () => {
                           min="0"
                           step="0.01"
                           value={gastoInput[flete.id] || ""}
-                          onChange={(e) => setGastoInput(prev => ({
-                            ...prev,
-                            [flete.id]: e.target.value
-                          }))}
+                          onChange={(e) =>
+                            setGastoInput((prev) => ({
+                              ...prev,
+                              [flete.id]: e.target.value,
+                            }))
+                          }
                           onKeyPress={(e) => handleKeyPress(e, flete.id)}
                           placeholder="Monto"
                           className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -869,7 +994,9 @@ const Rentabilidad = () => {
                           size="small"
                           variant="primary"
                           icon={Save}
-                          disabled={guardandoGasto[flete.id] || !gastoInput[flete.id]}
+                          disabled={
+                            guardandoGasto[flete.id] || !gastoInput[flete.id]
+                          }
                           isLoading={guardandoGasto[flete.id]}
                         >
                           Guardar

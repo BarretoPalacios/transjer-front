@@ -65,6 +65,9 @@ export const monitoreoAPI = {
         formatDateToISO(filters.fecha_creacion_hasta),
       );
     }
+    if (filters.solo_con_inversion !== undefined) {
+      params.append("solo_con_inversion", filters.solo_con_inversion);
+    }
 
     const response = await axiosInstance.get(
       `/monitoreo/fletes?${params.toString()}`,
@@ -119,6 +122,24 @@ export const monitoreoAPI = {
     // console.log(response)
     return response.data;
   },
+
+  registrarGastoInversion: async (fleteId, monto) => {
+    try {
+      const response = await axiosInstance.post(
+        `/monitoreo/registrar_gasto_inversion`,
+        {
+        flete_id: fleteId,
+        monto: monto
+      }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Error registrando gasto de inversión:", error);
+      throw error;
+    }
+  },
+
 };
 
 export const formatDateToISO = (fecha) => {
