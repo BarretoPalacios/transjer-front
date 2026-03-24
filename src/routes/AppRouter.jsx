@@ -36,6 +36,7 @@ import DetalleGestion from "../pages/dashboard/GerenciaMonitoreo/DetalleGestion"
 import TodosLosFletes from "../pages/dashboard/TodosLosFletes/TodosLosFletes";
 import ReportesPrincipales from "../pages/dashboard/Servicios/ReportesPrincipales";
 import Rentabilidad from "../pages/dashboard/Rentabilidad/Rentabilidad";
+import RentabilidadConGastos from "../pages/dashboard/Rentabilidad/RentabilidadConGasto";
 
 const AppRouter = () => {
   return (
@@ -247,6 +248,14 @@ const AppRouter = () => {
               <Rentabilidad />
             </ProtectedRoute>
           } />
+
+          
+          <Route path="gerencia/rentabilidad-fletes-con-gastos" element={
+            <ProtectedRoute requirePermission={['gerencia', 'view']}>
+              <RentabilidadConGastos />
+            </ProtectedRoute>
+          } />
+
 
           <Route path="gerencia/detalles" element={
             <ProtectedRoute requirePermission={['gerencia', 'view']}>

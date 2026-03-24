@@ -1,0 +1,950 @@
+import React, { useState, useCallback, useEffect } from "react";
+import {
+  Filter,
+  Calendar,
+  RefreshCw,
+  X,
+  CheckCircle,
+  Download,
+  Loader,
+  MapPin,
+  DollarSign,
+  Building2,
+  Package,
+  Trash2,
+  Fuel,
+  CarFrontIcon,
+  Utensils,
+  Car,
+  Building,
+  Package as PackageIcon,
+  Archive,
+  User,
+  CreditCard,
+  AlertCircle,
+  TrendingUpIcon,
+  Hash,
+} from "lucide-react";
+
+import Button from "../../../components/common/Button/Button";
+import Pagination from "../../../components/common/Pagination/Pagination";
+import { monitoreoAPI } from "../../../api/endpoints/monitoreo";
+import utilsAPI from "../../../api/endpoints/utils";
+import { Link } from "react-router-dom";
+
+const formatFecha = (fecha) => {
+  if (!fecha) return "N/A";
+  try {
+    return new Date(fecha).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch (e) {
+    return fecha;
+  }
+};
+
+const RentabilidadConGastos = () => {
+  const [fletesConGastos, setFletesConGastos] = useState([]);
+  const [clientesList, setClientesList] = useState([]);
+    const [placasList, setPlacasList] = useState([]);
+    const [proveedoresList, setProveedoresList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingDownload, setLoadingDownload] = useState(false);
+  const [metrics, setMetrics] = useState({
+    total_registros: 0,
+    suma_total_gastos: 0,
+    suma_total_rentabilidad: 0,
+    suma_total_fletes: 0,
+    suma_total_abonos: 0,
+  });
+
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
+
+  const [filters, setFilters] = useState({
+    fecha_inicio: "",
+    fecha_fin: "",
+    cliente_id: "",
+    proveedor_id: "",
+    placa_id: "",
+    mes: "",
+  });
+
+  const [errors, setErrors] = useState({
+    fecha_inicio: "",
+    fecha_fin: "",
+    rango_fechas: "",
+  });
+
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  const itemsPerPageOptions = [10, 20, 30, 50, 100];
+
+  const meses = [
+    { value: "01", label: "Enero" },
+    { value: "02", label: "Febrero" },
+    { value: "03", label: "Marzo" },
+    { value: "04", label: "Abril" },
+    { value: "05", label: "Mayo" },
+    { value: "06", label: "Junio" },
+    { value: "07", label: "Julio" },
+    { value: "08", label: "Agosto" },
+    { value: "09", label: "Septiembre" },
+    { value: "10", label: "Octubre" },
+    { value: "11", label: "Noviembre" },
+    { value: "12", label: "Diciembre" },
+  ];
+
+  useEffect(() => {
+    cargarClientesList();
+     cargarPlacasList();
+    cargarProveedoresList();
+  }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setPagination((prev) => ({
+        ...prev,
+        currentPage: 1,
+      }));
+      fetchFletesConGastos(1, pagination.itemsPerPage, filters);
+    }, 500);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [filters.fecha_inicio, filters.fecha_fin, filters.cliente_id,filters.placa_id,filters.proveedor_id]);
+
+  useEffect(() => {
+    if (filters.mes) {
+      const year = new Date().getFullYear();
+      const fechaInicio = `${year}-${filters.mes}-01`;
+      const lastDay = new Date(year, parseInt(filters.mes), 0).getDate();
+      const fechaFin = `${year}-${filters.mes}-${lastDay}`;
+
+      setFilters((prev) => ({
+        ...prev,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+      }));
+    }
+  }, [filters.mes]);
+
+  const cargarClientesList = useCallback(async () => {
+    try {
+      const response = await utilsAPI.getClientesList();
+      setClientesList(response || []);
+    } catch (err) {
+      console.error("Error cargando lista de clientes:", err);
+      setError("Error al cargar la lista de clientes");
+    }
+  }, []);
+
+   const cargarPlacasList = useCallback(async () => {
+      try {
+        const response = await utilsAPI.getPlacasList();
+        setPlacasList(response || []);
+      } catch (err) {
+        console.error("Error cargando lista de clientes:", err);
+        setError("Error al cargar la lista de clientes");
+      }
+    }, []);
+  
+      const cargarProveedoresList = useCallback(async () => {
+      try {
+        const response = await utilsAPI.getProveedoresList();
+        setProveedoresList(response || []);
+      } catch (err) {
+        console.error("Error cargando lista de clientes:", err);
+        setError("Error al cargar la lista de clientes");
+      }
+    }, []);
+
+  const fetchFletesConGastos = useCallback(
+    async (
+      page = 1,
+      itemsPerPage = pagination.itemsPerPage,
+      filtersToUse = filters,
+    ) => {
+      setIsLoading(true);
+      setError(null);
+
+      if (filtersToUse.fecha_inicio && filtersToUse.fecha_fin) {
+        if (filtersToUse.fecha_inicio > filtersToUse.fecha_fin) {
+          setErrors((prev) => ({
+            ...prev,
+            rango_fechas: "La fecha de inicio no puede ser mayor a la fecha de fin",
+          }));
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      try {
+        const apiFilters = {
+          page: page,
+          page_size: itemsPerPage,
+          con_gasto: true,
+        };
+
+        if (filtersToUse.fecha_inicio) {
+          apiFilters.fecha_servicio_desde = filtersToUse.fecha_inicio;
+        }
+
+        if (filtersToUse.fecha_fin) {
+          apiFilters.fecha_servicio_hasta = filtersToUse.fecha_fin;
+        }
+
+        if (filtersToUse.cliente_id && filtersToUse.cliente_id.trim() !== "") {
+          apiFilters.cliente = filtersToUse.cliente_id.trim();
+        }
+         if (filtersToUse.proveedor_id && filtersToUse.proveedor_id.trim() !== "") {
+          apiFilters.proveedor = filtersToUse.proveedor_id.trim();
+        }
+        if (filtersToUse.placa_id && filtersToUse.placa_id.trim() !== "") {
+          apiFilters.placa = filtersToUse.placa_id.trim();
+        }
+
+        const response = await monitoreoAPI.getGastosProvincia(apiFilters);
+
+        setFletesConGastos(response.items || []);
+        setMetrics({
+          total_registros: response.metrics?.total_registros || 0,
+          suma_total_gastos: response.metrics?.suma_total_gastos || 0,
+          suma_total_rentabilidad: response.metrics?.suma_total_rentabilidad || 0,
+          suma_total_fletes: response.metrics?.suma_total_fletes || 0,
+          suma_total_abonos: response.metrics?.suma_total_abonos || 0,
+        });
+
+        setPagination({
+          currentPage: response.pagination.page,
+          itemsPerPage: response.pagination.page_size,
+          totalItems: response.metrics?.total_registros || 0,
+          totalPages: response.pagination.total_pages,
+          hasNext: response.pagination.has_next,
+          hasPrev: response.pagination.has_prev,
+        });
+      } catch (err) {
+        setError(
+          "Error al cargar los fletes con gastos: " +
+            (err.message || "Error desconocido"),
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
+const handleEliminarGasto = useCallback(async (gastoId) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este registro?")) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await monitoreoAPI.eliminarGastoProvincia(gastoId);
+      
+      await fetchFletesConGastos(
+        pagination.currentPage,
+        pagination.itemsPerPage,
+        filters
+      );
+    } catch (err) {
+      setError(
+        "Error al eliminar el gasto: " + (err.response?.data?.detail || err.message || "Error desconocido")
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pagination.currentPage, pagination.itemsPerPage, filters, fetchFletesConGastos]);
+
+  const handleFilterChange = useCallback((key, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+
+    if (key === "mes") {
+      setFilters((prev) => ({
+        ...prev,
+        fecha_inicio: "",
+        fecha_fin: "",
+      }));
+    }
+
+    if (key === "fecha_inicio" || key === "fecha_fin") {
+      setErrors((prev) => ({
+        ...prev,
+        [key]: "",
+        rango_fechas: "",
+      }));
+    }
+  }, []);
+
+  const handleDateChange = useCallback((key, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+      mes: "",
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [key]: "",
+      rango_fechas: "",
+    }));
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      fecha_inicio: "",
+      fecha_fin: "",
+      cliente_id: "",
+      proveedor_id:"",
+      placa_id:"",
+      mes: "",
+    });
+    setErrors({
+      fecha_inicio: "",
+      fecha_fin: "",
+      rango_fechas: "",
+    });
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    fetchFletesConGastos(
+      pagination.currentPage,
+      pagination.itemsPerPage,
+      filters,
+    );
+  }, [fetchFletesConGastos, pagination.currentPage, pagination.itemsPerPage, filters]);
+
+  const handlePageChange = useCallback(
+    (newPage) => {
+      fetchFletesConGastos(newPage, pagination.itemsPerPage, filters);
+    },
+    [fetchFletesConGastos, pagination.itemsPerPage, filters],
+  );
+
+  const handleItemsPerPageChange = useCallback(
+    (newItemsPerPage) => {
+      fetchFletesConGastos(1, newItemsPerPage, filters);
+    },
+    [fetchFletesConGastos, filters],
+  );
+
+
+  const handleExportarExcel = useCallback(async () => {
+  try {
+    setLoadingDownload(true);
+    setError(null); 
+
+    const filtersForAPI = {
+      fecha_servicio_desde: filters.fecha_inicio,
+      fecha_servicio_hasta: filters.fecha_fin,
+      cliente: filters.cliente_id, 
+      placa: filters.placa_id,
+      proveedor: filters.proveedor_id,
+      zona:"provincia"
+    };
+
+    const data = await monitoreoAPI.exportGastosProvinciaExcel(filtersForAPI);
+
+   
+    const blob = new Blob([data], { 
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    
+    // Nombre del archivo más descriptivo
+    const fechaArchivo = new Date().toISOString().split("T")[0];
+    link.setAttribute("download", `reporte_gastos_provincia_${fechaArchivo}.xlsx`);
+
+    document.body.appendChild(link);
+    link.click();
+    
+    // Limpieza
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    setSuccessMessage("Exportación completada exitosamente");
+    setTimeout(() => setSuccessMessage(null), 3000);
+  } catch (err) {
+    console.error("Error en exportación:", err);
+    setError("Error al exportar: " + (err.response?.data?.detail || err.message));
+  } finally {
+    setLoadingDownload(false);
+  }
+}, [filters]);
+
+  const formatearMonto = (monto) => {
+    return new Intl.NumberFormat("es-PE", {
+      style: "currency",
+      currency: "PEN",
+      minimumFractionDigits: 2,
+    }).format(monto || 0);
+  };
+
+  if (isLoading && fletesConGastos.length === 0) {
+    return (
+      <div className="p-4">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {successMessage && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center text-green-700">
+            <CheckCircle className="h-5 w-5 mr-2" />
+            <span className="font-medium">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center text-red-700">
+            <X className="h-5 w-5 mr-2" />
+            <span className="font-medium">{error}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex -mb-px gap-2">
+          <Link to="/gerencia/rentabilidad-fletes">
+            <div className="py-4 px-1 font-medium text-sm flex items-center gap-2 text-gray-600">
+              Fletes a Provincia (Sin gastos registrados)
+            </div>
+          </Link>
+          <Link to="/gerencia/rentabilidad-fletes-con-gastos">
+            <div className="py-4 px-1 font-medium text-sm flex items-center gap-2 text-blue-600 border-b-2 border-blue-600">
+              Fletes a Provincia (Con gastos registrados)
+            </div>
+          </Link>
+        </nav>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total Fletes
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.suma_total_fletes)}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {metrics.total_registros} registros
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-red-100 rounded-md">
+              <DollarSign className="h-4 w-4 text-red-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total Gastos
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.suma_total_gastos)}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-orange-100 rounded-md">
+              <CreditCard className="h-4 w-4 text-orange-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total Abonos
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.suma_total_abonos)}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-green-100 rounded-md">
+              <TrendingUpIcon className="h-4 w-4 text-green-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Total Rentabilidad
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.suma_total_rentabilidad)}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1.5 bg-purple-100 rounded-md">
+              <AlertCircle className="h-4 w-4 text-purple-600" />
+            </div>
+            <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
+              Promedio Rentabilidad
+            </span>
+          </div>
+          <div className="text-xl font-bold text-gray-900 leading-none">
+            {formatearMonto(metrics.total_registros > 0 ? metrics.suma_total_rentabilidad / metrics.total_registros : 0)}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg border border-gray-300 p-4 mb-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Filter className="h-5 w-5 text-blue-600" />
+              Filtros de Búsqueda
+            </h3>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={handleRefresh}
+              variant="secondary"
+              size="small"
+              icon={RefreshCw}
+              isLoading={isLoading}
+            >
+              Actualizar
+            </Button>
+
+            <Button onClick={clearFilters} variant="secondary" size="small">
+              Limpiar Filtros
+            </Button>
+
+            <Button
+              onClick={handleExportarExcel}
+              disabled={loadingDownload}
+              variant="primary"
+              size="small"
+            >
+              {loadingDownload ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Exportar a Excel
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Mes
+            </label>
+            <select
+              value={filters.mes}
+              onChange={(e) => handleFilterChange("mes", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+            >
+              <option value="">Seleccionar mes</option>
+              {meses.map((mes) => (
+                <option key={mes.value} value={mes.value}>
+                  {mes.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Seleccione un mes para rango automático
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Cliente
+            </label>
+            <select
+              value={filters.cliente_id}
+              onChange={(e) => handleFilterChange("cliente_id", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+            >
+              <option value="">Todos los clientes</option>
+              {clientesList.map((cliente) => (
+                <option key={cliente} value={cliente}>
+                  {cliente}
+                </option>
+              ))}
+            </select>
+          </div>
+        <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      Placa
+                    </label>
+                    <select
+                      value={filters.placa_id}
+                      onChange={(e) => handleFilterChange("placa_id", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+                    >
+                      <option value="">Todas las placas</option>
+                      {placasList.map((placa) => (
+                        <option key={placa} value={placa}>
+                          {placa}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      Proveedor
+                    </label>
+                    <select
+                      value={filters.proveedor_id}
+                      onChange={(e) => handleFilterChange("proveedor_id", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+                    >
+                      <option value="">Todas las clientes</option>
+                      {proveedoresList.map((proveedores) => (
+                        <option key={proveedores} value={proveedores}>
+                          {proveedores}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha Inicio
+            </label>
+            <input
+              type="date"
+              value={filters.fecha_inicio}
+              onChange={(e) => handleDateChange("fecha_inicio", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              max={filters.fecha_fin || new Date().toISOString().split("T")[0]}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha Fin
+            </label>
+            <input
+              type="date"
+              value={filters.fecha_fin}
+              onChange={(e) => handleDateChange("fecha_fin", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+              min={filters.fecha_inicio}
+              max={new Date().toISOString().split("T")[0]}
+            />
+          </div>
+        </div>
+
+        {errors.rango_fechas && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+            <p className="text-sm text-red-600">{errors.rango_fechas}</p>
+          </div>
+        )}
+      </div>
+
+      {fletesConGastos.length > 0 && (
+        <div className="mb-4 text-sm text-gray-600 text-center">
+          Mostrando {fletesConGastos.length} de {pagination.totalItems} registros
+          {filters.cliente_id && " · Filtrado por cliente"}
+           {filters.placa_id && " · Filtrado por placa"}
+          {filters.proveedor_id && " · Filtrado por proveedor"}
+          {(filters.fecha_inicio || filters.fecha_fin) &&
+            " · Filtrado por rango de fechas"}
+          <span className="font-medium ml-2">Provincia CON gasto</span>
+        </div>
+      )}
+
+      <div className="bg-white border border-gray-300 shadow-sm rounded-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-100 border-b border-gray-300">
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Fecha Servicio
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Placa
+                </th>
+                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Proveedor
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Cliente
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Origen
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Destino
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Flete Neto
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Flete Bruto
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Combustible
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Peaje
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Viáticos
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Lavado
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Cochera
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Otros
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Estiba
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Desestiba
+                </th>
+                
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Tercerizado
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Total de Gastos
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Rentabilidad
+                </th>  
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Abono
+                </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700">
+                  Acciones
+                </th>
+               </tr>
+            </thead>
+            <tbody>
+              {fletesConGastos.map((item) => (
+                <tr
+                  key={item.id}
+                  className="border-b border-gray-200 hover:bg-blue-50"
+                >
+                  <td className="px-4 py-3 border-r border-gray-200 whitespace-nowrap">
+                    <div className="text-gray-900">
+                      {formatFecha(item.flete?.servicio?.fecha_servicio)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {item.flete?.servicio?.flota?.placa || "N/A"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      
+                      {item.flete?.servicio?.proveedor?.razon_social || "N/A"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {item.flete?.servicio?.cliente?.nombre || "N/A"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
+                      <span className="text-gray-900">
+                        {item.flete?.servicio?.origen?.split(",")[0] || "N/A"}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="flex items-start gap-1">
+                      <MapPin className="h-3 w-3 text-gray-400 mt-1 flex-shrink-0" />
+                      <span className="text-gray-900">
+                        {item.flete?.servicio?.destino?.split(",")[0] || "N/A"}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {formatearMonto(item.flete?.monto_flete)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-gray-900">
+                      {formatearMonto((item.flete?.monto_flete || 0) * 1.18)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-blue-100 ">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.combustible)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-blue-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.peaje)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-blue-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.viaticos)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-blue-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.lavado)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-blue-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.cochera)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-blue-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.otros)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-blue-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.estiba)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-blue-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.desestiba)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 bg-green-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.tercerizado)}
+                    </div>
+                  </td>
+                  
+                  <td className="px-4 py-3 border-r border-gray-200 bg-red-100">
+                    <div className="text-gray-900">
+                      {formatearMonto(item.total_gastos)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200 ">
+                    <div className={`font-bold ${item.rentabilidad > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatearMonto(item.rentabilidad)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-orange-600">
+                      {formatearMonto(item.abono)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Button
+                      onClick={() => handleEliminarGasto(item.id)}
+                      size="small"
+                      variant="danger"
+                      icon={Trash2}
+                    >
+                      Eliminar
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {fletesConGastos.length === 0 && !isLoading && (
+          <div className="text-center py-12">
+            <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No se encontraron registros
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {Object.values(filters).some((f) => f && f.trim() !== "")
+                ? "Intenta ajustar los filtros de búsqueda"
+                : "No hay fletes con gastos registrados"}
+            </p>
+            <Button onClick={clearFilters} size="small">
+              Limpiar filtros
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {fletesConGastos.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-6">
+          <div className="flex items-center space-x-4 mb-4 sm:mb-0">
+            <span className="text-sm text-gray-600">Mostrar</span>
+            <select
+              className="border border-gray-300 rounded px-3 py-1 text-sm"
+              value={pagination.itemsPerPage}
+              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+            >
+              {itemsPerPageOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <span className="text-sm text-gray-600">registros por página</span>
+          </div>
+
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            itemsPerPage={pagination.itemsPerPage}
+            onPageChange={handlePageChange}
+            startIndex={
+              (pagination.currentPage - 1) * pagination.itemsPerPage + 1
+            }
+            endIndex={Math.min(
+              pagination.currentPage * pagination.itemsPerPage,
+              pagination.totalItems,
+            )}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RentabilidadConGastos;
