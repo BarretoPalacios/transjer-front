@@ -287,8 +287,10 @@ const Rentabilidad = () => {
 
     const abono = parseFloat(gastoFormData.abono || 0);
     const montoFlete = selectedFlete?.monto_flete || 0;
+
+    const montoFleteBruto = montoFlete * 1.18;
     
-    const rentabilidad = montoFlete - totalGastos;
+    const rentabilidad = montoFleteBruto - totalGastos;
     const saldo = abono - totalGastos;
     const esRentable = rentabilidad > 0;
 
@@ -716,7 +718,10 @@ const Rentabilidad = () => {
                   
                   const abono = parseFloat(gastoFormData.abono || 0);
                   const montoFlete = selectedFlete?.monto_flete || 0;
-                  const rentabilidad = montoFlete - totalGastos;
+                  const montoFleteBruto = montoFlete * 1.18;
+
+                  const rentabilidad = montoFleteBruto - totalGastos;
+
                   const saldo = abono - totalGastos;
                   const esRentable = rentabilidad > 0;
                   

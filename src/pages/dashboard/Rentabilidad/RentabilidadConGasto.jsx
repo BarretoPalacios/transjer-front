@@ -453,11 +453,11 @@ const handleEliminarGasto = useCallback(async (gastoId) => {
               <DollarSign className="h-4 w-4 text-blue-600" />
             </div>
             <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400">
-              Total Fletes
+              Total Fletes + IVG
             </span>
           </div>
           <div className="text-xl font-bold text-gray-900 leading-none">
-            {formatearMonto(metrics.suma_total_fletes)}
+            {formatearMonto(metrics.suma_total_fletes * 1.18)}
           </div>
           <div className="text-xs text-gray-500 mt-1">
             {metrics.total_registros} registros
@@ -756,6 +756,9 @@ const handleEliminarGasto = useCallback(async (gastoId) => {
                 <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
                   Abono
                 </th>
+                <th className="py-3 px-4 text-left font-semibold text-gray-700 border-r border-gray-300">
+                  Saldo
+                </th>
                 <th className="py-3 px-4 text-left font-semibold text-gray-700">
                   Acciones
                 </th>
@@ -873,6 +876,11 @@ const handleEliminarGasto = useCallback(async (gastoId) => {
                   <td className="px-4 py-3 border-r border-gray-200">
                     <div className="font-medium text-orange-600">
                       {formatearMonto(item.abono)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 border-r border-gray-200">
+                    <div className="font-medium text-nowrap">
+                      {formatearMonto(item.saldo)} {item.saldo > 0 ?"A Favor":"Por Devolver"}
                     </div>
                   </td>
                   <td className="px-4 py-3">
